@@ -30,6 +30,11 @@ export default function LeagueHome() {
 
   async function loadData() {
     setLoading(true)
+    // Delete unconfirmed sessions older than 24 hours
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    await supabase.from('sessions').delete()
+      .eq('league_id', leagueId!).eq('confirmed', false).lt('created_at', oneDayAgo)
+
     const year = new Date().getFullYear()
     const yearStart = `${year}-01-01`
     const yearEnd = `${year}-12-31`
