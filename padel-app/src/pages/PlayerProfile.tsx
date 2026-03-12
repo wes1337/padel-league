@@ -86,6 +86,8 @@ export default function PlayerProfile() {
   const [totalSessions, setTotalSessions] = useState(0)
   const [regularPlayerIds, setRegularPlayerIds] = useState<Set<string>>(new Set())
   const [kingStats, setKingStats] = useState<{ sessionsTopped: number; sessionsAttended: number } | null>(null)
+  const [sessionRank, setSessionRank] = useState<{ rank: number; total: number } | null>(null)
+  const [sessionAvg, setSessionAvg] = useState<{ scored: number; conceded: number } | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { loadData() }, [playerId])
@@ -168,6 +170,38 @@ export default function PlayerProfile() {
 
     details.sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime())
     setMatchDetails(details)
+
+    // Session rank + averages
+    if (sessionId && allMatches) {
+      const sMap = new Map<string, { wins: number; pointDiff: number; scored: number; conceded: number }>()
+      for (const m of allMatches as Match[]) {
+        const t1Won = m.team1_score > m.team2_score
+        for (const pid of [m.team1_p1, m.team1_p2]) {
+          if (!sMap.has(pid)) sMap.set(pid, { wins: 0, pointDiff: 0, scored: 0, conceded: 0 })
+          const s = sMap.get(pid)!
+          if (t1Won) s.wins++
+          s.scored += m.team1_score; s.conceded += m.team2_score
+          s.pointDiff += m.team1_score - m.team2_score
+        }
+        for (const pid of [m.team2_p1, m.team2_p2]) {
+          if (!sMap.has(pid)) sMap.set(pid, { wins: 0, pointDiff: 0, scored: 0, conceded: 0 })
+          const s = sMap.get(pid)!
+          if (!t1Won) s.wins++
+          s.scored += m.team2_score; s.conceded += m.team1_score
+          s.pointDiff += m.team2_score - m.team1_score
+        }
+      }
+      const ranked = [...sMap.entries()].sort((a, b) => b[1].wins - a[1].wins || b[1].pointDiff - a[1].pointDiff)
+      const rank = ranked.findIndex(([id]) => id === playerId)
+      if (rank !== -1) setSessionRank({ rank: rank + 1, total: ranked.length })
+
+      const allScored = [...sMap.values()].map(s => s.scored)
+      const allConceded = [...sMap.values()].map(s => s.conceded)
+      setSessionAvg({
+        scored: Math.round(allScored.reduce((a, b) => a + b, 0) / allScored.length),
+        conceded: Math.round(allConceded.reduce((a, b) => a + b, 0) / allConceded.length),
+      })
+    }
 
     // Compute King of the Court
     const sessionsAttendedSet = new Set(details.map(d => d.session_id))
@@ -318,13 +352,14 @@ export default function PlayerProfile() {
           { label: 'Matches', value: totalPlayed },
           { label: 'Win Rate', value: `${winRate}%` },
           { label: 'Pt Diff', value: pointDiff > 0 ? `+${pointDiff}` : String(pointDiff) },
-          { label: 'Wins', value: wins },
-          { label: 'Losses', value: losses },
+          { label: 'Wins', value: wins, color: wins > 0 ? 'text-green-400' : 'text-white' },
+          { label: 'Losses', value: losses, color: losses > 0 ? 'text-red-400' : 'text-white' },
+          ...(sessionId && sessionRank ? [{ label: 'Session Rank', value: `${sessionRank.rank} / ${sessionRank.total}` }] : []),
           ...(!sessionId ? [{ label: 'Attendance', value: `${attendancePct}%` }] : []),
-        ].map(({ label, value }) => (
+        ].map(({ label, value, color }) => (
           <div key={label} className="bg-gray-900 rounded-xl p-3 flex flex-col gap-0.5">
             <span className="text-gray-400 text-xs uppercase tracking-wide">{label}</span>
-            <span className="text-white text-xl font-bold">{value}</span>
+            <span className={`${color ?? 'text-white'} text-xl font-bold`}>{value}</span>
           </div>
         ))}
       </div>
@@ -349,8 +384,8 @@ export default function PlayerProfile() {
 
       {/* Scoring */}
       <Section title="Scoring" tooltip="How many points you score and concede on average, plus your most decisive results.">
-        {sessionId && <StatRow label="Total points scored" value={String(totalScored)} />}
-        {sessionId && <StatRow label="Total points conceded" value={String(totalConceded)} />}
+        {sessionId && <StatRow label="Total points scored" value={String(totalScored)} sub={sessionAvg ? `avg ${sessionAvg.scored}` : undefined} />}
+        {sessionId && <StatRow label="Total points conceded" value={String(totalConceded)} sub={sessionAvg ? `avg ${sessionAvg.conceded}` : undefined} />}
         <StatRow label="Avg points scored" value={String(avgScored)} sub="per game" />
         <StatRow label="Avg points conceded" value={String(avgConceded)} sub="per game" />
         {biggestWin && (
@@ -470,14 +505,21 @@ export default function PlayerProfile() {
       <Section title="Match History" tooltip="Every match you've played this season, most recent first." defaultOpen={false}>
         {matchDetails.length === 0 ? <p className="text-gray-500 text-sm">No matches this season.</p> : (
           <div className="flex flex-col gap-2">
-            {matchDetails.map(m => (
+            {matchDetails.map(m => {
+              const diff = m.myScore - m.oppScore
+              return (
               <div key={m.id} className="bg-gray-800 rounded-xl px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-bold px-2 py-0.5 rounded ${m.won ? 'bg-green-700 text-green-100' : 'bg-red-800 text-red-100'}`}>
                       {m.won ? 'W' : 'L'}
                     </span>
-                    <span className="text-white font-bold">{m.myScore} – {m.oppScore}</span>
+                    <div>
+                      <span className="text-white font-bold">{m.myScore} – {m.oppScore}</span>
+                      <span className={`ml-1.5 text-xs ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                        {diff > 0 ? `+${diff}` : diff}
+                      </span>
+                    </div>
                   </div>
                   <span className="text-gray-500 text-xs">{m.sessionLabel}</span>
                 </div>
@@ -485,7 +527,7 @@ export default function PlayerProfile() {
                   With {m.partner} · vs {m.opponents}
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </Section>
