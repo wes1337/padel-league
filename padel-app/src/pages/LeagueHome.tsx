@@ -217,7 +217,7 @@ export default function LeagueHome() {
             <h2 className="font-semibold text-white">Admin</h2>
             <span className="text-xs bg-green-900/50 text-green-400 border border-green-700 rounded-full px-2 py-0.5">Admin</span>
           </div>
-          <p className="text-gray-400 text-xs">Share the code below to give others admin access to this league.</p>
+          <p className="text-gray-400 text-xs">Share this code with trusted players to give them admin access. Admins can create and delete sessions, end sessions, and exclude sessions from the season rankings.</p>
           <button
             onClick={() => setShowAdminCode(!showAdminCode)}
             className="text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg px-3 py-2 transition-colors text-left"
