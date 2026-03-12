@@ -191,14 +191,12 @@ export default function SessionPage() {
         const chartPlayerIds = new Set<string>()
         matches.forEach(m => [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2].forEach(id => chartPlayerIds.add(id)))
 
-        // Start point — everyone at 0 / rank 1
-        const g0: Record<string, number | string> = { game: 'Start' }
-        chartPlayerIds.forEach(id => { g0[id] = 0; netWins.set(id, 0); netPoints.set(id, 0) })
-        const gamesData: Record<string, number | string>[] = [g0]
-        const pointsData: Record<string, number | string>[] = [{ ...g0 }]
+        // Start point — everyone at midpoint rank
+        const midRank = Math.ceil(chartPlayerIds.size / 2)
+        chartPlayerIds.forEach(id => { netWins.set(id, 0); netPoints.set(id, 0) })
         const rankData: Record<string, number | string>[] = [(() => {
           const r: Record<string, number | string> = { game: 'Start' }
-          chartPlayerIds.forEach(id => { r[id] = 1 })
+          chartPlayerIds.forEach(id => { r[id] = midRank })
           return r
         })()]
 
@@ -215,19 +213,13 @@ export default function SessionPage() {
               netPoints.set(pid, (netPoints.get(pid) ?? 0) - diff)
             }
           }
-          const label = `R${i + 1}`
-          const gp: Record<string, number | string> = { game: label }
-          const pp: Record<string, number | string> = { game: label }
-          chartPlayerIds.forEach(id => { gp[id] = netWins.get(id)!; pp[id] = netPoints.get(id)! })
-          gamesData.push(gp)
-          pointsData.push(pp)
 
           // Dense rank after this round (wins primary, point diff secondary)
           const sorted = [...chartPlayerIds].sort((a, b) =>
             (netWins.get(b) ?? 0) - (netWins.get(a) ?? 0) ||
             (netPoints.get(b) ?? 0) - (netPoints.get(a) ?? 0)
           )
-          const rp: Record<string, number | string> = { game: label }
+          const rp: Record<string, number | string> = { game: `R${i + 1}` }
           let rank = 1
           sorted.forEach((id, idx) => {
             if (idx > 0) {
@@ -258,7 +250,6 @@ export default function SessionPage() {
         }
 
         const tooltipStyle = { contentStyle: { background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12 }, labelStyle: { color: '#9ca3af' } }
-        const fmtVal = (val: unknown, key: unknown) => [`${Number(val) > 0 ? '+' : ''}${val}`, pMap.get(String(key)) ?? String(key)] as [string, string]
 
         return (
           <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
@@ -285,41 +276,7 @@ export default function SessionPage() {
                   </ResponsiveContainer>
                 </div>
 
-                {/* Games chart */}
-                <div>
-                  <p className="text-gray-400 text-sm font-medium mb-3">Games</p>
-                  <ResponsiveContainer width="100%" height={160}>
-                    <LineChart data={gamesData} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
-                      <XAxis dataKey="game" tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={false} />
-                      <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#4b5563' }} allowDecimals={false} />
-                      <Tooltip {...tooltipStyle} formatter={fmtVal} />
-                      {chartPlayers.map(p => {
-                        const color = rankHighlightedIds.get(p.id)
-                        const active = !!color
-                        return <Line key={p.id} dataKey={p.id} stroke={color ?? '#374151'} strokeWidth={active ? 2.5 : 1.5} dot={active ? { r: 3, fill: color, strokeWidth: 0 } : false} connectNulls />
-                      })}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Points chart */}
-                <div>
-                  <p className="text-gray-400 text-sm font-medium mb-3">Points</p>
-                  <ResponsiveContainer width="100%" height={160}>
-                    <LineChart data={pointsData} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
-                      <XAxis dataKey="game" tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={false} />
-                      <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#4b5563' }} allowDecimals={false} />
-                      <Tooltip {...tooltipStyle} formatter={fmtVal} />
-                      {chartPlayers.map(p => {
-                        const color = rankHighlightedIds.get(p.id)
-                        const active = !!color
-                        return <Line key={p.id} dataKey={p.id} stroke={color ?? '#374151'} strokeWidth={active ? 2.5 : 1.5} dot={active ? { r: 3, fill: color, strokeWidth: 0 } : false} connectNulls />
-                      })}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Shared player toggles */}
+                {/* Player toggles */}
                 <div className="flex flex-wrap gap-2">
                   {chartPlayers.map(p => {
                     const color = rankHighlightedIds.get(p.id)
