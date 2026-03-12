@@ -320,7 +320,7 @@ export default function PlayerProfile() {
                 </div>
               </div>
             )}
-            {partners.map((p, i) => (
+            {partners.map((p) => (
               <PlayerStatRow
                 key={p.name} name={p.name} wins={p.wins} losses={p.losses}
                 highlight={p === bestPartner && p !== worstPartner ? 'green' : p === worstPartner && p !== bestPartner ? 'red' : undefined}

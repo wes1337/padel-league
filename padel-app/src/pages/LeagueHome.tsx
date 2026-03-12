@@ -11,7 +11,7 @@ export default function LeagueHome() {
   const [league, setLeague] = useState<League | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [seasonStats, setSeasonStats] = useState<PlayerStats[]>([])
-  const [totalSeasonSessions, setTotalSeasonSessions] = useState(0)
+  const [, setTotalSeasonSessions] = useState(0)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
 
