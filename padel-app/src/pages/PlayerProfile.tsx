@@ -276,10 +276,10 @@ export default function PlayerProfile() {
   }
 
   // ── Session history ─────────────────────────────────────────────────────────
-  const sessionStatsMap = new Map<string, { label: string; date: string; wins: number; losses: number; diff: number }>()
+  const sessionStatsMap = new Map<string, { id: string; label: string; date: string; wins: number; losses: number; diff: number }>()
   for (const m of matchDetails) {
     if (!sessionStatsMap.has(m.session_id)) {
-      sessionStatsMap.set(m.session_id, { label: m.sessionLabel, date: m.sessionDate, wins: 0, losses: 0, diff: 0 })
+      sessionStatsMap.set(m.session_id, { id: m.session_id, label: m.sessionLabel, date: m.sessionDate, wins: 0, losses: 0, diff: 0 })
     }
     const ss = sessionStatsMap.get(m.session_id)!
     m.won ? ss.wins++ : ss.losses++
@@ -439,7 +439,7 @@ export default function PlayerProfile() {
               const pct = Math.round(s.wins / (s.wins + s.losses) * 100)
               const diff = s.diff
               return (
-                <div key={s.date} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
+                <Link key={s.id} to={`/l/${leagueId}/session/${s.id}`} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0 hover:bg-gray-800/50 -mx-1 px-1 rounded transition-colors">
                   <span className="text-gray-400 text-sm">{s.label}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500 text-xs">{s.wins}W {s.losses}L</span>
@@ -447,8 +447,9 @@ export default function PlayerProfile() {
                     <span className={`text-xs w-10 text-right ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-400'}`}>
                       {diff > 0 ? `+${diff}` : diff}
                     </span>
+                    <span className="text-gray-600 text-xs">→</span>
                   </div>
-                </div>
+                </Link>
               )
             })}
           </>
