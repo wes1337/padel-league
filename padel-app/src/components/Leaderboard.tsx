@@ -6,11 +6,12 @@ interface Props {
   leagueId: string
   flamePlayerId?: string
   poopPlayerId?: string
+  movements?: Record<string, number>
 }
 
 const medals = ['🥇', '🥈', '🥉']
 
-export default function Leaderboard({ stats, leagueId, flamePlayerId, poopPlayerId }: Props) {
+export default function Leaderboard({ stats, leagueId, flamePlayerId, poopPlayerId, movements }: Props) {
   return (
     <div className="flex flex-col gap-2">
       {stats.map((s, i) => {
@@ -22,6 +23,8 @@ export default function Leaderboard({ stats, leagueId, flamePlayerId, poopPlayer
         const isPoop = poopPlayerId
           ? s.player.id === poopPlayerId
           : s.currentStreak <= -3
+        const movement = movements?.[s.player.id]
+        const isNew = movement === Infinity
         return (
           <Link
             key={s.player.id}
@@ -48,9 +51,16 @@ export default function Leaderboard({ stats, leagueId, flamePlayerId, poopPlayer
               </div>
             </div>
 
-            {/* Point diff */}
-            <div className={`text-sm font-semibold shrink-0 ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-400'}`}>
-              {diff > 0 ? `+${diff}` : diff}
+            {/* Point diff + movement */}
+            <div className="flex flex-col items-end gap-0.5 shrink-0">
+              <div className={`text-sm font-semibold ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                {diff > 0 ? `+${diff}` : diff}
+              </div>
+              {movements && (
+                <div className={`text-xs font-bold ${isNew ? 'text-blue-400' : !movement || movement === 0 ? 'text-gray-600' : movement > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {isNew ? 'NEW' : movement === 0 ? '–' : movement > 0 ? `↑${movement}` : `↓${Math.abs(movement)}`}
+                </div>
+              )}
             </div>
           </Link>
         )

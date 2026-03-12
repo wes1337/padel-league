@@ -74,6 +74,11 @@ export default function SessionPage() {
     loadData()
   }
 
+  async function endSession() {
+    await supabase.from('sessions').update({ ended: true }).eq('id', sessionId!)
+    setSession(prev => prev ? { ...prev, ended: true } : prev)
+  }
+
   async function deleteSession() {
     if (!window.confirm('Delete this session and all its matches? This cannot be undone.')) return
     await supabase.from('matches').delete().eq('session_id', sessionId!)
@@ -319,6 +324,17 @@ export default function SessionPage() {
             {session?.excluded ? 'Re-include' : 'Exclude'}
           </button>
         </div>
+        {isAdmin && !session?.ended && (
+          <button
+            onClick={endSession}
+            className="w-full bg-blue-900/40 hover:bg-blue-900/70 text-blue-400 font-semibold rounded-lg py-2 text-sm transition-colors border border-blue-900"
+          >
+            End Session
+          </button>
+        )}
+        {session?.ended && (
+          <p className="text-gray-500 text-xs text-center">Session ended — standings locked in</p>
+        )}
         {isAdmin && (
           <button
             onClick={deleteSession}

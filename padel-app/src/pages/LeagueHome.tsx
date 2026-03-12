@@ -15,6 +15,7 @@ export default function LeagueHome() {
   const [, setTotalSeasonSessions] = useState(0)
   const [recentTopId, setRecentTopId] = useState<string | undefined>()
   const [recentBottomId, setRecentBottomId] = useState<string | undefined>()
+  const [movements, setMovements] = useState<Record<string, number> | undefined>()
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [showClaimAdmin, setShowClaimAdmin] = useState(false)
@@ -73,6 +74,22 @@ export default function LeagueHome() {
           setTotalSeasonSessions(sessionIdsWithMatches.length)
           const stats = computeStats(playersRes.data as Player[], matches as Match[], sessionIdsWithMatches.length, true)
           setSeasonStats(stats)
+
+          // Position movements based on most recent ended session
+          const mostRecentEnded = sessionsRes.data.find((s: Session) => s.confirmed && s.ended)
+          if (mostRecentEnded && sessionIds.includes(mostRecentEnded.id)) {
+            const prevSessionIds = sessionIds.filter((id: string) => id !== mostRecentEnded.id)
+            const prevMatches = (matches as Match[]).filter(m => prevSessionIds.includes(m.session_id))
+            const prevStats = computeStats(playersRes.data as Player[], prevMatches, prevSessionIds.length, true)
+            const prevRanks: Record<string, number> = {}
+            prevStats.forEach((s, i) => { prevRanks[s.player.id] = i })
+            const mvmt: Record<string, number> = {}
+            stats.forEach((s, i) => {
+              const prev = prevRanks[s.player.id]
+              mvmt[s.player.id] = prev === undefined ? Infinity : prev - i // positive = moved up
+            })
+            setMovements(mvmt)
+          }
 
           // Top/bottom of most recent session for flame/poop
           const recentSessionId = sessionIds[0]
@@ -142,7 +159,7 @@ export default function LeagueHome() {
         {seasonStats.length === 0 ? (
           <p className="text-gray-500 text-sm">No matches played yet this season.</p>
         ) : (
-          <Leaderboard stats={seasonStats} leagueId={leagueId!} flamePlayerId={recentTopId} poopPlayerId={recentBottomId} />
+          <Leaderboard stats={seasonStats} leagueId={leagueId!} flamePlayerId={recentTopId} poopPlayerId={recentBottomId} movements={movements} />
         )}
       </div>
 
