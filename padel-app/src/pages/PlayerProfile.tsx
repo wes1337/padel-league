@@ -84,6 +84,7 @@ export default function PlayerProfile() {
   const [player, setPlayer] = useState<Player | null>(null)
   const [matchDetails, setMatchDetails] = useState<MatchDetail[]>([])
   const [totalSessions, setTotalSessions] = useState(0)
+  const [regularPlayerIds, setRegularPlayerIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { loadData() }, [playerId])
@@ -114,6 +115,20 @@ export default function PlayerProfile() {
 
     const { data: allMatches } = await supabase
       .from('matches').select('*').in('session_id', sessions.map(s => s.id))
+
+    // Compute attendance for every player — sessions attended / total sessions
+    const playerSessionsMap = new Map<string, Set<string>>()
+    for (const m of (allMatches || []) as Match[]) {
+      for (const pid of [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2]) {
+        if (!playerSessionsMap.has(pid)) playerSessionsMap.set(pid, new Set())
+        playerSessionsMap.get(pid)!.add(m.session_id)
+      }
+    }
+    const regularIds = new Set<string>()
+    for (const [pid, sessionSet] of playerSessionsMap) {
+      if (sessionSet.size / sessions.length >= 0.5) regularIds.add(pid)
+    }
+    setRegularPlayerIds(regularIds)
 
     const details: MatchDetail[] = []
     for (const m of (allMatches || []) as Match[]) {
@@ -177,11 +192,14 @@ export default function PlayerProfile() {
     const p = partnerMap.get(m.partnerId)!
     m.won ? p.wins++ : p.losses++
   }
-  const partners = [...partnerMap.values()].sort((a, b) => {
-    const pctA = (a.wins / (a.wins + a.losses)) || 0
-    const pctB = (b.wins / (b.wins + b.losses)) || 0
-    return pctB - pctA
-  })
+  const partners = [...partnerMap.entries()]
+    .filter(([id]) => regularPlayerIds.has(id))
+    .map(([, v]) => v)
+    .sort((a, b) => {
+      const pctA = (a.wins / (a.wins + a.losses)) || 0
+      const pctB = (b.wins / (b.wins + b.losses)) || 0
+      return pctB - pctA
+    })
   const bestPartner = partners[0]
   const worstPartner = partners[partners.length - 1]
 
@@ -194,13 +212,16 @@ export default function PlayerProfile() {
       m.won ? r.wins++ : r.losses++
     }
   }
-  const rivals = [...rivalMap.values()].sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses))
-  const nemesis = [...rivalMap.values()].filter(r => r.wins + r.losses >= 3).sort((a, b) => {
+  const rivals = [...rivalMap.entries()]
+    .filter(([id]) => regularPlayerIds.has(id))
+    .map(([, v]) => v)
+    .sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses))
+  const nemesis = [...rivalMap.entries()].filter(([id]) => regularPlayerIds.has(id)).map(([, v]) => v).filter(r => r.wins + r.losses >= 3).sort((a, b) => {
     const lossRateA = a.losses / (a.wins + a.losses)
     const lossRateB = b.losses / (b.wins + b.losses)
     return lossRateB - lossRateA
   })[0]
-  const favVictim = [...rivalMap.values()].filter(r => r.wins + r.losses >= 3).sort((a, b) => {
+  const favVictim = [...rivalMap.entries()].filter(([id]) => regularPlayerIds.has(id)).map(([, v]) => v).filter(r => r.wins + r.losses >= 3).sort((a, b) => {
     const winRateA = a.wins / (a.wins + a.losses)
     const winRateB = b.wins / (b.wins + b.losses)
     return winRateB - winRateA
