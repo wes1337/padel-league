@@ -13,11 +13,13 @@ export default function Landing() {
   const [nameSearch, setNameSearch] = useState('')
   const [nameResults, setNameResults] = useState<League[]>([])
   const [searching, setSearching] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
 
   async function handleNameSearch(e: React.FormEvent) {
     e.preventDefault()
     if (!nameSearch.trim()) return
     setSearching(true)
+    setHasSearched(true)
     const { data } = await supabase.from('leagues').select('*').ilike('name', `%${nameSearch.trim()}%`).limit(5)
     setNameResults((data as League[]) || [])
     setSearching(false)
@@ -77,7 +79,7 @@ export default function Landing() {
               className="flex-1 bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Search by league name..."
               value={nameSearch}
-              onChange={e => { setNameSearch(e.target.value); setNameResults([]) }}
+              onChange={e => { setNameSearch(e.target.value); setNameResults([]); setHasSearched(false) }}
             />
             <button
               type="submit"
@@ -102,7 +104,7 @@ export default function Landing() {
               ))}
             </div>
           )}
-          {nameResults.length === 0 && nameSearch && !searching && (
+          {nameResults.length === 0 && hasSearched && !searching && (
             <p className="text-gray-500 text-sm text-center">No leagues found.</p>
           )}
         </form>

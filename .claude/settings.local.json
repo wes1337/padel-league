@@ -19,7 +19,8 @@
       "Bash(python -m pip install requests -q 2>&1 | tail -1)",
       "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\" && python import_history.py 2>&1 | cat)",
       "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\" && echo \"0\" | python import_history.py 2>&1 | cat)",
-      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\" && echo \"0\" | python -c \"\nimport sys, io\nsys.stdout = io.TextIOWrapper\\(sys.stdout.buffer, encoding='utf-8'\\)\nexec\\(open\\('import_history.py', encoding='utf-8'\\).read\\(\\)\\)\n\" 2>&1 | cat)"
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\" && echo \"0\" | python -c \"\nimport sys, io\nsys.stdout = io.TextIOWrapper\\(sys.stdout.buffer, encoding='utf-8'\\)\nexec\\(open\\('import_history.py', encoding='utf-8'\\).read\\(\\)\\)\n\" 2>&1 | cat)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npx tsc -b 2>&1 | cat)"
     ]
   }
 }
