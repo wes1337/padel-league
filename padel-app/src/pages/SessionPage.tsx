@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import html2canvas from 'html2canvas'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
+import { isLeagueAdmin } from '../lib/admin'
 import type { Session, Match, Player, PlayerStats } from '../types'
 import Leaderboard from '../components/Leaderboard'
 import PlayerOfNightCard from '../components/PlayerOfNightCard'
@@ -73,6 +74,13 @@ export default function SessionPage() {
     loadData()
   }
 
+  async function deleteSession() {
+    if (!window.confirm('Delete this session and all its matches? This cannot be undone.')) return
+    await supabase.from('matches').delete().eq('session_id', sessionId!)
+    await supabase.from('sessions').delete().eq('id', sessionId!)
+    navigate(`/l/${leagueId}`)
+  }
+
   async function toggleExcluded() {
     if (!session) return
     const next = !session.excluded
@@ -128,6 +136,7 @@ export default function SessionPage() {
 
   if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-400">Loading...</div>
 
+  const isAdmin = isLeagueAdmin(leagueId!)
   const topPlayer = stats[0] ?? null
   const unevenWarning = matches.length > 0 ? getUnevenWarning() : null
 
@@ -136,14 +145,27 @@ export default function SessionPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link to={`/l/${leagueId}`} className="text-gray-400 hover:text-white text-xl">←</Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-bold text-white">{session?.label || session?.date}</h1>
           <p className="text-gray-400 text-sm">{matches.length} match{matches.length !== 1 ? 'es' : ''} played</p>
         </div>
         {session?.excluded && (
-          <span className="ml-auto text-xs bg-yellow-900/40 text-yellow-400 border border-yellow-700 rounded-lg px-2 py-1">Excluded from season</span>
+          <span className="text-xs bg-yellow-900/40 text-yellow-400 border border-yellow-700 rounded-lg px-2 py-1">Excluded</span>
         )}
       </div>
+
+      {/* Session PIN */}
+      {session?.pin && (
+        <div className="bg-gray-900 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Session PIN</p>
+            <p className="text-white text-3xl font-bold tracking-widest">{session.pin}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-gray-500 text-xs max-w-[140px]">Share this PIN so others can join and enter scores</p>
+          </div>
+        </div>
+      )}
 
       {/* Uneven games warning */}
       {unevenWarning && (
@@ -280,21 +302,31 @@ export default function SessionPage() {
       )}
 
       {/* Session Settings */}
-      <div className="bg-gray-900 rounded-2xl p-4 flex items-center justify-between">
-        <div>
-          <p className="text-white text-sm font-medium">Exclude from season rankings</p>
-          <p className="text-gray-500 text-xs">This session won't count towards season standings</p>
+      <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-white text-sm font-medium">Exclude from season rankings</p>
+            <p className="text-gray-500 text-xs">This session won't count towards season standings</p>
+          </div>
+          <button
+            onClick={toggleExcluded}
+            className={`text-sm font-semibold px-4 py-2 rounded-lg transition-colors ${
+              session?.excluded
+                ? 'bg-yellow-700 hover:bg-yellow-600 text-white'
+                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+            }`}
+          >
+            {session?.excluded ? 'Re-include' : 'Exclude'}
+          </button>
         </div>
-        <button
-          onClick={toggleExcluded}
-          className={`text-sm font-semibold px-4 py-2 rounded-lg transition-colors ${
-            session?.excluded
-              ? 'bg-yellow-700 hover:bg-yellow-600 text-white'
-              : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-          }`}
-        >
-          {session?.excluded ? 'Re-include' : 'Exclude'}
-        </button>
+        {isAdmin && (
+          <button
+            onClick={deleteSession}
+            className="w-full bg-red-900/40 hover:bg-red-900/70 text-red-400 font-semibold rounded-lg py-2 text-sm transition-colors border border-red-900"
+          >
+            Delete Session
+          </button>
+        )}
       </div>
 
       {/* Hidden share card */}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
+import { isLeagueAdmin, saveLeagueAdmin } from '../lib/admin'
 import type { League, Session, Match, Player, PlayerStats } from '../types'
 import Leaderboard from '../components/Leaderboard'
 
@@ -13,10 +14,15 @@ export default function LeagueHome() {
   const [seasonStats, setSeasonStats] = useState<PlayerStats[]>([])
   const [, setTotalSeasonSessions] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [copied, setCopied] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [showClaimAdmin, setShowClaimAdmin] = useState(false)
+  const [claimToken, setClaimToken] = useState('')
+  const [claimError, setClaimError] = useState('')
+  const [showAdminCode, setShowAdminCode] = useState(false)
 
   useEffect(() => {
     if (!leagueId) return
+    setIsAdmin(isLeagueAdmin(leagueId))
     loadData()
   }, [leagueId])
 
@@ -67,18 +73,37 @@ export default function LeagueHome() {
   async function createSession() {
     const today = new Date().toISOString().split('T')[0]
     const label = `Session – ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    const pin = String(Math.floor(1000 + Math.random() * 9000))
     const { data, error } = await supabase
       .from('sessions')
-      .insert({ league_id: leagueId, date: today, label })
+      .insert({ league_id: leagueId, date: today, label, pin })
       .select()
       .single()
     if (data && !error) navigate(`/l/${leagueId}/session/${data.id}`)
   }
 
-  function copyLink() {
-    navigator.clipboard.writeText(window.location.href)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  async function claimAdmin() {
+    setClaimError('')
+    const { data } = await supabase.from('leagues').select('admin_token').eq('id', leagueId!).single()
+    if (!data?.admin_token) {
+      setClaimError('No admin code exists for this league.')
+      return
+    }
+    if (data.admin_token !== claimToken.trim()) {
+      setClaimError('Incorrect admin code.')
+      return
+    }
+    saveLeagueAdmin(leagueId!)
+    setIsAdmin(true)
+    setShowClaimAdmin(false)
+    setClaimToken('')
+  }
+
+  async function deleteSession(sId: string) {
+    if (!window.confirm('Delete this session and all its matches? This cannot be undone.')) return
+    await supabase.from('matches').delete().eq('session_id', sId)
+    await supabase.from('sessions').delete().eq('id', sId)
+    setSessions(sessions.filter(s => s.id !== sId))
   }
 
   if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-400">Loading...</div>
@@ -87,17 +112,9 @@ export default function LeagueHome() {
   return (
     <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">{league.name}</h1>
-          <p className="text-gray-400 text-sm">{new Date().getFullYear()} Season</p>
-        </div>
-        <button
-          onClick={copyLink}
-          className="text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition-colors"
-        >
-          {copied ? '✓ Copied!' : '🔗 Share'}
-        </button>
+      <div>
+        <h1 className="text-2xl font-bold text-white">{league.name}</h1>
+        <p className="text-gray-400 text-sm">{new Date().getFullYear()} Season</p>
       </div>
 
       {/* Season Leaderboard */}
@@ -126,21 +143,82 @@ export default function LeagueHome() {
         ) : (
           <div className="flex flex-col gap-2">
             {sessions.map(s => (
-              <Link
-                key={s.id}
-                to={`/l/${leagueId}/session/${s.id}`}
-                className="flex items-center justify-between bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
-              >
-                <span className={`text-sm ${s.excluded ? 'text-gray-500' : 'text-white'}`}>{s.label || s.date}</span>
-                <div className="flex items-center gap-2">
-                  {s.excluded && <span className="text-xs text-yellow-600">excluded</span>}
-                  <span className="text-gray-400 text-sm">→</span>
-                </div>
-              </Link>
+              <div key={s.id} className="flex items-center gap-2">
+                <Link
+                  to={`/l/${leagueId}/session/${s.id}`}
+                  className="flex-1 flex items-center justify-between bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
+                >
+                  <span className={`text-sm ${s.excluded ? 'text-gray-500' : 'text-white'}`}>{s.label || s.date}</span>
+                  <div className="flex items-center gap-2">
+                    {s.excluded && <span className="text-xs text-yellow-600">excluded</span>}
+                    <span className="text-gray-400 text-sm">→</span>
+                  </div>
+                </Link>
+                {isAdmin && (
+                  <button
+                    onClick={() => deleteSession(s.id)}
+                    className="text-gray-600 hover:text-red-400 bg-gray-800 rounded-xl px-3 py-3 transition-colors text-sm"
+                    title="Delete session"
+                  >
+                    🗑
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Admin Section */}
+      {isAdmin ? (
+        <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-white">Admin</h2>
+            <span className="text-xs bg-green-900/50 text-green-400 border border-green-700 rounded-full px-2 py-0.5">Admin</span>
+          </div>
+          <p className="text-gray-400 text-xs">Share the code below to give others admin access to this league.</p>
+          <button
+            onClick={() => setShowAdminCode(!showAdminCode)}
+            className="text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg px-3 py-2 transition-colors text-left"
+          >
+            {showAdminCode ? `Admin code: ${league.admin_token ?? '—'}` : 'Reveal admin code'}
+          </button>
+        </div>
+      ) : (
+        <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
+          {!showClaimAdmin ? (
+            <button
+              onClick={() => setShowClaimAdmin(true)}
+              className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-center"
+            >
+              Admin login
+            </button>
+          ) : (
+            <>
+              <h2 className="font-semibold text-white text-sm">Enter admin code</h2>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 bg-gray-800 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Admin code"
+                  value={claimToken}
+                  onChange={e => { setClaimToken(e.target.value); setClaimError('') }}
+                />
+                <button
+                  onClick={claimAdmin}
+                  disabled={!claimToken.trim()}
+                  className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-semibold px-4 rounded-lg transition-colors"
+                >
+                  Claim
+                </button>
+              </div>
+              {claimError && <p className="text-red-400 text-xs">{claimError}</p>}
+              <button onClick={() => { setShowClaimAdmin(false); setClaimToken(''); setClaimError('') }} className="text-gray-600 hover:text-gray-400 text-xs transition-colors">
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -3,6 +3,7 @@ export type ScoringType = 'americano' | 'traditional'
 export interface League {
   id: string
   name: string
+  admin_token?: string
   created_at: string
 }
 
@@ -19,6 +20,7 @@ export interface Session {
   date: string
   label: string | null
   excluded: boolean
+  pin: string | null
   created_at: string
 }
 

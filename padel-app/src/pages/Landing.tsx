@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { nanoid } from 'nanoid'
+import { saveLeagueAdmin } from '../lib/admin'
 import type { League } from '../types'
 
 export default function Landing() {
@@ -14,6 +15,23 @@ export default function Landing() {
   const [nameResults, setNameResults] = useState<League[]>([])
   const [searching, setSearching] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
+  const [sessionPin, setSessionPin] = useState('')
+  const [pinError, setPinError] = useState('')
+  const [joiningPin, setJoiningPin] = useState(false)
+
+  async function handleJoinPin(e: React.FormEvent) {
+    e.preventDefault()
+    if (!sessionPin.trim()) return
+    setJoiningPin(true)
+    setPinError('')
+    const { data } = await supabase.from('sessions').select('id, league_id').eq('pin', sessionPin.trim()).maybeSingle()
+    if (data) {
+      navigate(`/l/${data.league_id}/session/${data.id}`)
+    } else {
+      setPinError('No active session found with that PIN.')
+      setJoiningPin(false)
+    }
+  }
 
   async function handleNameSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -31,13 +49,15 @@ export default function Landing() {
     setCreating(true)
     setError('')
     const id = nanoid(8)
-    const { error } = await supabase.from('leagues').insert({ id, name: leagueName.trim() })
+    const admin_token = nanoid(8)
+    const { error } = await supabase.from('leagues').insert({ id, name: leagueName.trim(), admin_token })
     if (error) {
       console.error('Supabase error:', error)
       setError(`Error: ${error.message}`)
       setCreating(false)
       return
     }
+    saveLeagueAdmin(id)
     navigate(`/l/${id}`)
   }
 
@@ -51,6 +71,32 @@ export default function Landing() {
       </div>
 
       <div className="w-full max-w-sm flex flex-col gap-6">
+        {/* Join session by PIN */}
+        <form onSubmit={handleJoinPin} className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
+          <h2 className="font-semibold text-white text-lg">Join a Session</h2>
+          <p className="text-gray-500 text-xs -mt-1">Ask the organiser for the 4-digit session PIN</p>
+          <div className="flex gap-2">
+            <input
+              className="w-0 flex-1 bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500 text-2xl font-bold tracking-widest text-center min-w-0"
+              placeholder="0000"
+              value={sessionPin}
+              maxLength={4}
+              inputMode="numeric"
+              onChange={e => { setSessionPin(e.target.value.replace(/\D/g, '')); setPinError('') }}
+            />
+            <button
+              type="submit"
+              disabled={joiningPin || sessionPin.length !== 4}
+              className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold px-5 rounded-lg transition-colors"
+            >
+              {joiningPin ? '...' : 'Join'}
+            </button>
+          </div>
+          {pinError && <p className="text-red-400 text-sm">{pinError}</p>}
+        </form>
+
+        <div className="text-center text-gray-500 text-sm">— or —</div>
+
         {/* Create league */}
         <form onSubmit={handleCreate} className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
           <h2 className="font-semibold text-white text-lg">Create a League</h2>
