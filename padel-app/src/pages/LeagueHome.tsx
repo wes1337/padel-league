@@ -62,8 +62,11 @@ export default function LeagueHome() {
           .in('session_id', sessionIds)
 
         if (matches) {
-          setTotalSeasonSessions(sessionIds.length)
-          const stats = computeStats(playersRes.data as Player[], matches as Match[], sessionIds.length, true)
+          const sessionIdsWithMatches = sessionIds.filter(id =>
+            (matches as Match[]).some(m => m.session_id === id)
+          )
+          setTotalSeasonSessions(sessionIdsWithMatches.length)
+          const stats = computeStats(playersRes.data as Player[], matches as Match[], sessionIdsWithMatches.length, true)
           setSeasonStats(stats)
 
           // Top/bottom of most recent session for flame/poop
