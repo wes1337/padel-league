@@ -264,8 +264,13 @@ export default function PlayerProfile() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link to={`/l/${leagueId}`} className="text-gray-400 hover:text-white text-xl">←</Link>
-        <h1 className="text-2xl font-bold text-white">{player.name}</h1>
-        {lowAttendance && <span className="text-yellow-500 text-lg" title="Low attendance">⚠</span>}
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-white">{player.name}</h1>
+            {lowAttendance && <span className="text-yellow-500 text-lg" title="Low attendance">⚠</span>}
+          </div>
+          <p className="text-gray-400 text-sm">{new Date().getFullYear()} Season · all stats below are season totals</p>
+        </div>
       </div>
 
       {/* Overview grid */}
@@ -290,10 +295,10 @@ export default function PlayerProfile() {
         <StatRow label="Avg points scored" value={String(avgScored)} sub="per game" />
         <StatRow label="Avg points conceded" value={String(avgConceded)} sub="per game" />
         {biggestWin && (
-          <StatRow label="Biggest win" value={`${biggestWin.myScore} – ${biggestWin.oppScore}`} sub={`vs ${biggestWin.opponents}`} />
+          <StatRow label="Biggest win" value={`${biggestWin.myScore} – ${biggestWin.oppScore}`} sub={`vs ${biggestWin.opponents} · ${biggestWin.sessionLabel}`} />
         )}
         {heaviestLoss && (
-          <StatRow label="Heaviest loss" value={`${heaviestLoss.myScore} – ${heaviestLoss.oppScore}`} sub={`vs ${heaviestLoss.opponents}`} />
+          <StatRow label="Heaviest loss" value={`${heaviestLoss.myScore} – ${heaviestLoss.oppScore}`} sub={`vs ${heaviestLoss.opponents} · ${heaviestLoss.sessionLabel}`} />
         )}
       </Section>
 
@@ -357,7 +362,7 @@ export default function PlayerProfile() {
       </Section>
 
       {/* Streaks */}
-      <Section title="Streaks" tooltip="Your current run of wins or losses, and your longest winning streak this season.">
+      <Section title="Streaks" tooltip="Counts individual matches, not sessions. Current streak = how many matches in a row you've won or lost most recently. Longest win streak = the most consecutive match wins you've had this season.">
         {currentStreakType && (
           <StatRow
             label="Current streak"
