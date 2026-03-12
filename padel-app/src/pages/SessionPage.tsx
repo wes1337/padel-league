@@ -7,6 +7,7 @@ import { isLeagueAdmin } from '../lib/admin'
 import type { Session, Match, Player, PlayerStats } from '../types'
 import Leaderboard from '../components/Leaderboard'
 import PlayerOfNightCard from '../components/PlayerOfNightCard'
+import SessionSummary from '../components/SessionSummary'
 
 type EditState = {
   s1: string; s2: string
@@ -180,6 +181,11 @@ export default function SessionPage() {
             <p key={i} className="text-yellow-400 text-xs">{line}</p>
           ))}
         </div>
+      )}
+
+      {/* Session Awards — only shown after session is ended */}
+      {session?.ended && matches.length > 0 && (
+        <SessionSummary matches={matches} players={players} />
       )}
 
       {/* Night Leaderboard */}
