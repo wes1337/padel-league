@@ -1,0 +1,131 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import { nanoid } from 'nanoid'
+import type { League } from '../types'
+
+export default function Landing() {
+  const navigate = useNavigate()
+  const [leagueName, setLeagueName] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [error, setError] = useState('')
+  const recentLeagues: { id: string; name: string }[] = JSON.parse(localStorage.getItem('recent_leagues') || '[]')
+  const [nameSearch, setNameSearch] = useState('')
+  const [nameResults, setNameResults] = useState<League[]>([])
+  const [searching, setSearching] = useState(false)
+
+  async function handleNameSearch(e: React.FormEvent) {
+    e.preventDefault()
+    if (!nameSearch.trim()) return
+    setSearching(true)
+    const { data } = await supabase.from('leagues').select('*').ilike('name', `%${nameSearch.trim()}%`).limit(5)
+    setNameResults((data as League[]) || [])
+    setSearching(false)
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!leagueName.trim()) return
+    setCreating(true)
+    setError('')
+    const id = nanoid(8)
+    const { error } = await supabase.from('leagues').insert({ id, name: leagueName.trim() })
+    if (error) {
+      console.error('Supabase error:', error)
+      setError(`Error: ${error.message}`)
+      setCreating(false)
+      return
+    }
+    navigate(`/l/${id}`)
+  }
+
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 gap-10">
+      <div className="text-center">
+        <div className="text-5xl mb-2">🎾</div>
+        <h1 className="text-3xl font-bold text-white">Padel League</h1>
+        <p className="text-gray-400 mt-1">Track scores. Crown champions.</p>
+      </div>
+
+      <div className="w-full max-w-sm flex flex-col gap-6">
+        {/* Create league */}
+        <form onSubmit={handleCreate} className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
+          <h2 className="font-semibold text-white text-lg">Create a League</h2>
+          <input
+            className="bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
+            placeholder="League name (e.g. Friday Padel)"
+            value={leagueName}
+            onChange={e => setLeagueName(e.target.value)}
+          />
+          <button
+            type="submit"
+            disabled={creating || !leagueName.trim()}
+            className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold rounded-lg py-2.5 transition-colors"
+          >
+            {creating ? 'Creating...' : 'Create League'}
+          </button>
+        </form>
+
+        <div className="text-center text-gray-500 text-sm">— or —</div>
+
+        {/* Find league by name */}
+        <form onSubmit={handleNameSearch} className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
+          <h2 className="font-semibold text-white text-lg">Find a League</h2>
+          <div className="flex gap-2">
+            <input
+              className="flex-1 bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Search by league name..."
+              value={nameSearch}
+              onChange={e => { setNameSearch(e.target.value); setNameResults([]) }}
+            />
+            <button
+              type="submit"
+              disabled={searching || !nameSearch.trim()}
+              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold px-4 rounded-lg transition-colors"
+            >
+              {searching ? '...' : 'Search'}
+            </button>
+          </div>
+          {nameResults.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {nameResults.map(l => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => navigate(`/l/${l.id}`)}
+                  className="flex items-center justify-between bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
+                >
+                  <span className="text-white font-medium">{l.name}</span>
+                  <span className="text-gray-400 text-sm">→</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {nameResults.length === 0 && nameSearch && !searching && (
+            <p className="text-gray-500 text-sm text-center">No leagues found.</p>
+          )}
+        </form>
+
+        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+
+        {/* Recent leagues */}
+        {recentLeagues.length > 0 && (
+          <div className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
+            <h2 className="font-semibold text-white text-lg">Recent Leagues</h2>
+            {recentLeagues.map(l => (
+              <button
+                key={l.id}
+                onClick={() => navigate(`/l/${l.id}`)}
+                className="flex items-center justify-between bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
+              >
+                <span className="text-white font-medium">{l.name}</span>
+                <span className="text-gray-400 text-sm">→</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

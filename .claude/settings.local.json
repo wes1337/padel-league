@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\" && npm create vite@latest . -- --template react-ts 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\" && npm create vite@latest . -- --template react-ts --yes 2>&1 || echo \"exit: $?\")",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\" && npm create vite@latest padel-app -- --template react-ts 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm install && npm install react-router-dom @supabase/supabase-js html2canvas nanoid 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm install -D tailwindcss postcss autoprefixer && npx tailwindcss init -p 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && ./node_modules/.bin/tailwindcss init -p 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm install -D @tailwindcss/vite 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npx tsc --noEmit 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run dev 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run dev)"
+    ]
+  }
+}
