@@ -2,13 +2,13 @@ import type { Match, Player, PlayerStats } from '../types'
 
 /**
  * Compute stats for a list of players given a set of matches.
- * totalSeasonMatches is used to compute attendance % (season mode only).
- * Pass 0 for session mode (attendance not applicable).
+ * totalSessions is the number of sessions in the season (for attendance %).
+ * Pass 0 for session/night mode (attendance not applicable).
  */
 export function computeStats(
   players: Player[],
   matches: Match[],
-  totalSeasonMatches: number = 0,
+  totalSessions: number = 0,
   seasonMode: boolean = false,
 ): PlayerStats[] {
   const statMap = new Map<string, {
@@ -17,10 +17,11 @@ export function computeStats(
     losses: number
     pointDiff: number
     totalPointsScored: number
+    sessionsAttended: Set<string>
   }>()
 
   for (const p of players) {
-    statMap.set(p.id, { matchesPlayed: 0, wins: 0, losses: 0, pointDiff: 0, totalPointsScored: 0 })
+    statMap.set(p.id, { matchesPlayed: 0, wins: 0, losses: 0, pointDiff: 0, totalPointsScored: 0, sessionsAttended: new Set() })
   }
 
   for (const match of matches) {
@@ -36,6 +37,7 @@ export function computeStats(
       s.matchesPlayed++
       s.totalPointsScored += match.team1_score
       s.pointDiff += diff1
+      s.sessionsAttended.add(match.session_id)
       if (team1Won) s.wins++; else s.losses++
     }
     for (const pid of team2) {
@@ -44,6 +46,7 @@ export function computeStats(
       s.matchesPlayed++
       s.totalPointsScored += match.team2_score
       s.pointDiff += diff2
+      s.sessionsAttended.add(match.session_id)
       if (!team1Won) s.wins++; else s.losses++
     }
   }
@@ -54,8 +57,8 @@ export function computeStats(
       const s = statMap.get(player.id)!
       const winRate = s.matchesPlayed > 0 ? s.wins / s.matchesPlayed : 0
       const avgPointDiff = s.matchesPlayed > 0 ? s.pointDiff / s.matchesPlayed : 0
-      const attendancePct = seasonMode && totalSeasonMatches > 0
-        ? s.matchesPlayed / totalSeasonMatches
+      const attendancePct = seasonMode && totalSessions > 0
+        ? s.sessionsAttended.size / totalSessions
         : 1
 
       return {

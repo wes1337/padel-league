@@ -4,17 +4,16 @@ import type { PlayerStats } from '../types'
 interface Props {
   stats: PlayerStats[]
   leagueId: string
-  showAttendance?: boolean
-  totalMatches?: number
 }
 
 const medals = ['🥇', '🥈', '🥉']
 
-export default function Leaderboard({ stats, leagueId, showAttendance = false, totalMatches = 0 }: Props) {
+export default function Leaderboard({ stats, leagueId }: Props) {
   return (
     <div className="flex flex-col gap-2">
       {stats.map((s, i) => {
         const diff = s.pointDiff
+        const winPct = Math.round(s.winRate * 100)
         return (
           <Link
             key={s.player.id}
@@ -35,10 +34,7 @@ export default function Leaderboard({ stats, leagueId, showAttendance = false, t
                 )}
               </div>
               <div className="text-gray-400 text-xs mt-0.5">
-                {s.wins}W – {s.losses}L · {s.matchesPlayed} played
-                {showAttendance && totalMatches > 0 && (
-                  <> · {Math.round(s.attendancePct * 100)}% attendance</>
-                )}
+                {s.wins}W – {s.losses}L · {winPct}% win rate
               </div>
             </div>
 

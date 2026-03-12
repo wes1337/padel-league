@@ -11,7 +11,7 @@ export default function LeagueHome() {
   const [league, setLeague] = useState<League | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [seasonStats, setSeasonStats] = useState<PlayerStats[]>([])
-  const [totalSeasonMatches, setTotalSeasonMatches] = useState(0)
+  const [totalSeasonSessions, setTotalSeasonSessions] = useState(0)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
 
@@ -54,8 +54,8 @@ export default function LeagueHome() {
           .in('session_id', sessionIds)
 
         if (matches) {
-          setTotalSeasonMatches(matches.length)
-          const stats = computeStats(playersRes.data as Player[], matches as Match[], matches.length, true)
+          setTotalSeasonSessions(sessionIds.length)
+          const stats = computeStats(playersRes.data as Player[], matches as Match[], sessionIds.length, true)
           setSeasonStats(stats)
         }
       }
@@ -106,7 +106,7 @@ export default function LeagueHome() {
         {seasonStats.length === 0 ? (
           <p className="text-gray-500 text-sm">No matches played yet this season.</p>
         ) : (
-          <Leaderboard stats={seasonStats} leagueId={leagueId!} showAttendance totalMatches={totalSeasonMatches} />
+          <Leaderboard stats={seasonStats} leagueId={leagueId!} />
         )}
       </div>
 

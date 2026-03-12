@@ -10,7 +10,16 @@
       "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm install -D @tailwindcss/vite 2>&1)",
       "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npx tsc --noEmit 2>&1)",
       "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run dev 2>&1)",
-      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run dev)"
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run dev)",
+      "Bash(python --version 2>/dev/null && python -c \"import openpyxl; print\\('openpyxl ok'\\)\" 2>/dev/null || echo \"no python/openpyxl\")",
+      "Bash(pip install:*)",
+      "Bash(python -m pip install openpyxl -q)",
+      "Bash(python - <<'EOF'\nimport openpyxl\nwb = openpyxl.load_workbook\\(r'c:\\\\Users\\\\wesl3\\\\Desktop\\\\Padel League 2026_Updated.xlsx'\\)\nprint\\(\"Sheets:\", wb.sheetnames\\)\nfor name in wb.sheetnames:\n    ws = wb[name]\n    print\\(f\"\\\\n--- {name} \\({ws.max_row} rows x {ws.max_column} cols\\) ---\"\\)\n    for row in ws.iter_rows\\(min_row=1, max_row=5, values_only=True\\):\n        print\\(row\\)\nEOF)",
+      "Bash(python -c \"\nimport openpyxl, sys\nsys.stdout.reconfigure\\(encoding='utf-8'\\)\nwb = openpyxl.load_workbook\\(r'c:\\\\Users\\\\wesl3\\\\Desktop\\\\Padel League 2026_Updated.xlsx'\\)\nfor name in wb.sheetnames:\n    ws = wb[name]\n    print\\(f'\\\\n--- {name} \\({ws.max_row}r x {ws.max_column}c\\) ---'\\)\n    for row in ws.iter_rows\\(min_row=1, max_row=6, values_only=True\\):\n        print\\(row\\)\n\" 2>&1 | cat)",
+      "Bash(python -m pip install requests -q 2>&1 | tail -1)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\" && python import_history.py 2>&1 | cat)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\" && echo \"0\" | python import_history.py 2>&1 | cat)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\" && echo \"0\" | python -c \"\nimport sys, io\nsys.stdout = io.TextIOWrapper\\(sys.stdout.buffer, encoding='utf-8'\\)\nexec\\(open\\('import_history.py', encoding='utf-8'\\).read\\(\\)\\)\n\" 2>&1 | cat)"
     ]
   }
 }
