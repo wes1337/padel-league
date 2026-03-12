@@ -52,7 +52,7 @@ export default function LeagueHome() {
     // Load all matches for season
     if (sessionsRes.data && sessionsRes.data.length > 0 && playersRes.data) {
       const sessionIds = sessionsRes.data
-        .filter((s: Session) => s.date >= yearStart && s.date <= yearEnd && !s.excluded)
+        .filter((s: Session) => s.date >= yearStart && s.date <= yearEnd && !s.excluded && s.confirmed)
         .map((s: Session) => s.id)
 
       if (sessionIds.length > 0) {
@@ -152,19 +152,20 @@ export default function LeagueHome() {
       {/* Past Sessions */}
       <div className="bg-gray-900 rounded-2xl p-4">
         <h2 className="font-semibold text-white mb-3">Sessions</h2>
-        {sessions.length === 0 ? (
+        {sessions.filter(s => isAdmin || s.confirmed).length === 0 ? (
           <p className="text-gray-500 text-sm">No sessions yet.</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {sessions.map(s => (
+            {sessions.filter(s => isAdmin || s.confirmed).map(s => (
               <div key={s.id} className="flex items-center gap-2">
                 <Link
                   to={`/l/${leagueId}/session/${s.id}`}
                   className="flex-1 flex items-center justify-between bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
                 >
-                  <span className={`text-sm ${s.excluded ? 'text-gray-500' : 'text-white'}`}>{s.label || s.date}</span>
+                  <span className={`text-sm ${s.excluded ? 'text-gray-500' : !s.confirmed ? 'text-gray-500' : 'text-white'}`}>{s.label || s.date}</span>
                   <div className="flex items-center gap-2">
                     {s.excluded && <span className="text-xs text-yellow-600">excluded</span>}
+                    {!s.confirmed && <span className="text-xs text-gray-600">unconfirmed</span>}
                     <span className="text-gray-400 text-sm">→</span>
                   </div>
                 </Link>

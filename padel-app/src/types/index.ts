@@ -21,6 +21,7 @@ export interface Session {
   label: string | null
   excluded: boolean
   pin: string | null
+  confirmed: boolean
   created_at: string
 }
 

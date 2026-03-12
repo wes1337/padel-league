@@ -100,7 +100,7 @@ export default function PlayerProfile() {
       supabase.from('players').select('*').eq('id', playerId).single(),
       supabase.from('players').select('*').eq('league_id', leagueId),
       supabase.from('sessions').select('*').eq('league_id', leagueId)
-        .eq('excluded', false).gte('date', yearStart).lte('date', yearEnd),
+        .eq('excluded', false).eq('confirmed', true).gte('date', yearStart).lte('date', yearEnd),
     ])
 
     if (playerRes.data) setPlayer(playerRes.data)

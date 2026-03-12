@@ -26,6 +26,7 @@ export default function Landing() {
     setPinError('')
     const { data } = await supabase.from('sessions').select('id, league_id').eq('pin', sessionPin.trim()).maybeSingle()
     if (data) {
+      await supabase.from('sessions').update({ confirmed: true }).eq('id', data.id)
       navigate(`/l/${data.league_id}/session/${data.id}`)
     } else {
       setPinError('No active session found with that PIN.')
