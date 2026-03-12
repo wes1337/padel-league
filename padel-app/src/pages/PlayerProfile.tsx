@@ -18,7 +18,7 @@ export default function PlayerProfile() {
   const { leagueId, playerId } = useParams<{ leagueId: string; playerId: string }>()
   const [player, setPlayer] = useState<Player | null>(null)
   const [matchDetails, setMatchDetails] = useState<MatchDetail[]>([])
-  const [allPlayers, setAllPlayers] = useState<Player[]>([])
+
   const [totalSeasonMatches, setTotalSeasonMatches] = useState(0)
   const [loading, setLoading] = useState(true)
 
@@ -42,7 +42,7 @@ export default function PlayerProfile() {
     if (playerRes.data) setPlayer(playerRes.data)
     const pMap = new Map<string, Player>()
     for (const p of (playersRes.data || [])) pMap.set(p.id, p as Player)
-    setAllPlayers(playersRes.data as Player[] || [])
+
 
     const sessions = (sessionsRes.data || []) as Session[]
     if (sessions.length === 0) { setLoading(false); return }
