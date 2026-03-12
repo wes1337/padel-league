@@ -357,8 +357,8 @@ export default function PlayerProfile() {
         )}
       </Section>
 
-      {/* Partner Chemistry */}
-      <Section title="Partner Chemistry" tooltip="Your win rate with each partner. Best partner highlighted in green, worst in red (minimum 3 games together).">
+      {/* Partner Chemistry — season only */}
+      {!sessionId && <Section title="Partner Chemistry" tooltip="Your win rate with each partner. Best partner highlighted in green, worst in red (minimum 3 games together).">
         {partners.length === 0 ? <p className="text-gray-500 text-sm">No data yet.</p> : (
           <>
             {bestPartner && bestPartner !== worstPartner && (
@@ -383,10 +383,10 @@ export default function PlayerProfile() {
             ))}
           </>
         )}
-      </Section>
+      </Section>}
 
-      {/* Rivals */}
-      <Section title="Head to Head" tooltip="Your win/loss record against each opponent. Nemesis = player you lose to most. Favourite victim = player you beat most. Minimum 3 games to qualify.">
+      {/* Rivals — season only */}
+      {!sessionId && <Section title="Head to Head" tooltip="Your win/loss record against each opponent. Nemesis = player you lose to most. Favourite victim = player you beat most. Minimum 3 games to qualify.">
         {rivals.length === 0 ? <p className="text-gray-500 text-sm">No data yet.</p> : (
           <>
             {(nemesis || favVictim) && (
@@ -414,7 +414,7 @@ export default function PlayerProfile() {
             ))}
           </>
         )}
-      </Section>
+      </Section>}
 
       {/* Streaks — season only */}
       {!sessionId && (
