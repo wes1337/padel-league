@@ -20,7 +20,16 @@
       "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\" && python import_history.py 2>&1 | cat)",
       "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\" && echo \"0\" | python import_history.py 2>&1 | cat)",
       "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\" && echo \"0\" | python -c \"\nimport sys, io\nsys.stdout = io.TextIOWrapper\\(sys.stdout.buffer, encoding='utf-8'\\)\nexec\\(open\\('import_history.py', encoding='utf-8'\\).read\\(\\)\\)\n\" 2>&1 | cat)",
-      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npx tsc -b 2>&1 | cat)"
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npx tsc -b 2>&1 | cat)",
+      "Bash(python -c \"\nimport base64, json\npayload = 'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5aGNzdGliaHJta3NpcGNndWpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODgxNTYsImV4cCI6MjA4ODg2NDE1Nn0'\npadded = payload + '=' * \\(4 - len\\(payload\\) % 4\\)\nprint\\(json.loads\\(base64.b64decode\\(padded\\)\\)\\)\n\")",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run build 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run build 2>&1 | tail -10)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run build 2>&1 | tail -20)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run build 2>&1 | tail -5)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run build 2>&1 | tail -8)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm install recharts 2>&1 | tail -5)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run build 2>&1 | tail -12)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run build 2>&1 | grep -E \"error|✓ built\")"
     ]
   }
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '../lib/supabase'
+import { computeStats } from '../lib/stats'
 import type { Player, Match, Session } from '../types'
 
 interface MatchDetail extends Match {
@@ -86,6 +88,9 @@ export default function PlayerProfile() {
   const [totalSessions, setTotalSessions] = useState(0)
   const [regularPlayerIds, setRegularPlayerIds] = useState<Set<string>>(new Set())
   const [kingStats, setKingStats] = useState<{ sessionsTopped: number; sessionsAttended: number } | null>(null)
+  const [rankHistory, setRankHistory] = useState<Record<string, number | string>[]>([])
+  const [allPlayerNames, setAllPlayerNames] = useState<{ id: string; name: string }[]>([])
+  const [highlightedIds, setHighlightedIds] = useState<Map<string, string>>(new Map())
   const [sessionRank, setSessionRank] = useState<{ rank: number; total: number } | null>(null)
   const [sessionAvg, setSessionAvg] = useState<{ scored: number; conceded: number } | null>(null)
   const [loading, setLoading] = useState(true)
@@ -171,6 +176,41 @@ export default function PlayerProfile() {
     details.sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime())
     setMatchDetails(details)
 
+    // Season rank trendline (season mode only)
+    if (!sessionId && allMatches) {
+      const chronoSessions = [...sessions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      const sessionsWithMatches = chronoSessions.filter(s => (allMatches as Match[]).some(m => m.session_id === s.id))
+      const allPlayers = playersRes.data as Player[]
+
+      const history: Record<string, number | string>[] = []
+      for (let i = 0; i < sessionsWithMatches.length; i++) {
+        const cumulativeSessionIds = new Set(sessionsWithMatches.slice(0, i + 1).map(s => s.id))
+        const cumulativeMatches = (allMatches as Match[]).filter(m => cumulativeSessionIds.has(m.session_id))
+        const stats = computeStats(allPlayers, cumulativeMatches, i + 1, true)
+        const point: Record<string, number | string> = {
+          label: sessionsWithMatches[i].label?.replace('Session – ', '') ?? sessionsWithMatches[i].date
+        }
+        stats.forEach((s, idx) => { point[s.player.id] = idx + 1 })
+        history.push(point)
+      }
+      setRankHistory(history)
+
+      const playerIds = new Set<string>()
+      history.forEach(h => Object.keys(h).filter(k => k !== 'label').forEach(k => playerIds.add(k)))
+      // Count sessions each player appeared in and apply 30% threshold
+      const playerSessionCounts = new Map<string, number>()
+      history.forEach(h => {
+        Object.keys(h).filter(k => k !== 'label').forEach(k => {
+          playerSessionCounts.set(k, (playerSessionCounts.get(k) ?? 0) + 1)
+        })
+      })
+      const totalSess = sessionsWithMatches.length
+      const names = allPlayers
+        .filter(p => playerIds.has(p.id) && (playerSessionCounts.get(p.id) ?? 0) / totalSess >= 0.3)
+      setAllPlayerNames(names)
+      setHighlightedIds(new Map([[playerId!, '#22c55e']]))
+    }
+
     // Session rank + averages
     if (sessionId && allMatches) {
       const sMap = new Map<string, { wins: number; pointDiff: number; scored: number; conceded: number }>()
@@ -201,6 +241,7 @@ export default function PlayerProfile() {
         scored: Math.round(allScored.reduce((a, b) => a + b, 0) / allScored.length),
         conceded: Math.round(allConceded.reduce((a, b) => a + b, 0) / allConceded.length),
       })
+
     }
 
     // Compute King of the Court
@@ -257,6 +298,7 @@ export default function PlayerProfile() {
   const avgConceded = totalPlayed > 0 ? (totalConceded / totalPlayed).toFixed(1) : '–'
   const biggestWin = matchDetails.filter(m => m.won).sort((a, b) => (b.myScore - b.oppScore) - (a.myScore - a.oppScore))[0]
   const heaviestLoss = matchDetails.filter(m => !m.won).sort((a, b) => (b.oppScore - b.myScore) - (a.oppScore - a.myScore))[0]
+
 
   // ── Partner chemistry ───────────────────────────────────────────────────────
   const partnerMap = new Map<string, { name: string; wins: number; losses: number }>()
@@ -381,6 +423,111 @@ export default function PlayerProfile() {
           </div>
         </div>
       )}
+
+      {/* Season rank trendline */}
+      {!sessionId && rankHistory.length > 1 && (() => {
+        const PALETTE = ['#3b82f6', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4', '#f97316']
+        function togglePlayer(id: string) {
+          if (id === playerId) return // current player always on
+          setHighlightedIds(prev => {
+            const next = new Map(prev)
+            if (next.has(id)) {
+              next.delete(id)
+            } else {
+              const usedColors = new Set([...next.values()])
+              const color = PALETTE.find(c => !usedColors.has(c)) ?? PALETTE[0]
+              next.set(id, color)
+            }
+            return next
+          })
+        }
+        return (
+          <div className="bg-gray-900 rounded-2xl p-4">
+            <h2 className="font-semibold text-white mb-1">Season Rank Trend</h2>
+            <p className="text-gray-500 text-xs mb-3">Tap a line to compare — lower is better</p>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={rankHistory} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+                <XAxis dataKey="label" tick={false} tickLine={false} axisLine={false} />
+                <YAxis reversed domain={[1, 'dataMax']} tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: '#9ca3af' }}
+                  formatter={(val, key) => {
+                    const name = allPlayerNames.find(p => p.id === String(key))?.name ?? String(key)
+                    return [`#${val}`, name]
+                  }}
+                />
+                {allPlayerNames.map(p => {
+                  const color = highlightedIds.get(p.id)
+                  const isHighlighted = !!color
+                  return (
+                    <Line
+                      key={p.id}
+                      dataKey={p.id}
+                      stroke={color ?? '#374151'}
+                      strokeWidth={isHighlighted ? 2.5 : 1.5}
+                      dot={isHighlighted ? { r: 3, fill: color, strokeWidth: 0 } : false}
+                      connectNulls
+                    />
+                  )
+                })}
+              </LineChart>
+            </ResponsiveContainer>
+            {/* Player chips — tap to compare */}
+            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-800">
+              {allPlayerNames.filter(p => p.id !== playerId).map(p => {
+                const color = highlightedIds.get(p.id)
+                const active = !!color
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => togglePlayer(p.id)}
+                    className={`flex items-center gap-1.5 text-xs rounded-full px-3 py-1 transition-colors ${active ? 'bg-gray-700 text-white' : 'bg-gray-800 text-gray-500'}`}
+                  >
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: active ? color : '#4b5563' }} />
+                    {p.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Session momentum chart */}
+      {sessionId && matchDetails.length > 1 && (() => {
+        const chrono = [...matchDetails].reverse()
+        let running = 0
+        const momentumData = chrono.map((m, i) => {
+          running += m.myScore - m.oppScore
+          return { game: `G${i + 1}`, diff: running, won: m.won }
+        })
+        return (
+          <div className="bg-gray-900 rounded-2xl p-4">
+            <h2 className="font-semibold text-white mb-1">Session Momentum</h2>
+            <p className="text-gray-500 text-xs mb-3">Cumulative point diff after each game</p>
+            <ResponsiveContainer width="100%" height={160}>
+              <LineChart data={momentumData} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+                <XAxis dataKey="game" tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: '#9ca3af' }}
+                  formatter={(val) => [`${Number(val) > 0 ? '+' : ''}${val}`, 'Pt diff']}
+                />
+                <Line dataKey="diff" stroke="#22c55e" strokeWidth={2.5}
+                  dot={(props) => {
+                    const { cx, cy, payload } = props
+                    return <circle key={props.key} cx={cx} cy={cy} r={4} fill={payload.won ? '#22c55e' : '#ef4444'} strokeWidth={0} />
+                  }}
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
+            <p className="text-gray-600 text-xs mt-2">● green = win · ● red = loss</p>
+          </div>
+        )
+      })()}
 
       {/* Scoring */}
       <Section title="Scoring" tooltip="How many points you score and concede on average, plus your most decisive results.">

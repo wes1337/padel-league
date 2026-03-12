@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
 import { isLeagueAdmin, isSessionCreator } from '../lib/admin'
@@ -22,6 +23,7 @@ export default function SessionPage() {
   const [loading, setLoading] = useState(true)
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
   const [editState, setEditState] = useState<EditState | null>(null)
+  const [rankHighlightedIds, setRankHighlightedIds] = useState<Map<string, string>>(new Map())
 
   useEffect(() => { loadData() }, [sessionId])
 
@@ -165,21 +167,188 @@ export default function SessionPage() {
         <SessionSummary matches={matches} players={players} stats={stats} sessionLabel={session?.label || session?.date || ''} />
       )}
 
-      {/* Night Leaderboard */}
-      {stats.length > 0 && (
-        <div className="bg-gray-900 rounded-2xl p-4">
-          <h2 className="font-semibold text-white mb-3">Session Standings</h2>
-          <Leaderboard stats={stats} leagueId={leagueId!} sessionId={sessionId} />
-        </div>
-      )}
+      {/* Session Standings + Charts */}
+      {stats.length > 0 && (() => {
+        const PALETTE = ['#22c55e', '#3b82f6', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4', '#f97316']
+        const pMap = new Map(players.map(p => [p.id, p.name]))
+
+        // Group matches into rounds: a new round starts when a player would appear twice
+        const rounds: Match[][] = []
+        for (const m of matches) {
+          const mPlayers = [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2]
+          const last = rounds[rounds.length - 1]
+          const lastPlayers = last ? last.flatMap(r => [r.team1_p1, r.team1_p2, r.team2_p1, r.team2_p2]) : []
+          if (!last || mPlayers.some(p => lastPlayers.includes(p))) {
+            rounds.push([m])
+          } else {
+            last.push(m)
+          }
+        }
+
+        // Build per-player running totals after each round
+        const netWins = new Map<string, number>()
+        const netPoints = new Map<string, number>()
+        const chartPlayerIds = new Set<string>()
+        matches.forEach(m => [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2].forEach(id => chartPlayerIds.add(id)))
+
+        // Start point — everyone at 0 / rank 1
+        const g0: Record<string, number | string> = { game: 'Start' }
+        chartPlayerIds.forEach(id => { g0[id] = 0; netWins.set(id, 0); netPoints.set(id, 0) })
+        const gamesData: Record<string, number | string>[] = [g0]
+        const pointsData: Record<string, number | string>[] = [{ ...g0 }]
+        const rankData: Record<string, number | string>[] = [(() => {
+          const r: Record<string, number | string> = { game: 'Start' }
+          chartPlayerIds.forEach(id => { r[id] = 1 })
+          return r
+        })()]
+
+        rounds.forEach((round, i) => {
+          for (const m of round) {
+            const t1Won = m.team1_score > m.team2_score
+            const diff = m.team1_score - m.team2_score
+            for (const pid of [m.team1_p1, m.team1_p2]) {
+              netWins.set(pid, (netWins.get(pid) ?? 0) + (t1Won ? 1 : -1))
+              netPoints.set(pid, (netPoints.get(pid) ?? 0) + diff)
+            }
+            for (const pid of [m.team2_p1, m.team2_p2]) {
+              netWins.set(pid, (netWins.get(pid) ?? 0) + (t1Won ? -1 : 1))
+              netPoints.set(pid, (netPoints.get(pid) ?? 0) - diff)
+            }
+          }
+          const label = `R${i + 1}`
+          const gp: Record<string, number | string> = { game: label }
+          const pp: Record<string, number | string> = { game: label }
+          chartPlayerIds.forEach(id => { gp[id] = netWins.get(id)!; pp[id] = netPoints.get(id)! })
+          gamesData.push(gp)
+          pointsData.push(pp)
+
+          // Dense rank after this round (wins primary, point diff secondary)
+          const sorted = [...chartPlayerIds].sort((a, b) =>
+            (netWins.get(b) ?? 0) - (netWins.get(a) ?? 0) ||
+            (netPoints.get(b) ?? 0) - (netPoints.get(a) ?? 0)
+          )
+          const rp: Record<string, number | string> = { game: label }
+          let rank = 1
+          sorted.forEach((id, idx) => {
+            if (idx > 0) {
+              const prev = sorted[idx - 1]
+              if (netWins.get(id) !== netWins.get(prev) || netPoints.get(id) !== netPoints.get(prev)) rank = idx + 1
+            }
+            rp[id] = rank
+          })
+          rankData.push(rp)
+        })
+
+        const chartPlayers = [...chartPlayerIds].map((id, i) => ({ id, name: pMap.get(id) ?? id, color: PALETTE[i % PALETTE.length] }))
+
+        if (rankHighlightedIds.size === 0 && chartPlayers.length > 0) {
+          setRankHighlightedIds(new Map(chartPlayers.map(p => [p.id, p.color])))
+        }
+
+        function toggleRank(id: string) {
+          setRankHighlightedIds(prev => {
+            const next = new Map(prev)
+            if (next.has(id)) { next.delete(id) } else {
+              const usedColors = new Set([...next.values()])
+              const color = PALETTE.find(c => !usedColors.has(c)) ?? PALETTE[0]
+              next.set(id, color)
+            }
+            return next
+          })
+        }
+
+        const tooltipStyle = { contentStyle: { background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12 }, labelStyle: { color: '#9ca3af' } }
+        const fmtVal = (val: unknown, key: unknown) => [`${Number(val) > 0 ? '+' : ''}${val}`, pMap.get(String(key)) ?? String(key)] as [string, string]
+
+        return (
+          <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
+            <div>
+              <h2 className="font-semibold text-white mb-3">Session Standings</h2>
+              <Leaderboard stats={stats} leagueId={leagueId!} sessionId={sessionId} />
+            </div>
+            {rounds.length > 1 && (
+              <div className="pt-3 border-t border-gray-800 flex flex-col gap-5">
+                {/* Rank chart */}
+                <div>
+                  <p className="text-gray-400 text-sm font-medium mb-3">Rank</p>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <LineChart data={rankData} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+                      <XAxis dataKey="game" tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={false} />
+                      <YAxis reversed domain={[1, 'dataMax']} tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <Tooltip {...tooltipStyle} formatter={(val, key) => [`#${val}`, pMap.get(String(key)) ?? String(key)] as [string, string]} />
+                      {chartPlayers.map(p => {
+                        const color = rankHighlightedIds.get(p.id)
+                        const active = !!color
+                        return <Line key={p.id} dataKey={p.id} stroke={color ?? '#374151'} strokeWidth={active ? 2.5 : 1.5} dot={active ? { r: 3, fill: color, strokeWidth: 0 } : false} connectNulls />
+                      })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Games chart */}
+                <div>
+                  <p className="text-gray-400 text-sm font-medium mb-3">Games</p>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <LineChart data={gamesData} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+                      <XAxis dataKey="game" tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#4b5563' }} allowDecimals={false} />
+                      <Tooltip {...tooltipStyle} formatter={fmtVal} />
+                      {chartPlayers.map(p => {
+                        const color = rankHighlightedIds.get(p.id)
+                        const active = !!color
+                        return <Line key={p.id} dataKey={p.id} stroke={color ?? '#374151'} strokeWidth={active ? 2.5 : 1.5} dot={active ? { r: 3, fill: color, strokeWidth: 0 } : false} connectNulls />
+                      })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Points chart */}
+                <div>
+                  <p className="text-gray-400 text-sm font-medium mb-3">Points</p>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <LineChart data={pointsData} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+                      <XAxis dataKey="game" tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#4b5563' }} allowDecimals={false} />
+                      <Tooltip {...tooltipStyle} formatter={fmtVal} />
+                      {chartPlayers.map(p => {
+                        const color = rankHighlightedIds.get(p.id)
+                        const active = !!color
+                        return <Line key={p.id} dataKey={p.id} stroke={color ?? '#374151'} strokeWidth={active ? 2.5 : 1.5} dot={active ? { r: 3, fill: color, strokeWidth: 0 } : false} connectNulls />
+                      })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Shared player toggles */}
+                <div className="flex flex-wrap gap-2">
+                  {chartPlayers.map(p => {
+                    const color = rankHighlightedIds.get(p.id)
+                    const active = !!color
+                    return (
+                      <button key={p.id} onClick={() => toggleRank(p.id)}
+                        className={`flex items-center gap-1.5 text-xs rounded-full px-3 py-1 transition-colors ${active ? 'bg-gray-700 text-white' : 'bg-gray-800 text-gray-500'}`}
+                      >
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: active ? color : '#4b5563' }} />
+                        {p.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Add Match */}
-      <button
-        onClick={() => navigate(`/l/${leagueId}/session/${sessionId}/add-match`)}
-        className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl py-3 text-lg transition-colors"
-      >
-        + Add Match
-      </button>
+      {!session?.ended && (
+        <button
+          onClick={() => navigate(`/l/${leagueId}/session/${sessionId}/add-match`)}
+          className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl py-3 text-lg transition-colors"
+        >
+          + Add Match
+        </button>
+      )}
 
 
       {/* Match List */}
