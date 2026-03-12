@@ -48,6 +48,16 @@ export default function Landing() {
     if (!leagueName.trim()) return
     setCreating(true)
     setError('')
+    const { data: existing } = await supabase
+      .from('leagues')
+      .select('id')
+      .ilike('name', leagueName.trim())
+      .maybeSingle()
+    if (existing) {
+      setError('A league with that name already exists.')
+      setCreating(false)
+      return
+    }
     const id = nanoid(8)
     const admin_token = nanoid(8)
     const { error } = await supabase.from('leagues').insert({ id, name: leagueName.trim(), admin_token })

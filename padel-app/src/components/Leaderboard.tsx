@@ -4,16 +4,24 @@ import type { PlayerStats } from '../types'
 interface Props {
   stats: PlayerStats[]
   leagueId: string
+  flamePlayerId?: string
+  poopPlayerId?: string
 }
 
 const medals = ['🥇', '🥈', '🥉']
 
-export default function Leaderboard({ stats, leagueId }: Props) {
+export default function Leaderboard({ stats, leagueId, flamePlayerId, poopPlayerId }: Props) {
   return (
     <div className="flex flex-col gap-2">
       {stats.map((s, i) => {
         const diff = s.pointDiff
         const winPct = Math.round(s.winRate * 100)
+        const isFlame = flamePlayerId
+          ? s.player.id === flamePlayerId
+          : s.currentStreak >= 3
+        const isPoop = poopPlayerId
+          ? s.player.id === poopPlayerId
+          : s.currentStreak <= -3
         return (
           <Link
             key={s.player.id}
@@ -29,6 +37,8 @@ export default function Leaderboard({ stats, leagueId }: Props) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-white font-semibold truncate">{s.player.name}</span>
+                {isFlame && <span className="shrink-0">🔥</span>}
+                {isPoop && <span className="shrink-0">💩</span>}
                 {s.lowAttendance && (
                   <span className="text-yellow-500 text-sm shrink-0" title={`Low attendance (${Math.round(s.attendancePct * 100)}%)`}>⚠</span>
                 )}

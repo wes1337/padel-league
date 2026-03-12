@@ -13,6 +13,8 @@ export default function LeagueHome() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [seasonStats, setSeasonStats] = useState<PlayerStats[]>([])
   const [, setTotalSeasonSessions] = useState(0)
+  const [recentTopId, setRecentTopId] = useState<string | undefined>()
+  const [recentBottomId, setRecentBottomId] = useState<string | undefined>()
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [showClaimAdmin, setShowClaimAdmin] = useState(false)
@@ -63,6 +65,15 @@ export default function LeagueHome() {
           setTotalSeasonSessions(sessionIds.length)
           const stats = computeStats(playersRes.data as Player[], matches as Match[], sessionIds.length, true)
           setSeasonStats(stats)
+
+          // Top/bottom of most recent session for flame/poop
+          const recentSessionId = sessionIds[0]
+          const recentMatches = (matches as Match[]).filter(m => m.session_id === recentSessionId)
+          if (recentMatches.length > 0) {
+            const recentStats = computeStats(playersRes.data as Player[], recentMatches)
+            setRecentTopId(recentStats[0]?.player.id)
+            setRecentBottomId(recentStats[recentStats.length - 1]?.player.id)
+          }
         }
       }
     }
@@ -123,7 +134,7 @@ export default function LeagueHome() {
         {seasonStats.length === 0 ? (
           <p className="text-gray-500 text-sm">No matches played yet this season.</p>
         ) : (
-          <Leaderboard stats={seasonStats} leagueId={leagueId!} />
+          <Leaderboard stats={seasonStats} leagueId={leagueId!} flamePlayerId={recentTopId} poopPlayerId={recentBottomId} />
         )}
       </div>
 

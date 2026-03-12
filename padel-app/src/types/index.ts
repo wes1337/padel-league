@@ -49,4 +49,5 @@ export interface PlayerStats {
   attendancePct: number
   lowAttendance: boolean
   rankScore: number
+  currentStreak: number
 }

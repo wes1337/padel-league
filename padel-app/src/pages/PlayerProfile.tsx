@@ -55,11 +55,11 @@ function Section({ title, tooltip, children, defaultOpen = true }: {
 // ── Small stat row ────────────────────────────────────────────────────────────
 function StatRow({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
-      <span className="text-gray-400 text-sm">{label}</span>
+    <div className="flex items-start justify-between py-2 border-b border-gray-800 last:border-0 gap-4">
+      <span className="text-gray-400 text-sm shrink-0">{label}</span>
       <div className="text-right">
         <span className="text-white font-semibold text-sm">{value}</span>
-        {sub && <span className="text-gray-500 text-xs ml-1">{sub}</span>}
+        {sub && <p className="text-gray-500 text-xs mt-0.5">{sub}</p>}
       </div>
     </div>
   )
@@ -85,6 +85,7 @@ export default function PlayerProfile() {
   const [matchDetails, setMatchDetails] = useState<MatchDetail[]>([])
   const [totalSessions, setTotalSessions] = useState(0)
   const [regularPlayerIds, setRegularPlayerIds] = useState<Set<string>>(new Set())
+  const [kingStats, setKingStats] = useState<{ sessionsTopped: number; sessionsAttended: number } | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { loadData() }, [playerId])
@@ -126,7 +127,7 @@ export default function PlayerProfile() {
     }
     const regularIds = new Set<string>()
     for (const [pid, sessionSet] of playerSessionsMap) {
-      if (sessionSet.size / sessions.length >= 0.5) regularIds.add(pid)
+      if (sessionSet.size / sessions.length > 0.5) regularIds.add(pid)
     }
     setRegularPlayerIds(regularIds)
 
@@ -163,6 +164,38 @@ export default function PlayerProfile() {
 
     details.sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime())
     setMatchDetails(details)
+
+    // Compute King of the Court
+    const sessionsAttendedSet = new Set(details.map(d => d.session_id))
+    let sessionsTopped = 0
+    for (const session of sessions) {
+      const sessionMatches = (allMatches as Match[]).filter(m => m.session_id === session.id)
+      if (sessionMatches.length === 0 || !sessionsAttendedSet.has(session.id)) continue
+      const sessionStatMap = new Map<string, { wins: number; pointDiff: number }>()
+      for (const m of sessionMatches) {
+        for (const pid of [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2]) {
+          if (!sessionStatMap.has(pid)) sessionStatMap.set(pid, { wins: 0, pointDiff: 0 })
+        }
+        const team1Won = m.team1_score > m.team2_score
+        for (const pid of [m.team1_p1, m.team1_p2]) {
+          const s = sessionStatMap.get(pid)!
+          if (team1Won) s.wins++
+          s.pointDiff += m.team1_score - m.team2_score
+        }
+        for (const pid of [m.team2_p1, m.team2_p2]) {
+          const s = sessionStatMap.get(pid)!
+          if (!team1Won) s.wins++
+          s.pointDiff += m.team2_score - m.team1_score
+        }
+      }
+      const sorted = [...sessionStatMap.entries()].sort((a, b) => {
+        if (b[1].wins !== a[1].wins) return b[1].wins - a[1].wins
+        return b[1].pointDiff - a[1].pointDiff
+      })
+      if (sorted[0]?.[0] === playerId) sessionsTopped++
+    }
+    setKingStats({ sessionsTopped, sessionsAttended: sessionsAttendedSet.size })
+
     setLoading(false)
   }
 
@@ -177,7 +210,7 @@ export default function PlayerProfile() {
   const pointDiff = matchDetails.reduce((acc, m) => acc + (m.myScore - m.oppScore), 0)
   const sessionsAttended = new Set(matchDetails.map(m => m.session_id)).size
   const attendancePct = totalSessions > 0 ? Math.round((sessionsAttended / totalSessions) * 100) : 0
-  const lowAttendance = attendancePct < 50
+  const lowAttendance = attendancePct <= 50
 
   // ── Scoring ─────────────────────────────────────────────────────────────────
   const avgScored = totalPlayed > 0 ? (matchDetails.reduce((a, m) => a + m.myScore, 0) / totalPlayed).toFixed(1) : '–'
@@ -289,6 +322,24 @@ export default function PlayerProfile() {
           </div>
         ))}
       </div>
+
+      {/* King of the Court */}
+      {kingStats && (
+        <div className="bg-yellow-900/20 border border-yellow-700 rounded-2xl p-4 flex items-center gap-4">
+          <span className="text-4xl">👑</span>
+          <div className="flex-1">
+            <p className="text-yellow-400 font-bold text-sm uppercase tracking-wide">King of the Court</p>
+            <p className="text-white text-2xl font-bold mt-0.5">
+              {kingStats.sessionsTopped} session{kingStats.sessionsTopped !== 1 ? 's' : ''} topped
+            </p>
+            <p className="text-gray-400 text-xs mt-0.5">
+              {kingStats.sessionsAttended > 0
+                ? `${Math.round((kingStats.sessionsTopped / kingStats.sessionsAttended) * 100)}% of sessions attended`
+                : 'No sessions yet'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Scoring */}
       <Section title="Scoring" tooltip="How many points you score and concede on average, plus your most decisive results.">

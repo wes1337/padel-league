@@ -52,6 +52,8 @@ export default function AddMatch() {
     if (!name) return
     const existing = players.find(p => p.name.toLowerCase() === name.toLowerCase())
     if (existing) {
+      setError(`"${existing.name}" already exists — selected them.`)
+      setTimeout(() => setError(''), 2000)
       selectPlayer(existing)
       return
     }

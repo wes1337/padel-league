@@ -18,10 +18,11 @@ export function computeStats(
     pointDiff: number
     totalPointsScored: number
     sessionsAttended: Set<string>
+    currentStreak: number
   }>()
 
   for (const p of players) {
-    statMap.set(p.id, { matchesPlayed: 0, wins: 0, losses: 0, pointDiff: 0, totalPointsScored: 0, sessionsAttended: new Set() })
+    statMap.set(p.id, { matchesPlayed: 0, wins: 0, losses: 0, pointDiff: 0, totalPointsScored: 0, sessionsAttended: new Set(), currentStreak: 0 })
   }
 
   for (const match of matches) {
@@ -51,6 +52,34 @@ export function computeStats(
     }
   }
 
+  // Compute current streak per player (chronological order)
+  const sortedMatches = [...matches].sort((a, b) =>
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  )
+  for (const player of players) {
+    const s = statMap.get(player.id)
+    if (!s) continue
+    const playerMatches = sortedMatches.filter(m =>
+      [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2].includes(player.id)
+    )
+    let streak = 0
+    for (let i = playerMatches.length - 1; i >= 0; i--) {
+      const m = playerMatches[i]
+      const onTeam1 = m.team1_p1 === player.id || m.team1_p2 === player.id
+      const won = onTeam1 ? m.team1_score > m.team2_score : m.team2_score > m.team1_score
+      if (streak === 0) {
+        streak = won ? 1 : -1
+      } else if (won && streak > 0) {
+        streak++
+      } else if (!won && streak < 0) {
+        streak--
+      } else {
+        break
+      }
+    }
+    s.currentStreak = streak
+  }
+
   const results: PlayerStats[] = players
     .filter(p => statMap.has(p.id))
     .map(player => {
@@ -71,13 +100,14 @@ export function computeStats(
         totalPointsScored: s.totalPointsScored,
         avgPointDiff,
         attendancePct,
-        lowAttendance: seasonMode && attendancePct < 0.5,
-        rankScore: 0, // computed below
+        lowAttendance: seasonMode && attendancePct <= 0.5,
+        rankScore: 0,
+        currentStreak: s.currentStreak,
       }
     })
     .filter(s => s.matchesPlayed > 0)
 
-  // Normalize avgPointDiff for ranking
+  // Normalize avgPointDiff for rankScore
   const diffs = results.map(r => r.avgPointDiff)
   const maxDiff = Math.max(...diffs, 1)
   const minDiff = Math.min(...diffs, 0)
@@ -88,21 +118,13 @@ export function computeStats(
     r.rankScore = r.winRate * 0.5 + normalizedDiff * 0.5
   }
 
-  // Sort: wins DESC, then pointDiff DESC
+  // Sort: eligible players first (win rate DESC, point diff as tiebreaker)
+  // Low attendance players ranked after eligible players
   results.sort((a, b) => {
-    if (b.wins !== a.wins) return b.wins - a.wins
+    if (a.lowAttendance !== b.lowAttendance) return a.lowAttendance ? 1 : -1
+    if (b.winRate !== a.winRate) return b.winRate - a.winRate
     return b.pointDiff - a.pointDiff
   })
 
   return results
-}
-
-/**
- * For season standings, eligible (50%+ attendance) players come first,
- * ineligible are still shown in their rank position but flagged.
- */
-export function sortSeasonStandings(stats: PlayerStats[]): PlayerStats[] {
-  const eligible = stats.filter(s => !s.lowAttendance)
-  const ineligible = stats.filter(s => s.lowAttendance)
-  return [...eligible, ...ineligible]
 }
