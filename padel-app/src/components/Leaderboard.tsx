@@ -4,6 +4,7 @@ import type { PlayerStats } from '../types'
 interface Props {
   stats: PlayerStats[]
   leagueId: string
+  sessionId?: string
   flamePlayerId?: string
   poopPlayerId?: string
   movements?: Record<string, number>
@@ -11,7 +12,7 @@ interface Props {
 
 const medals = ['🥇', '🥈', '🥉']
 
-export default function Leaderboard({ stats, leagueId, flamePlayerId, poopPlayerId, movements }: Props) {
+export default function Leaderboard({ stats, leagueId, sessionId, flamePlayerId, poopPlayerId, movements }: Props) {
   return (
     <div className="flex flex-col gap-2">
       {stats.map((s, i) => {
@@ -28,7 +29,7 @@ export default function Leaderboard({ stats, leagueId, flamePlayerId, poopPlayer
         return (
           <Link
             key={s.player.id}
-            to={`/l/${leagueId}/player/${s.player.id}`}
+            to={sessionId ? `/l/${leagueId}/session/${sessionId}/player/${s.player.id}` : `/l/${leagueId}/player/${s.player.id}`}
             className="flex items-center gap-3 bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
           >
             {/* Rank + movement */}

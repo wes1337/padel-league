@@ -169,7 +169,7 @@ export default function SessionPage() {
       {stats.length > 0 && (
         <div className="bg-gray-900 rounded-2xl p-4">
           <h2 className="font-semibold text-white mb-3">Session Standings</h2>
-          <Leaderboard stats={stats} leagueId={leagueId!} />
+          <Leaderboard stats={stats} leagueId={leagueId!} sessionId={sessionId} />
         </div>
       )}
 

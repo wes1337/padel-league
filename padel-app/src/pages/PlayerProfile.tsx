@@ -80,7 +80,7 @@ function PlayerStatRow({ name, wins, losses, highlight }: { name: string; wins: 
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function PlayerProfile() {
-  const { leagueId, playerId } = useParams<{ leagueId: string; playerId: string }>()
+  const { leagueId, playerId, sessionId } = useParams<{ leagueId: string; playerId: string; sessionId?: string }>()
   const [player, setPlayer] = useState<Player | null>(null)
   const [matchDetails, setMatchDetails] = useState<MatchDetail[]>([])
   const [totalSessions, setTotalSessions] = useState(0)
@@ -96,11 +96,15 @@ export default function PlayerProfile() {
     const yearStart = `${year}-01-01`
     const yearEnd = `${year}-12-31`
 
+    const sessionsQuery = sessionId
+      ? supabase.from('sessions').select('*').eq('id', sessionId)
+      : supabase.from('sessions').select('*').eq('league_id', leagueId)
+          .eq('excluded', false).eq('confirmed', true).gte('date', yearStart).lte('date', yearEnd)
+
     const [playerRes, playersRes, sessionsRes] = await Promise.all([
       supabase.from('players').select('*').eq('id', playerId).single(),
       supabase.from('players').select('*').eq('league_id', leagueId),
-      supabase.from('sessions').select('*').eq('league_id', leagueId)
-        .eq('excluded', false).eq('confirmed', true).gte('date', yearStart).lte('date', yearEnd),
+      sessionsQuery,
     ])
 
     if (playerRes.data) setPlayer(playerRes.data)
@@ -296,13 +300,13 @@ export default function PlayerProfile() {
     <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link to={`/l/${leagueId}`} className="text-gray-400 hover:text-white text-xl">←</Link>
+        <Link to={sessionId ? `/l/${leagueId}/session/${sessionId}` : `/l/${leagueId}`} className="text-gray-400 hover:text-white text-xl">←</Link>
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-white">{player.name}</h1>
-            {lowAttendance && <span className="text-yellow-500 text-lg" title="Low attendance">⚠</span>}
+            {!sessionId && lowAttendance && <span className="text-yellow-500 text-lg" title="Low attendance">⚠</span>}
           </div>
-          <p className="text-gray-400 text-sm">{new Date().getFullYear()} Season · all stats below are season totals</p>
+          <p className="text-gray-400 text-sm">{sessionId ? 'Session stats' : `${new Date().getFullYear()} Season · all stats below are season totals`}</p>
         </div>
       </div>
 
@@ -314,7 +318,7 @@ export default function PlayerProfile() {
           { label: 'Pt Diff', value: pointDiff > 0 ? `+${pointDiff}` : String(pointDiff) },
           { label: 'Wins', value: wins },
           { label: 'Losses', value: losses },
-          { label: 'Attendance', value: `${attendancePct}%` },
+          ...(!sessionId ? [{ label: 'Attendance', value: `${attendancePct}%` }] : []),
         ].map(({ label, value }) => (
           <div key={label} className="bg-gray-900 rounded-xl p-3 flex flex-col gap-0.5">
             <span className="text-gray-400 text-xs uppercase tracking-wide">{label}</span>
@@ -324,7 +328,7 @@ export default function PlayerProfile() {
       </div>
 
       {/* King of the Court */}
-      {kingStats && (
+      {!sessionId && kingStats && (
         <div className="bg-yellow-900/20 border border-yellow-700 rounded-2xl p-4 flex items-center gap-4">
           <span className="text-4xl">👑</span>
           <div className="flex-1">
@@ -412,20 +416,22 @@ export default function PlayerProfile() {
         )}
       </Section>
 
-      {/* Streaks */}
-      <Section title="Streaks" tooltip="Counts individual matches, not sessions. Current streak = how many matches in a row you've won or lost most recently. Longest win streak = the most consecutive match wins you've had this season.">
-        {currentStreakType && (
-          <StatRow
-            label="Current streak"
-            value={`${currentStreak} ${currentStreakType === 'W' ? 'wins' : 'losses'}`}
-            sub={currentStreakType === 'W' ? '🔥' : ''}
-          />
-        )}
-        <StatRow label="Longest win streak" value={`${longestWinStreak} wins`} />
-      </Section>
+      {/* Streaks — season only */}
+      {!sessionId && (
+        <Section title="Streaks" tooltip="Counts individual matches, not sessions. Current streak = how many matches in a row you've won or lost most recently. Longest win streak = the most consecutive match wins you've had this season.">
+          {currentStreakType && (
+            <StatRow
+              label="Current streak"
+              value={`${currentStreak} ${currentStreakType === 'W' ? 'wins' : 'losses'}`}
+              sub={currentStreakType === 'W' ? '🔥' : ''}
+            />
+          )}
+          <StatRow label="Longest win streak" value={`${longestWinStreak} wins`} />
+        </Section>
+      )}
 
-      {/* Session History */}
-      <Section title="Session History" tooltip="Your results broken down by each session attended this season." defaultOpen={false}>
+      {/* Session History — season only */}
+      {!sessionId && <Section title="Session History" tooltip="Your results broken down by each session attended this season." defaultOpen={false}>
         {sessionHistory.length === 0 ? <p className="text-gray-500 text-sm">No sessions yet.</p> : (
           <>
             {bestSession && (
@@ -454,7 +460,7 @@ export default function PlayerProfile() {
             })}
           </>
         )}
-      </Section>
+      </Section>}
 
       {/* Match History */}
       <Section title="Match History" tooltip="Every match you've played this season, most recent first." defaultOpen={false}>

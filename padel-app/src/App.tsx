@@ -15,6 +15,7 @@ export default function App() {
           <Route path="/l/:leagueId/session/:sessionId" element={<SessionPage />} />
           <Route path="/l/:leagueId/session/:sessionId/add-match" element={<AddMatch />} />
           <Route path="/l/:leagueId/player/:playerId" element={<PlayerProfile />} />
+          <Route path="/l/:leagueId/session/:sessionId/player/:playerId" element={<PlayerProfile />} />
         </Routes>
       </div>
     </BrowserRouter>
