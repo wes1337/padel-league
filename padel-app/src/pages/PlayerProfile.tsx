@@ -217,8 +217,10 @@ export default function PlayerProfile() {
   const lowAttendance = attendancePct <= 50
 
   // ── Scoring ─────────────────────────────────────────────────────────────────
-  const avgScored = totalPlayed > 0 ? (matchDetails.reduce((a, m) => a + m.myScore, 0) / totalPlayed).toFixed(1) : '–'
-  const avgConceded = totalPlayed > 0 ? (matchDetails.reduce((a, m) => a + m.oppScore, 0) / totalPlayed).toFixed(1) : '–'
+  const totalScored = matchDetails.reduce((a, m) => a + m.myScore, 0)
+  const totalConceded = matchDetails.reduce((a, m) => a + m.oppScore, 0)
+  const avgScored = totalPlayed > 0 ? (totalScored / totalPlayed).toFixed(1) : '–'
+  const avgConceded = totalPlayed > 0 ? (totalConceded / totalPlayed).toFixed(1) : '–'
   const biggestWin = matchDetails.filter(m => m.won).sort((a, b) => (b.myScore - b.oppScore) - (a.myScore - a.oppScore))[0]
   const heaviestLoss = matchDetails.filter(m => !m.won).sort((a, b) => (b.oppScore - b.myScore) - (a.oppScore - a.myScore))[0]
 
@@ -347,6 +349,8 @@ export default function PlayerProfile() {
 
       {/* Scoring */}
       <Section title="Scoring" tooltip="How many points you score and concede on average, plus your most decisive results.">
+        {sessionId && <StatRow label="Total points scored" value={String(totalScored)} />}
+        {sessionId && <StatRow label="Total points conceded" value={String(totalConceded)} />}
         <StatRow label="Avg points scored" value={String(avgScored)} sub="per game" />
         <StatRow label="Avg points conceded" value={String(avgConceded)} sub="per game" />
         {biggestWin && (
