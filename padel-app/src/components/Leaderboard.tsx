@@ -38,7 +38,7 @@ export default function Leaderboard({ stats, leagueId, flamePlayerId, poopPlayer
               </span>
               {movements && (
                 <span className={`text-xs font-bold leading-none ${isNew ? 'text-blue-400' : !movement || movement === 0 ? 'text-gray-600' : movement > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {isNew ? 'NEW' : movement === 0 ? '–' : movement > 0 ? `↑${movement}` : `↓${Math.abs(movement)}`}
+                  {isNew ? 'NEW' : !movement || movement === 0 ? '–' : movement > 0 ? `↑${movement}` : `↓${Math.abs(movement)}`}
                 </span>
               )}
             </div>
