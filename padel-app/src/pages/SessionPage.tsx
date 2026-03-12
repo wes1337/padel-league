@@ -1,12 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import html2canvas from 'html2canvas'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
-import { isLeagueAdmin } from '../lib/admin'
+import { isLeagueAdmin, isSessionCreator } from '../lib/admin'
 import type { Session, Match, Player, PlayerStats } from '../types'
 import Leaderboard from '../components/Leaderboard'
-import PlayerOfNightCard from '../components/PlayerOfNightCard'
 import SessionSummary from '../components/SessionSummary'
 
 type EditState = {
@@ -21,11 +19,9 @@ export default function SessionPage() {
   const [matches, setMatches] = useState<Match[]>([])
   const [players, setPlayers] = useState<Player[]>([])
   const [stats, setStats] = useState<PlayerStats[]>([])
-  const [showCard, setShowCard] = useState(false)
   const [loading, setLoading] = useState(true)
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
   const [editState, setEditState] = useState<EditState | null>(null)
-  const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { loadData() }, [sessionId])
 
@@ -94,26 +90,6 @@ export default function SessionPage() {
     setSession({ ...session, excluded: next })
   }
 
-  async function shareCard() {
-    setShowCard(true)
-    setTimeout(async () => {
-      if (!cardRef.current) return
-      const canvas = await html2canvas(cardRef.current, { backgroundColor: '#111827' })
-      canvas.toBlob(async blob => {
-        if (!blob) return
-        const file = new File([blob], 'player-of-the-night.png', { type: 'image/png' })
-        if (navigator.share && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: 'Player of the Night' })
-        } else {
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = 'player-of-the-night.png'
-          a.click()
-        }
-      })
-    }, 300)
-  }
 
   function getPlayerName(id: string) {
     return players.find(p => p.id === id)?.name ?? id
@@ -143,7 +119,8 @@ export default function SessionPage() {
   if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-400">Loading...</div>
 
   const isAdmin = isLeagueAdmin(leagueId!)
-  const topPlayer = stats[0] ?? null
+  const isCreator = isSessionCreator(sessionId!, session?.creator_token)
+
   const unevenWarning = matches.length > 0 ? getUnevenWarning() : null
 
   return (
@@ -184,14 +161,14 @@ export default function SessionPage() {
       )}
 
       {/* Session Awards — only shown after session is ended */}
-      {session?.ended && matches.length > 0 && (
-        <SessionSummary matches={matches} players={players} />
+      {matches.length > 0 && (
+        <SessionSummary matches={matches} players={players} stats={stats} sessionLabel={session?.label || session?.date || ''} />
       )}
 
       {/* Night Leaderboard */}
       {stats.length > 0 && (
         <div className="bg-gray-900 rounded-2xl p-4">
-          <h2 className="font-semibold text-white mb-3">Tonight's Standings</h2>
+          <h2 className="font-semibold text-white mb-3">Session Standings</h2>
           <Leaderboard stats={stats} leagueId={leagueId!} />
         </div>
       )}
@@ -204,15 +181,6 @@ export default function SessionPage() {
         + Add Match
       </button>
 
-      {/* Player of the Night */}
-      {topPlayer && (
-        <button
-          onClick={shareCard}
-          className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-semibold rounded-xl py-3 transition-colors flex items-center justify-center gap-2"
-        >
-          🏆 Share Player of the Night
-        </button>
-      )}
 
       {/* Match List */}
       {matches.length > 0 && (
@@ -294,13 +262,15 @@ export default function SessionPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <div className={`flex-1 text-sm ${t1Won ? 'text-white font-semibold' : 'text-gray-400'}`}>
+                      <div className={`flex-1 text-sm font-semibold ${t1Won ? 'text-green-400' : 'text-red-400'}`}>
                         {getPlayerName(m.team1_p1)} & {getPlayerName(m.team1_p2)}
                       </div>
-                      <div className="text-white font-bold text-lg min-w-[60px] text-center">
-                        {m.team1_score} – {m.team2_score}
+                      <div className="font-bold text-lg min-w-[60px] text-center">
+                        <span className={t1Won ? 'text-green-400' : 'text-red-400'}>{m.team1_score}</span>
+                        <span className="text-gray-500"> – </span>
+                        <span className={!t1Won ? 'text-green-400' : 'text-red-400'}>{m.team2_score}</span>
                       </div>
-                      <div className={`flex-1 text-sm text-right ${!t1Won ? 'text-white font-semibold' : 'text-gray-400'}`}>
+                      <div className={`flex-1 text-sm font-semibold text-right ${!t1Won ? 'text-green-400' : 'text-red-400'}`}>
                         {getPlayerName(m.team2_p1)} & {getPlayerName(m.team2_p2)}
                       </div>
                     </div>
@@ -312,61 +282,47 @@ export default function SessionPage() {
         </div>
       )}
 
-      {/* Session Settings */}
-      <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-white text-sm font-medium">Exclude from season rankings</p>
-            <p className="text-gray-500 text-xs">This session won't count towards season standings</p>
-          </div>
-          <button
-            onClick={toggleExcluded}
-            className={`text-sm font-semibold px-4 py-2 rounded-lg transition-colors ${
-              session?.excluded
-                ? 'bg-yellow-700 hover:bg-yellow-600 text-white'
-                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-            }`}
-          >
-            {session?.excluded ? 'Re-include' : 'Exclude'}
-          </button>
-        </div>
-        {isAdmin && !session?.ended && (
-          <button
-            onClick={endSession}
-            className="w-full bg-blue-900/40 hover:bg-blue-900/70 text-blue-400 font-semibold rounded-lg py-2 text-sm transition-colors border border-blue-900"
-          >
-            End Session
-          </button>
-        )}
-        {session?.ended && (
-          <p className="text-gray-500 text-xs text-center">Session ended — standings locked in</p>
-        )}
-        {isAdmin && (
-          <button
-            onClick={deleteSession}
-            className="w-full bg-red-900/40 hover:bg-red-900/70 text-red-400 font-semibold rounded-lg py-2 text-sm transition-colors border border-red-900"
-          >
-            Delete Session
-          </button>
-        )}
-      </div>
-
-      {/* Hidden share card */}
-      {showCard && topPlayer && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowCard(false)}>
-          <div onClick={e => e.stopPropagation()}>
-            <div ref={cardRef}>
-              <PlayerOfNightCard
-                player={topPlayer}
-                sessionLabel={session?.label || session?.date || ''}
-              />
+      {/* Session Settings — admin/creator only */}
+      {(isAdmin || isCreator) && (
+        <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white text-sm font-medium">Exclude from season rankings</p>
+              <p className="text-gray-500 text-xs">This session won't count towards season standings</p>
             </div>
-            <button onClick={() => setShowCard(false)} className="mt-4 w-full text-gray-400 hover:text-white text-sm">
-              Close
+            <button
+              onClick={toggleExcluded}
+              className={`text-sm font-semibold px-4 py-2 rounded-lg transition-colors ${
+                session?.excluded
+                  ? 'bg-yellow-700 hover:bg-yellow-600 text-white'
+                  : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+              }`}
+            >
+              {session?.excluded ? 'Re-include' : 'Exclude'}
             </button>
           </div>
+          {!session?.ended && (
+            <button
+              onClick={endSession}
+              className="w-full bg-blue-900/40 hover:bg-blue-900/70 text-blue-400 font-semibold rounded-lg py-2 text-sm transition-colors border border-blue-900"
+            >
+              End Session
+            </button>
+          )}
+          {session?.ended && (
+            <p className="text-gray-500 text-xs text-center">Session ended — standings locked in</p>
+          )}
+          {isAdmin && (
+            <button
+              onClick={deleteSession}
+              className="w-full bg-red-900/40 hover:bg-red-900/70 text-red-400 font-semibold rounded-lg py-2 text-sm transition-colors border border-red-900"
+            >
+              Delete Session
+            </button>
+          )}
         </div>
       )}
+
     </div>
   )
 }

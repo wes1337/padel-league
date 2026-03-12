@@ -1,21 +1,26 @@
-import type { Match, Player } from '../types'
+import type { Match, Player, PlayerStats } from '../types'
+import PlayerOfNightCard from './PlayerOfNightCard'
 
 interface Props {
   matches: Match[]
   players: Player[]
+  stats: PlayerStats[]
+  sessionLabel: string
 }
 
-function Award({ emoji, title, name, stat }: { emoji: string; title: string; name: string; stat: string }) {
+function Award({ emoji, title, names, stat }: { emoji: string; title: string; names: string[]; stat: string }) {
   return (
     <div className="bg-gray-800 rounded-xl p-3 flex flex-col gap-1">
       <p className="text-gray-400 text-xs">{emoji} {title}</p>
-      <p className="text-white font-bold text-sm truncate">{name}</p>
+      {names.map((n, i) => (
+        <p key={i} className="text-white font-bold text-sm truncate">{n}</p>
+      ))}
       <p className="text-gray-500 text-xs">{stat}</p>
     </div>
   )
 }
 
-export default function SessionSummary({ matches, players }: Props) {
+export default function SessionSummary({ matches, players, stats, sessionLabel }: Props) {
   if (matches.length === 0) return null
 
   const pMap = new Map(players.map(p => [p.id, p.name]))
@@ -40,39 +45,29 @@ export default function SessionSummary({ matches, players }: Props) {
   }
 
   const playerList = [...statMap.entries()].map(([id, s]) => ({ id, name: getName(id), ...s }))
-  const byWins = [...playerList].sort((a, b) => b.wins - a.wins || (b.scored - b.conceded) - (a.scored - a.conceded))
-  const king = byWins[0]
-  const spoon = byWins[byWins.length - 1] !== king ? byWins[byWins.length - 1] : null
-  const topScorer = [...playerList].sort((a, b) => b.scored - a.scored)[0]
-  const bestDefense = [...playerList].sort((a, b) => a.conceded - b.conceded)[0]
 
-  // ── Partnership stats ───────────────────────────────────────────────────────
-  const partnerMap = new Map<string, { names: string; wins: number; losses: number }>()
-  for (const m of matches) {
-    const team1Won = m.team1_score > m.team2_score
-    for (const [p1, p2, won] of [
-      [m.team1_p1, m.team1_p2, team1Won],
-      [m.team2_p1, m.team2_p2, !team1Won],
-    ] as [string, string, boolean][]) {
-      const key = [p1, p2].sort().join('|')
-      if (!partnerMap.has(key)) partnerMap.set(key, { names: `${getName(p1)} & ${getName(p2)}`, wins: 0, losses: 0 })
-      const ps = partnerMap.get(key)!
-      if (won) ps.wins++; else ps.losses++
-    }
-  }
-  const partnerships = [...partnerMap.values()]
-  const byWinRate = [...partnerships].sort((a, b) =>
-    (b.wins / (b.wins + b.losses)) - (a.wins / (a.wins + a.losses))
+  // Wooden Spoon — fewest wins, then worst point diff
+  const byWins = [...playerList].sort((a, b) => a.wins - b.wins || (a.scored - a.conceded) - (b.scored - b.conceded))
+  const spoonVal = byWins[0]
+  const spoons = playerList.filter(p =>
+    p.wins === spoonVal.wins && (p.scored - p.conceded) === (spoonVal.scored - spoonVal.conceded)
   )
-  const dreamTeam = byWinRate[0]
-  const nightmareDuo = byWinRate[byWinRate.length - 1] !== dreamTeam ? byWinRate[byWinRate.length - 1] : null
+
+  // Top Scorer
+  const maxScored = Math.max(...playerList.map(p => p.scored))
+  const topScorers = playerList.filter(p => p.scored === maxScored)
+
+  // Best Defense
+  const minConceded = Math.min(...playerList.map(p => p.conceded))
+  const bestDefenders = playerList.filter(p => p.conceded === minConceded)
 
   // ── Match highlights ────────────────────────────────────────────────────────
-  const byGap = [...matches].sort((a, b) =>
-    Math.abs(a.team1_score - a.team2_score) - Math.abs(b.team1_score - b.team2_score)
-  )
-  const matchOfNight = byGap[0]
-  const biggestBlowout = byGap[byGap.length - 1] !== matchOfNight ? byGap[byGap.length - 1] : null
+  const gaps = matches.map(m => Math.abs(m.team1_score - m.team2_score))
+  const minGap = Math.min(...gaps)
+  const maxGap = Math.max(...gaps)
+
+  const matchesOfNight = matches.filter(m => Math.abs(m.team1_score - m.team2_score) === minGap)
+  const blowouts = maxGap !== minGap ? matches.filter(m => Math.abs(m.team1_score - m.team2_score) === maxGap) : []
 
   function matchLabel(m: Match) {
     const t1Won = m.team1_score > m.team2_score
@@ -82,31 +77,51 @@ export default function SessionSummary({ matches, players }: Props) {
     return { winners: winners as string, stat: `${ws}–${ls} vs ${losers}` }
   }
 
+  const topPlayer = stats[0] ?? null
+
   return (
     <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-4">
       <h2 className="font-semibold text-white text-lg">🏆 Session Awards</h2>
+
+      {/* King of the Court card */}
+      {topPlayer && (
+        <div className="flex justify-center">
+          <PlayerOfNightCard player={topPlayer} sessionLabel={sessionLabel} />
+        </div>
+      )}
 
       {/* Player Awards */}
       <div>
         <p className="text-gray-500 text-xs uppercase tracking-wide mb-2">Player Awards</p>
         <div className="grid grid-cols-2 gap-2">
-          {king && <Award emoji="👑" title="King of the Court" name={king.name} stat={`${king.wins}W ${king.losses}L`} />}
-          {spoon && <Award emoji="💀" title="Wooden Spoon" name={spoon.name} stat={`${spoon.wins}W ${spoon.losses}L`} />}
-          {topScorer && <Award emoji="⚡" title="Top Scorer" name={topScorer.name} stat={`${topScorer.scored} pts scored`} />}
-          {bestDefense && <Award emoji="🛡️" title="Best Defense" name={bestDefense.name} stat={`${bestDefense.conceded} pts conceded`} />}
+          {spoons.length > 0 && (
+            <Award emoji="💀" title="Wooden Spoon" names={spoons.map(p => p.name)} stat={`${spoonVal.wins}W ${spoonVal.losses}L`} />
+          )}
+          {topScorers.length > 0 && (
+            <Award emoji="⚡" title="Top Scorer" names={topScorers.map(p => p.name)} stat={`${maxScored} pts scored`} />
+          )}
+          {bestDefenders.length > 0 && (
+            <Award emoji="🛡️" title="Best Defense" names={bestDefenders.map(p => p.name)} stat={`${minConceded} pts conceded`} />
+          )}
         </div>
       </div>
 
-      {/* Team & Match Awards */}
-      <div>
-        <p className="text-gray-500 text-xs uppercase tracking-wide mb-2">Team & Match Awards</p>
-        <div className="grid grid-cols-2 gap-2">
-          {dreamTeam && <Award emoji="🤝" title="Dream Team" name={dreamTeam.names} stat={`${dreamTeam.wins}W ${dreamTeam.losses}L`} />}
-          {nightmareDuo && <Award emoji="☠️" title="Nightmare Duo" name={nightmareDuo.names} stat={`${nightmareDuo.wins}W ${nightmareDuo.losses}L`} />}
-          {matchOfNight && (() => { const { winners, stat } = matchLabel(matchOfNight); return <Award emoji="🏆" title="Match of the Night" name={winners} stat={stat} /> })()}
-          {biggestBlowout && (() => { const { winners, stat } = matchLabel(biggestBlowout); return <Award emoji="💥" title="Biggest Blowout" name={winners} stat={stat} /> })()}
+      {/* Match Awards */}
+      {(matchesOfNight.length > 0 || blowouts.length > 0) && (
+        <div>
+          <p className="text-gray-500 text-xs uppercase tracking-wide mb-2">Match Awards</p>
+          <div className="grid grid-cols-2 gap-2">
+            {matchesOfNight.map((m, i) => {
+              const { winners, stat } = matchLabel(m)
+              return <Award key={i} emoji="🎯" title="Match of the Night" names={[winners]} stat={stat} />
+            })}
+            {blowouts.map((m, i) => {
+              const { winners, stat } = matchLabel(m)
+              return <Award key={i} emoji="💥" title="Biggest Blowout" names={[winners]} stat={stat} />
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

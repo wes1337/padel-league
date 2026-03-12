@@ -100,12 +100,12 @@ export function computeStats(
         totalPointsScored: s.totalPointsScored,
         avgPointDiff,
         attendancePct,
-        lowAttendance: seasonMode && attendancePct <= 0.5,
+        lowAttendance: seasonMode && attendancePct >= 0.3 && attendancePct <= 0.5,
         rankScore: 0,
         currentStreak: s.currentStreak,
       }
     })
-    .filter(s => s.matchesPlayed > 0)
+    .filter(s => s.matchesPlayed > 0 && !(seasonMode && s.attendancePct < 0.3))
 
   // Normalize avgPointDiff for rankScore
   const diffs = results.map(r => r.avgPointDiff)

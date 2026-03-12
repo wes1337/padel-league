@@ -10,3 +10,15 @@ export function saveLeagueAdmin(leagueId: string): void {
     localStorage.setItem('admin_leagues', JSON.stringify(admins))
   }
 }
+
+export function saveSessionCreator(sessionId: string, token: string): void {
+  const map: Record<string, string> = JSON.parse(localStorage.getItem('session_creator_tokens') || '{}')
+  map[sessionId] = token
+  localStorage.setItem('session_creator_tokens', JSON.stringify(map))
+}
+
+export function isSessionCreator(sessionId: string, creatorToken: string | null | undefined): boolean {
+  if (!creatorToken) return false
+  const map: Record<string, string> = JSON.parse(localStorage.getItem('session_creator_tokens') || '{}')
+  return map[sessionId] === creatorToken
+}

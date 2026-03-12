@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
-import { isLeagueAdmin, saveLeagueAdmin } from '../lib/admin'
+import { isLeagueAdmin, saveLeagueAdmin, saveSessionCreator } from '../lib/admin'
 import type { League, Session, Match, Player, PlayerStats } from '../types'
 import Leaderboard from '../components/Leaderboard'
 
@@ -75,10 +75,10 @@ export default function LeagueHome() {
           const stats = computeStats(playersRes.data as Player[], matches as Match[], sessionIdsWithMatches.length, true)
           setSeasonStats(stats)
 
-          // Position movements based on most recent ended session
-          const mostRecentEnded = sessionsRes.data.find((s: Session) => s.confirmed && s.ended)
-          if (mostRecentEnded && sessionIds.includes(mostRecentEnded.id)) {
-            const prevSessionIds = sessionIds.filter((id: string) => id !== mostRecentEnded.id)
+          // Position movements based on most recent ended session that has matches
+          const mostRecentEnded = sessionsRes.data.find((s: Session) => s.confirmed && s.ended && sessionIdsWithMatches.includes(s.id))
+          if (mostRecentEnded) {
+            const prevSessionIds = sessionIdsWithMatches.filter((id: string) => id !== mostRecentEnded.id)
             const prevMatches = (matches as Match[]).filter(m => prevSessionIds.includes(m.session_id))
             const prevStats = computeStats(playersRes.data as Player[], prevMatches, prevSessionIds.length, true)
             const prevRanks: Record<string, number> = {}
@@ -110,12 +110,16 @@ export default function LeagueHome() {
     const today = new Date().toISOString().split('T')[0]
     const label = `Session – ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
     const pin = String(Math.floor(1000 + Math.random() * 9000))
+    const creator_token = crypto.randomUUID()
     const { data, error } = await supabase
       .from('sessions')
-      .insert({ league_id: leagueId, date: today, label, pin })
+      .insert({ league_id: leagueId, date: today, label, pin, creator_token })
       .select()
       .single()
-    if (data && !error) navigate(`/l/${leagueId}/session/${data.id}`)
+    if (data && !error) {
+      saveSessionCreator(data.id, creator_token)
+      navigate(`/l/${leagueId}/session/${data.id}`)
+    }
   }
 
   async function claimAdmin() {

@@ -31,10 +31,17 @@ export default function Leaderboard({ stats, leagueId, flamePlayerId, poopPlayer
             to={`/l/${leagueId}/player/${s.player.id}`}
             className="flex items-center gap-3 bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
           >
-            {/* Rank */}
-            <span className="text-lg w-7 text-center shrink-0">
-              {i < 3 ? medals[i] : <span className="text-gray-400 text-sm font-semibold">{i + 1}</span>}
-            </span>
+            {/* Rank + movement */}
+            <div className="flex flex-col items-center shrink-0 w-7">
+              <span className="text-lg text-center">
+                {i < 3 ? medals[i] : <span className="text-gray-400 text-sm font-semibold">{i + 1}</span>}
+              </span>
+              {movements && (
+                <span className={`text-xs font-bold leading-none ${isNew ? 'text-blue-400' : !movement || movement === 0 ? 'text-gray-600' : movement > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {isNew ? 'NEW' : movement === 0 ? '–' : movement > 0 ? `↑${movement}` : `↓${Math.abs(movement)}`}
+                </span>
+              )}
+            </div>
 
             {/* Name + badge */}
             <div className="flex-1 min-w-0">
@@ -51,16 +58,11 @@ export default function Leaderboard({ stats, leagueId, flamePlayerId, poopPlayer
               </div>
             </div>
 
-            {/* Point diff + movement */}
-            <div className="flex flex-col items-end gap-0.5 shrink-0">
+            {/* Point diff */}
+            <div className="shrink-0">
               <div className={`text-sm font-semibold ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-400'}`}>
                 {diff > 0 ? `+${diff}` : diff}
               </div>
-              {movements && (
-                <div className={`text-xs font-bold ${isNew ? 'text-blue-400' : !movement || movement === 0 ? 'text-gray-600' : movement > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {isNew ? 'NEW' : movement === 0 ? '–' : movement > 0 ? `↑${movement}` : `↓${Math.abs(movement)}`}
-                </div>
-              )}
             </div>
           </Link>
         )

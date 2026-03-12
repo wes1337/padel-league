@@ -23,6 +23,7 @@ export interface Session {
   pin: string | null
   confirmed: boolean
   ended: boolean
+  creator_token: string | null
   created_at: string
 }
 
