@@ -152,12 +152,18 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
         <div>
           <p className="text-gray-500 text-xs uppercase tracking-wide mb-2">Match Awards</p>
           <div className="grid grid-cols-2 gap-2">
-            {motn1.length > 0 && (
-              <Award emoji="🎯" title="Match of the Night" first={motn1} second={motn2} />
-            )}
-            {blowout1.length > 0 && (
-              <Award emoji="💥" title="Biggest Blowout" first={blowout1} second={blowout2} />
-            )}
+            {motn1.map((entry, i) => (
+              <Award key={`motn-${i}`} emoji="🎯" title="Match of the Night"
+                first={[entry]}
+                second={motn1.length === 1 ? motn2 : undefined}
+              />
+            ))}
+            {blowout1.map((entry, i) => (
+              <Award key={`blowout-${i}`} emoji="💥" title="Biggest Blowout"
+                first={[entry]}
+                second={blowout1.length === 1 ? blowout2 : undefined}
+              />
+            ))}
           </div>
         </div>
       )}
