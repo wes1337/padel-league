@@ -1,111 +1,111 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
 import { isLeagueAdmin, saveLeagueAdmin, saveSessionCreator } from '../lib/admin'
-import type { League, Session, Match, Player, PlayerStats } from '../types'
+import { useLeague, useSessions, usePlayers, useMultiSessionMatches, qk } from '../lib/queries'
+import type { Session, Match, Player, PlayerStats } from '../types'
 import Leaderboard from '../components/Leaderboard'
 
 export default function LeagueHome() {
   const { leagueId } = useParams<{ leagueId: string }>()
   const navigate = useNavigate()
-  const [league, setLeague] = useState<League | null>(null)
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [seasonStats, setSeasonStats] = useState<PlayerStats[]>([])
-  const [, setTotalSeasonSessions] = useState(0)
-  const [recentTopId, setRecentTopId] = useState<string | undefined>()
-  const [recentBottomId, setRecentBottomId] = useState<string | undefined>()
-  const [movements, setMovements] = useState<Record<string, number> | undefined>()
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+
   const [isAdmin, setIsAdmin] = useState(false)
   const [showClaimAdmin, setShowClaimAdmin] = useState(false)
   const [claimToken, setClaimToken] = useState('')
   const [claimError, setClaimError] = useState('')
   const [showAdminCode, setShowAdminCode] = useState(false)
+  const [showRankingInfo, setShowRankingInfo] = useState(false)
+
+  // ── Queries ────────────────────────────────────────────────────────────────
+  const { data: league, isLoading: leagueLoading } = useLeague(leagueId)
+  const { data: sessions = [], isLoading: sessionsLoading } = useSessions(leagueId)
+  const { data: players = [], isLoading: playersLoading } = usePlayers(leagueId)
+
+  const year = new Date().getFullYear()
+  const yearStart = `${year}-01-01`
+  const yearEnd   = `${year}-12-31`
+
+  const filteredSessionIds = useMemo(() =>
+    sessions
+      .filter((s: Session) => s.date >= yearStart && s.date <= yearEnd && !s.excluded && s.confirmed)
+      .map((s: Session) => s.id),
+    [sessions, yearStart, yearEnd]
+  )
+
+  const { data: seasonMatches = [], isLoading: matchesLoading } = useMultiSessionMatches(
+    filteredSessionIds,
+    `${leagueId}-${year}`
+  )
+
+  const loading = leagueLoading || sessionsLoading || playersLoading ||
+    (filteredSessionIds.length > 0 && matchesLoading)
+
+  // ── Side-effects ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (leagueId) setIsAdmin(isLeagueAdmin(leagueId))
+  }, [leagueId])
+
+  useEffect(() => {
+    if (!league) return
+    const recent: { id: string; name: string }[] = JSON.parse(localStorage.getItem('recent_leagues') || '[]')
+    const updated = [{ id: league.id, name: league.name }, ...recent.filter(r => r.id !== league.id)].slice(0, 5)
+    localStorage.setItem('recent_leagues', JSON.stringify(updated))
+  }, [league])
 
   useEffect(() => {
     if (!leagueId) return
-    setIsAdmin(isLeagueAdmin(leagueId))
-    loadData()
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    supabase.from('sessions').delete()
+      .eq('league_id', leagueId).eq('confirmed', false).lt('created_at', oneDayAgo)
   }, [leagueId])
 
-  async function loadData() {
-    setLoading(true)
-    // Delete unconfirmed sessions older than 24 hours
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    await supabase.from('sessions').delete()
-      .eq('league_id', leagueId!).eq('confirmed', false).lt('created_at', oneDayAgo)
+  // ── Computed season stats ──────────────────────────────────────────────────
+  const sessionIdsWithMatches = useMemo(() =>
+    filteredSessionIds.filter(id => (seasonMatches as Match[]).some(m => m.session_id === id)),
+    [filteredSessionIds, seasonMatches]
+  )
 
-    const year = new Date().getFullYear()
-    const yearStart = `${year}-01-01`
-    const yearEnd = `${year}-12-31`
+  const seasonStats: PlayerStats[] = useMemo(() => {
+    if ((players as Player[]).length === 0 || sessionIdsWithMatches.length === 0) return []
+    return computeStats(players as Player[], seasonMatches as Match[], sessionIdsWithMatches.length, true)
+  }, [players, seasonMatches, sessionIdsWithMatches])
 
-    const [leagueRes, sessionsRes, playersRes] = await Promise.all([
-      supabase.from('leagues').select('*').eq('id', leagueId).single(),
-      supabase.from('sessions').select('*').eq('league_id', leagueId).order('date', { ascending: false }),
-      supabase.from('players').select('*').eq('league_id', leagueId).order('name'),
-    ])
+  const movements: Record<string, number> | undefined = useMemo(() => {
+    if (sessionIdsWithMatches.length < 2) return undefined
+    const mostRecentEnded = sessions.find((s: Session) =>
+      s.confirmed && s.ended && sessionIdsWithMatches.includes(s.id)
+    )
+    if (!mostRecentEnded) return undefined
+    const prevIds = sessionIdsWithMatches.filter((id: string) => id !== mostRecentEnded.id)
+    const prevMatches = (seasonMatches as Match[]).filter(m => prevIds.includes(m.session_id))
+    const prevStats = computeStats(players as Player[], prevMatches, prevIds.length, true)
+    const prevRanks: Record<string, number> = {}
+    prevStats.forEach((s, i) => { prevRanks[s.player.id] = i })
+    const mvmt: Record<string, number> = {}
+    seasonStats.forEach((s, i) => {
+      const prev = prevRanks[s.player.id]
+      mvmt[s.player.id] = prev === undefined ? Infinity : prev - i
+    })
+    return mvmt
+  }, [sessions, sessionIdsWithMatches, seasonMatches, players, seasonStats])
 
-    if (leagueRes.data) {
-      setLeague(leagueRes.data)
-      // Remember this league for the home page
-      const recent: { id: string; name: string }[] = JSON.parse(localStorage.getItem('recent_leagues') || '[]')
-      const updated = [{ id: leagueRes.data.id, name: leagueRes.data.name }, ...recent.filter(r => r.id !== leagueRes.data!.id)].slice(0, 5)
-      localStorage.setItem('recent_leagues', JSON.stringify(updated))
+  const { recentTopId, recentBottomId } = useMemo(() => {
+    if (sessionIdsWithMatches.length === 0) return {}
+    const recentSessionId = sessionIdsWithMatches[sessionIdsWithMatches.length - 1]
+    const recentMatches = (seasonMatches as Match[]).filter(m => m.session_id === recentSessionId)
+    if (recentMatches.length === 0) return {}
+    const recentStats = computeStats(players as Player[], recentMatches)
+    return {
+      recentTopId: recentStats[0]?.player.id,
+      recentBottomId: recentStats[recentStats.length - 1]?.player.id,
     }
-    if (sessionsRes.data) setSessions(sessionsRes.data)
+  }, [sessionIdsWithMatches, seasonMatches, players])
 
-    // Load all matches for season
-    if (sessionsRes.data && sessionsRes.data.length > 0 && playersRes.data) {
-      const sessionIds = sessionsRes.data
-        .filter((s: Session) => s.date >= yearStart && s.date <= yearEnd && !s.excluded && s.confirmed)
-        .map((s: Session) => s.id)
-
-      if (sessionIds.length > 0) {
-        const { data: matches } = await supabase
-          .from('matches')
-          .select('*')
-          .in('session_id', sessionIds)
-
-        if (matches) {
-          const sessionIdsWithMatches = sessionIds.filter(id =>
-            (matches as Match[]).some(m => m.session_id === id)
-          )
-          setTotalSeasonSessions(sessionIdsWithMatches.length)
-          const stats = computeStats(playersRes.data as Player[], matches as Match[], sessionIdsWithMatches.length, true)
-          setSeasonStats(stats)
-
-          // Position movements based on most recent ended session that has matches
-          const mostRecentEnded = sessionsRes.data.find((s: Session) => s.confirmed && s.ended && sessionIdsWithMatches.includes(s.id))
-          if (mostRecentEnded) {
-            const prevSessionIds = sessionIdsWithMatches.filter((id: string) => id !== mostRecentEnded.id)
-            const prevMatches = (matches as Match[]).filter(m => prevSessionIds.includes(m.session_id))
-            const prevStats = computeStats(playersRes.data as Player[], prevMatches, prevSessionIds.length, true)
-            const prevRanks: Record<string, number> = {}
-            prevStats.forEach((s, i) => { prevRanks[s.player.id] = i })
-            const mvmt: Record<string, number> = {}
-            stats.forEach((s, i) => {
-              const prev = prevRanks[s.player.id]
-              mvmt[s.player.id] = prev === undefined ? Infinity : prev - i // positive = moved up
-            })
-            setMovements(mvmt)
-          }
-
-          // Top/bottom of most recent session for flame/poop
-          const recentSessionId = sessionIds[0]
-          const recentMatches = (matches as Match[]).filter(m => m.session_id === recentSessionId)
-          if (recentMatches.length > 0) {
-            const recentStats = computeStats(playersRes.data as Player[], recentMatches)
-            setRecentTopId(recentStats[0]?.player.id)
-            setRecentBottomId(recentStats[recentStats.length - 1]?.player.id)
-          }
-        }
-      }
-    }
-
-    setLoading(false)
-  }
-
+  // ── Actions ────────────────────────────────────────────────────────────────
   async function createSession() {
     const today = new Date().toISOString().split('T')[0]
     const label = `Session – ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
@@ -118,6 +118,7 @@ export default function LeagueHome() {
       .single()
     if (data && !error) {
       saveSessionCreator(data.id, creator_token)
+      queryClient.invalidateQueries({ queryKey: qk.sessions(leagueId!) })
       navigate(`/l/${leagueId}/session/${data.id}`)
     }
   }
@@ -125,14 +126,8 @@ export default function LeagueHome() {
   async function claimAdmin() {
     setClaimError('')
     const { data } = await supabase.from('leagues').select('admin_token').eq('id', leagueId!).single()
-    if (!data?.admin_token) {
-      setClaimError('No admin code exists for this league.')
-      return
-    }
-    if (data.admin_token !== claimToken.trim()) {
-      setClaimError('Incorrect admin code.')
-      return
-    }
+    if (!data?.admin_token) { setClaimError('No admin code exists for this league.'); return }
+    if (data.admin_token !== claimToken.trim()) { setClaimError('Incorrect admin code.'); return }
     saveLeagueAdmin(leagueId!)
     setIsAdmin(true)
     setShowClaimAdmin(false)
@@ -143,7 +138,8 @@ export default function LeagueHome() {
     if (!window.confirm('Delete this session and all its matches? This cannot be undone.')) return
     await supabase.from('matches').delete().eq('session_id', sId)
     await supabase.from('sessions').delete().eq('id', sId)
-    setSessions(sessions.filter(s => s.id !== sId))
+    queryClient.invalidateQueries({ queryKey: qk.sessions(leagueId!) })
+    queryClient.invalidateQueries({ queryKey: ['matches'] })
   }
 
   if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-400">Loading...</div>
@@ -152,14 +148,33 @@ export default function LeagueHome() {
   return (
     <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">{league.name}</h1>
-        <p className="text-gray-400 text-sm">{new Date().getFullYear()} Season</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">{league.name}</h1>
+          <p className="text-gray-400 text-sm">{year} Season</p>
+        </div>
+        <Link to="/" className="text-gray-500 hover:text-white text-sm transition-colors pt-1">← Home</Link>
       </div>
 
       {/* Season Leaderboard */}
       <div className="bg-gray-900 rounded-2xl p-4">
-        <h2 className="font-semibold text-white mb-3">Season Standings</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-white">Season Standings</h2>
+          <button
+            onClick={() => setShowRankingInfo(v => !v)}
+            className="text-gray-500 hover:text-gray-300 text-sm w-5 h-5 rounded-full border border-gray-700 flex items-center justify-center transition-colors"
+            title="How rankings work"
+          >
+            i
+          </button>
+        </div>
+        {showRankingInfo && (
+          <div className="bg-gray-800 rounded-xl px-3 py-2.5 mb-3 flex flex-col gap-1.5 text-xs text-gray-400">
+            <p><span className="text-white font-medium">Ranking</span> — primary: matches won. Tiebreaker: point differential.</p>
+            <p><span className="text-white font-medium">⚠ badge</span> — player attended between 30–50% of sessions. They appear in the standings but are ranked below all players with 50%+ attendance, regardless of their record.</p>
+            <p><span className="text-white font-medium">Not listed</span> — players who attended fewer than 30% of sessions are excluded from the standings entirely.</p>
+          </div>
+        )}
         {seasonStats.length === 0 ? (
           <p className="text-gray-500 text-sm">No matches played yet this season.</p>
         ) : (
@@ -178,11 +193,11 @@ export default function LeagueHome() {
       {/* Past Sessions */}
       <div className="bg-gray-900 rounded-2xl p-4">
         <h2 className="font-semibold text-white mb-3">Sessions</h2>
-        {sessions.filter(s => isAdmin || s.confirmed).length === 0 ? (
+        {sessions.filter((s: Session) => isAdmin || s.confirmed).length === 0 ? (
           <p className="text-gray-500 text-sm">No sessions yet.</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {sessions.filter(s => isAdmin || s.confirmed).map(s => (
+            {sessions.filter((s: Session) => isAdmin || s.confirmed).map((s: Session) => (
               <div key={s.id} className="flex items-center gap-2">
                 <Link
                   to={`/l/${leagueId}/session/${s.id}`}
@@ -192,6 +207,7 @@ export default function LeagueHome() {
                   <div className="flex items-center gap-2">
                     {s.excluded && <span className="text-xs text-yellow-600">excluded</span>}
                     {!s.confirmed && <span className="text-xs text-gray-600">unconfirmed</span>}
+                    {s.pin && !s.ended && !s.excluded && <span className="text-xs font-mono bg-gray-700 text-gray-300 rounded px-1.5 py-0.5">PIN: {s.pin}</span>}
                     <span className="text-gray-400 text-sm">→</span>
                   </div>
                 </Link>
@@ -228,10 +244,7 @@ export default function LeagueHome() {
       ) : (
         <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
           {!showClaimAdmin ? (
-            <button
-              onClick={() => setShowClaimAdmin(true)}
-              className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-center"
-            >
+            <button onClick={() => setShowClaimAdmin(true)} className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-center">
               Admin login
             </button>
           ) : (

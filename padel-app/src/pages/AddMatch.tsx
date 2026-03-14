@@ -1,36 +1,33 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { usePlayers, useLeague, qk } from '../lib/queries'
 import type { Player, ScoringType } from '../types'
 
 export default function AddMatch() {
   const { leagueId, sessionId } = useParams<{ leagueId: string; sessionId: string }>()
   const navigate = useNavigate()
-  const [players, setPlayers] = useState<Player[]>([])
+  const queryClient = useQueryClient()
+
+  const { data: players = [] } = usePlayers(leagueId)
+  const { data: league } = useLeague(leagueId)
+  const scoringType = (league?.scoring_type ?? 'americano') as ScoringType
+
   const [selected, setSelected] = useState<(Player | null)[]>([null, null, null, null])
-  const [scoringType, setScoringType] = useState<ScoringType>('americano')
   const [team1Score, setTeam1Score] = useState('')
   const [team2Score, setTeam2Score] = useState('')
-  const [activeTeam, setActiveTeam] = useState<number | null>(null) // 0 = team1, 1 = team2
-  const [pickingPlayer, setPickingPlayer] = useState(0) // 0 = P1, 1 = P2 within team
-  const [newName, setNewName] = useState('')
+  const [activeTeam, setActiveTeam] = useState<number | null>(null)
+  const [pickingPlayer, setPickingPlayer] = useState(0)
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    supabase.from('players').select('*').eq('league_id', leagueId).order('name')
-      .then(({ data }) => { if (data) setPlayers(data as Player[]) })
-  }, [leagueId])
-
-  useEffect(() => {
-    if (activeTeam !== null) {
-      setSearch('')
-      setNewName('')
-      setTimeout(() => searchRef.current?.focus(), 100)
-    }
-  }, [activeTeam, pickingPlayer])
+  // Focus search when picker opens
+  if (activeTeam !== null) {
+    setTimeout(() => searchRef.current?.focus(), 100)
+  }
 
   function openTeam(team: number) {
     const base = team * 2
@@ -48,7 +45,7 @@ export default function AddMatch() {
   )
 
   async function addNewPlayer() {
-    const name = newName.trim()
+    const name = search.trim()
     if (!name) return
     const existing = players.find(p => p.name.toLowerCase() === name.toLowerCase())
     if (existing) {
@@ -63,9 +60,8 @@ export default function AddMatch() {
       .select()
       .single()
     if (data && !error) {
-      const newPlayer = data as Player
-      setPlayers(prev => [...prev, newPlayer].sort((a, b) => a.name.localeCompare(b.name)))
-      selectPlayer(newPlayer)
+      queryClient.invalidateQueries({ queryKey: qk.players(leagueId!) })
+      selectPlayer(data as Player)
     }
   }
 
@@ -79,12 +75,10 @@ export default function AddMatch() {
       // Advance to P2
       setPickingPlayer(1)
       setSearch('')
-      setNewName('')
     } else {
       // Both picked — close modal
       setActiveTeam(null)
       setSearch('')
-      setNewName('')
     }
   }
 
@@ -113,6 +107,7 @@ export default function AddMatch() {
       team2_score: s2,
     })
     if (error) { setError('Failed to save match.'); setSaving(false); return }
+    queryClient.invalidateQueries({ queryKey: qk.sessionMatches(sessionId!) })
     navigate(-1)
   }
 
@@ -126,29 +121,6 @@ export default function AddMatch() {
       <div className="flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-white text-xl">←</button>
         <h1 className="text-xl font-bold text-white">Add Match</h1>
-      </div>
-
-      {/* Scoring Type */}
-      <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
-        <h2 className="font-semibold text-white">Format</h2>
-        <div className="flex gap-3">
-          {(['americano', 'traditional'] as ScoringType[]).map(type => (
-            <button
-              key={type}
-              onClick={() => setScoringType(type)}
-              className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-colors capitalize ${
-                scoringType === type ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-              }`}
-            >
-              {type === 'americano' ? '🎯 Americano' : '🎾 Traditional'}
-            </button>
-          ))}
-        </div>
-        <p className="text-gray-500 text-xs">
-          {scoringType === 'americano'
-            ? 'Enter points scored by each team (e.g. 17 – 15)'
-            : 'Enter total games won by each team (e.g. 12 – 7)'}
-        </p>
       </div>
 
       {/* Player Slots */}
@@ -192,39 +164,31 @@ export default function AddMatch() {
               <button onClick={() => setActiveTeam(null)} className="text-gray-400 hover:text-white">✕</button>
             </div>
 
-            {/* Search */}
+            {/* Combined search / add input */}
             <input
               ref={searchRef}
               className="bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Search players..."
+              placeholder="Search or type new name..."
               value={search}
               onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && search.trim() && filteredPlayers.length === 0) addNewPlayer()
+              }}
             />
-
-            {/* Add new */}
-            <div className="flex gap-2">
-              <input
-                className="flex-1 bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Add new player..."
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && addNewPlayer()}
-              />
-              <button
-                onClick={addNewPlayer}
-                disabled={!newName.trim()}
-                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 rounded-lg font-semibold transition-colors"
-              >
-                Add
-              </button>
-            </div>
 
             {/* Player list */}
             <div className="overflow-y-auto flex flex-col gap-2">
-              {filteredPlayers.length === 0 && (
-                <p className="text-gray-500 text-sm text-center py-2">
-                  {search ? 'No players found.' : 'No players yet — add one above.'}
-                </p>
+              {/* Add new option — shown when typed name doesn't match any existing player */}
+              {search.trim() && !players.some(p => p.name.toLowerCase() === search.trim().toLowerCase()) && (
+                <button
+                  onClick={addNewPlayer}
+                  className="w-full text-left bg-blue-900/30 hover:bg-blue-900/50 border border-blue-800 rounded-xl px-4 py-3 text-blue-300 font-medium transition-colors"
+                >
+                  + Add "{search.trim()}"
+                </button>
+              )}
+              {filteredPlayers.length === 0 && !search.trim() && (
+                <p className="text-gray-500 text-sm text-center py-2">No players yet — type a name to add one.</p>
               )}
               {filteredPlayers.map(p => (
                 <button
@@ -242,14 +206,20 @@ export default function AddMatch() {
 
       {/* Score */}
       <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
-        <h2 className="font-semibold text-white">Score</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-white">Score</h2>
+          <span className="text-xs text-gray-500">{scoringType === 'americano' ? '🎯 Americano' : '🎾 Traditional'}</span>
+        </div>
+        <p className="text-gray-500 text-xs -mt-1">
+          {scoringType === 'americano' ? 'Points scored by each team (e.g. 17 – 15)' : 'Games won by each team (e.g. 6 – 4)'}
+        </p>
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0 flex flex-col gap-1">
             <label className="text-xs text-blue-400">Team 1</label>
             <input
-              type="number"
-              min="0"
+              type="text"
               inputMode="numeric"
+              pattern="[0-9]*"
               className="w-full bg-gray-800 rounded-lg px-2 py-3 text-white text-xl font-bold text-center outline-none focus:ring-2 focus:ring-blue-500"
               value={team1Score}
               onChange={e => setTeam1Score(e.target.value)}

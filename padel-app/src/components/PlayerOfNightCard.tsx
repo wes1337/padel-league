@@ -17,7 +17,7 @@ export default function PlayerOfNightCard({ player, sessionLabel }: Props) {
       <div className="text-5xl">🏆</div>
 
       <div className="text-center">
-        <p className="text-yellow-400 text-sm font-semibold uppercase tracking-widest">Player of the Night</p>
+        <p className="text-yellow-400 text-sm font-semibold uppercase tracking-widest">Court Champion</p>
         <p className="text-gray-400 text-xs mt-0.5">{sessionLabel}</p>
       </div>
 

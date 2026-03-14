@@ -8,7 +8,7 @@ interface Props {
   sessionLabel: string
 }
 
-type AwardEntry = { name: string; stat: string }
+type AwardEntry = { name: string; nameStat?: string; stat?: string; statColor?: string }
 
 function Award({ emoji, title, first, second }: {
   emoji: string; title: string
@@ -20,16 +20,28 @@ function Award({ emoji, title, first, second }: {
       <p className="text-gray-400 text-xs">{emoji} {title}</p>
       <div>
         {first.map((e, i) => (
-          <p key={i} className="text-white font-bold text-sm truncate">{e.name}</p>
+          <div key={i}>
+            <p className="text-white font-bold text-sm truncate">{e.name}</p>
+            {(e.nameStat || e.stat) && (
+              <p className="text-xs flex gap-2">
+                {e.nameStat && <span className="text-gray-500">{e.nameStat}</span>}
+                {e.stat && <span className={e.statColor ?? 'text-gray-500'}>{e.stat}</span>}
+              </p>
+            )}
+          </div>
         ))}
-        <p className="text-gray-500 text-xs">{first[0]?.stat}</p>
       </div>
       {second && second.length > 0 && (
         <div className="border-t border-gray-700 pt-1.5 flex flex-col gap-1">
           {second.map((e, i) => (
             <div key={i}>
               <p className="text-gray-300 text-xs font-semibold truncate">{e.name}</p>
-              <p className="text-gray-600 text-xs">{e.stat}</p>
+              {(e.nameStat || e.stat) && (
+                <p className="text-xs flex gap-2">
+                  {e.nameStat && <span className="text-gray-600">{e.nameStat}</span>}
+                  {e.stat && <span className={e.statColor ?? 'text-gray-600'}>{e.stat}</span>}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -128,14 +140,14 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
         <div className="grid grid-cols-2 gap-2">
           {spoons1.length > 0 && (
             <Award emoji="💀" title="Wooden Spoon"
-              first={spoons1.map(p => ({ name: p.name, stat: `${spoon1.wins}W ${spoon1.losses}L` }))}
-              second={spoons2.map(p => ({ name: p.name, stat: `${spoon2!.wins}W ${spoon2!.losses}L` }))}
+              first={spoons1.map(p => ({ name: p.name, nameStat: `${p.wins}W ${p.losses}L`, stat: String(p.scored - p.conceded), statColor: 'text-red-400' }))}
+              second={spoons2.map(p => ({ name: p.name, nameStat: `${p.wins}W ${p.losses}L`, stat: String(p.scored - p.conceded), statColor: 'text-red-400' }))}
             />
           )}
           {topScorers1.length > 0 && (
             <Award emoji="⚡" title="Top Scorer"
-              first={topScorers1.map(p => ({ name: p.name, stat: `${maxScored} pts scored` }))}
-              second={topScorers2.map(p => ({ name: p.name, stat: `${scorer2!.scored} pts scored` }))}
+              first={topScorers1.map(p => ({ name: p.name, nameStat: `${p.wins}W ${p.losses}L`, stat: String(p.scored), statColor: 'text-green-400' }))}
+              second={topScorers2.map(p => ({ name: p.name, nameStat: `${p.wins}W ${p.losses}L`, stat: String(scorer2!.scored), statColor: 'text-green-400' }))}
             />
           )}
           {bestDefenders1.length > 0 && (
@@ -153,7 +165,7 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
           <p className="text-gray-500 text-xs uppercase tracking-wide mb-2">Match Awards</p>
           <div className="grid grid-cols-2 gap-2">
             {motn1.map((entry, i) => (
-              <Award key={`motn-${i}`} emoji="🎯" title="Match of the Night"
+              <Award key={`motn-${i}`} emoji="🎯" title="Match of the Session"
                 first={[entry]}
                 second={motn1.length === 1 ? motn2 : undefined}
               />

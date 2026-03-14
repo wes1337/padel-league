@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
 import { isLeagueAdmin, isSessionCreator } from '../lib/admin'
-import type { Session, Match, Player, PlayerStats } from '../types'
+import { useSession, useSessionMatches, usePlayers, qk } from '../lib/queries'
+import type { Match } from '../types'
 import Leaderboard from '../components/Leaderboard'
 import SessionSummary from '../components/SessionSummary'
 
@@ -16,32 +18,22 @@ type EditState = {
 export default function SessionPage() {
   const { leagueId, sessionId } = useParams<{ leagueId: string; sessionId: string }>()
   const navigate = useNavigate()
-  const [session, setSession] = useState<Session | null>(null)
-  const [matches, setMatches] = useState<Match[]>([])
-  const [players, setPlayers] = useState<Player[]>([])
-  const [stats, setStats] = useState<PlayerStats[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
   const [editState, setEditState] = useState<EditState | null>(null)
   const [rankHighlightedIds, setRankHighlightedIds] = useState<Map<string, string>>(new Map())
 
-  useEffect(() => { loadData() }, [sessionId])
+  const { data: session, isLoading: sessionLoading } = useSession(sessionId)
+  const { data: matches = [], isLoading: matchesLoading } = useSessionMatches(sessionId)
+  const { data: players = [], isLoading: playersLoading } = usePlayers(leagueId)
 
-  async function loadData() {
-    setLoading(true)
-    const [sessionRes, matchesRes, playersRes] = await Promise.all([
-      supabase.from('sessions').select('*').eq('id', sessionId).single(),
-      supabase.from('matches').select('*').eq('session_id', sessionId).order('created_at'),
-      supabase.from('players').select('*').eq('league_id', leagueId).order('name'),
-    ])
-    if (sessionRes.data) setSession(sessionRes.data as Session)
-    const m = matchesRes.data as Match[] || []
-    const p = playersRes.data as Player[] || []
-    setMatches(m)
-    setPlayers(p)
-    if (m.length > 0 && p.length > 0) setStats(computeStats(p, m))
-    setLoading(false)
-  }
+  const loading = sessionLoading || matchesLoading || playersLoading
+
+  const stats = useMemo(() => {
+    if (matches.length === 0 || players.length === 0) return []
+    return computeStats(players, matches)
+  }, [matches, players])
 
   function startEdit(m: Match) {
     setEditingMatchId(m.id)
@@ -57,7 +49,7 @@ export default function SessionPage() {
     const s2 = parseInt(editState.s2)
     if (isNaN(s1) || isNaN(s2) || s1 < 0 || s2 < 0) return
     const ids = [editState.p1, editState.p2, editState.p3, editState.p4]
-    if (new Set(ids).size < 4) return // duplicate player
+    if (new Set(ids).size < 4) return
     await supabase.from('matches').update({
       team1_score: s1, team2_score: s2,
       team1_p1: editState.p1, team1_p2: editState.p2,
@@ -65,23 +57,25 @@ export default function SessionPage() {
     }).eq('id', matchId)
     setEditingMatchId(null)
     setEditState(null)
-    loadData()
+    queryClient.invalidateQueries({ queryKey: qk.sessionMatches(sessionId!) })
   }
 
   async function deleteMatch(matchId: string) {
     await supabase.from('matches').delete().eq('id', matchId)
-    loadData()
+    queryClient.invalidateQueries({ queryKey: qk.sessionMatches(sessionId!) })
   }
 
   async function endSession() {
     await supabase.from('sessions').update({ ended: true }).eq('id', sessionId!)
-    setSession(prev => prev ? { ...prev, ended: true } : prev)
+    queryClient.invalidateQueries({ queryKey: qk.session(sessionId!) })
+    queryClient.invalidateQueries({ queryKey: qk.sessions(leagueId!) })
   }
 
   async function deleteSession() {
     if (!window.confirm('Delete this session and all its matches? This cannot be undone.')) return
     await supabase.from('matches').delete().eq('session_id', sessionId!)
     await supabase.from('sessions').delete().eq('id', sessionId!)
+    queryClient.invalidateQueries({ queryKey: qk.sessions(leagueId!) })
     navigate(`/l/${leagueId}`)
   }
 
@@ -89,15 +83,14 @@ export default function SessionPage() {
     if (!session) return
     const next = !session.excluded
     await supabase.from('sessions').update({ excluded: next }).eq('id', sessionId!)
-    setSession({ ...session, excluded: next })
+    queryClient.invalidateQueries({ queryKey: qk.session(sessionId!) })
+    queryClient.invalidateQueries({ queryKey: qk.sessions(leagueId!) })
   }
-
 
   function getPlayerName(id: string) {
     return players.find(p => p.id === id)?.name ?? id
   }
 
-  // Uneven games warning
   function getUnevenWarning(): { lines: string[] } | null {
     if (matches.length === 0) return null
     const counts = new Map<string, number>()
@@ -122,7 +115,6 @@ export default function SessionPage() {
 
   const isAdmin = isLeagueAdmin(leagueId!)
   const isCreator = isSessionCreator(sessionId!, session?.creator_token)
-
   const unevenWarning = matches.length > 0 ? getUnevenWarning() : null
 
   return (
@@ -139,16 +131,23 @@ export default function SessionPage() {
         )}
       </div>
 
-      {/* Session PIN */}
-      {session?.pin && (
-        <div className="bg-gray-900 rounded-2xl p-4 flex items-center justify-between">
-          <div>
-            <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Session PIN</p>
-            <p className="text-white text-3xl font-bold tracking-widest">{session.pin}</p>
+      {/* Session PIN — hidden once session is ended */}
+      {session?.pin && !session.ended && (
+        <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Session PIN</p>
+              <p className="text-white text-3xl font-bold tracking-widest">{session.pin}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-gray-500 text-xs max-w-[140px]">Share this PIN so others can join and enter scores</p>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-gray-500 text-xs max-w-[140px]">Share this PIN so others can join and enter scores</p>
-          </div>
+          {!session.confirmed && (
+            <p className="text-yellow-400 text-xs bg-yellow-900/20 border border-yellow-800 rounded-lg px-3 py-2">
+              At least one other player must join with this PIN for the session to be confirmed and logged in the league standings.
+            </p>
+          )}
         </div>
       )}
 
@@ -162,7 +161,7 @@ export default function SessionPage() {
         </div>
       )}
 
-      {/* Session Awards — only shown after session is ended */}
+      {/* Session Awards */}
       {matches.length > 0 && (
         <SessionSummary matches={matches} players={players} stats={stats} sessionLabel={session?.label || session?.date || ''} />
       )}
@@ -172,7 +171,6 @@ export default function SessionPage() {
         const PALETTE = ['#22c55e', '#3b82f6', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4', '#f97316']
         const pMap = new Map(players.map(p => [p.id, p.name]))
 
-        // Group matches into rounds: a new round starts when a player would appear twice
         const rounds: Match[][] = []
         for (const m of matches) {
           const mPlayers = [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2]
@@ -185,13 +183,11 @@ export default function SessionPage() {
           }
         }
 
-        // Build per-player running totals after each round
         const netWins = new Map<string, number>()
         const netPoints = new Map<string, number>()
         const chartPlayerIds = new Set<string>()
         matches.forEach(m => [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2].forEach(id => chartPlayerIds.add(id)))
 
-        // Start point — everyone at midpoint rank
         const midRank = Math.ceil(chartPlayerIds.size / 2)
         chartPlayerIds.forEach(id => { netWins.set(id, 0); netPoints.set(id, 0) })
         const rankData: Record<string, number | string>[] = [(() => {
@@ -214,7 +210,6 @@ export default function SessionPage() {
             }
           }
 
-          // Dense rank after this round (wins primary, point diff secondary)
           const sorted = [...chartPlayerIds].sort((a, b) =>
             (netWins.get(b) ?? 0) - (netWins.get(a) ?? 0) ||
             (netPoints.get(b) ?? 0) - (netPoints.get(a) ?? 0)
@@ -259,7 +254,6 @@ export default function SessionPage() {
             </div>
             {rounds.length > 1 && (
               <div className="pt-3 border-t border-gray-800 flex flex-col gap-5">
-                {/* Rank chart */}
                 <div>
                   <p className="text-gray-400 text-sm font-medium mb-3">Rank</p>
                   <ResponsiveContainer width="100%" height={160}>
@@ -275,8 +269,6 @@ export default function SessionPage() {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-
-                {/* Player toggles */}
                 <div className="flex flex-wrap gap-2">
                   {chartPlayers.map(p => {
                     const color = rankHighlightedIds.get(p.id)
@@ -307,13 +299,12 @@ export default function SessionPage() {
         </button>
       )}
 
-
       {/* Match List */}
       {matches.length > 0 && (
         <div className="bg-gray-900 rounded-2xl p-4">
           <h2 className="font-semibold text-white mb-3">Matches</h2>
           <div className="flex flex-col gap-3">
-            {matches.map((m, i) => {
+            {[...matches].reverse().map((m, i) => {
               const t1Won = m.team1_score > m.team2_score
               const isEditing = editingMatchId === m.id
               const es = editState
@@ -321,7 +312,7 @@ export default function SessionPage() {
                 <div key={m.id} className="bg-gray-800 rounded-xl p-3 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500 uppercase tracking-wide">
-                      Game {i + 1} · {m.scoring_type === 'americano' ? 'Americano' : 'Traditional'}
+                      Game {matches.length - i} · {m.scoring_type === 'americano' ? 'Americano' : 'Traditional'}
                     </span>
                     <div className="flex items-center gap-2">
                       {!isEditing && (
@@ -333,51 +324,24 @@ export default function SessionPage() {
 
                   {isEditing && es ? (
                     <div className="flex flex-col gap-2">
-                      {/* Team 1 players */}
                       <div className="flex gap-2">
-                        <select
-                          value={es.p1}
-                          onChange={e => setEditState({ ...es, p1: e.target.value })}
-                          className="flex-1 bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none"
-                        >
+                        <select value={es.p1} onChange={e => setEditState({ ...es, p1: e.target.value })} className="flex-1 bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
                           {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
-                        <select
-                          value={es.p2}
-                          onChange={e => setEditState({ ...es, p2: e.target.value })}
-                          className="flex-1 bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none"
-                        >
+                        <select value={es.p2} onChange={e => setEditState({ ...es, p2: e.target.value })} className="flex-1 bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
                           {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                       </div>
-                      {/* Score */}
                       <div className="flex items-center gap-2 justify-center">
-                        <input
-                          type="number" min="0" inputMode="numeric"
-                          className="w-14 bg-gray-700 rounded-lg px-2 py-1.5 text-white text-center text-sm outline-none focus:ring-2 focus:ring-green-500"
-                          value={es.s1} onChange={e => setEditState({ ...es, s1: e.target.value })}
-                        />
+                        <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-14 bg-gray-700 rounded-lg px-2 py-1.5 text-white text-center text-sm outline-none focus:ring-2 focus:ring-green-500" value={es.s1} onChange={e => setEditState({ ...es, s1: e.target.value })} />
                         <span className="text-gray-500 font-bold">–</span>
-                        <input
-                          type="number" min="0" inputMode="numeric"
-                          className="w-14 bg-gray-700 rounded-lg px-2 py-1.5 text-white text-center text-sm outline-none focus:ring-2 focus:ring-green-500"
-                          value={es.s2} onChange={e => setEditState({ ...es, s2: e.target.value })}
-                        />
+                        <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-14 bg-gray-700 rounded-lg px-2 py-1.5 text-white text-center text-sm outline-none focus:ring-2 focus:ring-green-500" value={es.s2} onChange={e => setEditState({ ...es, s2: e.target.value })} />
                       </div>
-                      {/* Team 2 players */}
                       <div className="flex gap-2">
-                        <select
-                          value={es.p3}
-                          onChange={e => setEditState({ ...es, p3: e.target.value })}
-                          className="flex-1 bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none"
-                        >
+                        <select value={es.p3} onChange={e => setEditState({ ...es, p3: e.target.value })} className="flex-1 bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
                           {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
-                        <select
-                          value={es.p4}
-                          onChange={e => setEditState({ ...es, p4: e.target.value })}
-                          className="flex-1 bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none"
-                        >
+                        <select value={es.p4} onChange={e => setEditState({ ...es, p4: e.target.value })} className="flex-1 bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
                           {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                       </div>
@@ -428,10 +392,7 @@ export default function SessionPage() {
             </button>
           </div>
           {!session?.ended && (
-            <button
-              onClick={endSession}
-              className="w-full bg-blue-900/40 hover:bg-blue-900/70 text-blue-400 font-semibold rounded-lg py-2 text-sm transition-colors border border-blue-900"
-            >
+            <button onClick={endSession} className="w-full bg-blue-900/40 hover:bg-blue-900/70 text-blue-400 font-semibold rounded-lg py-2 text-sm transition-colors border border-blue-900">
               End Session
             </button>
           )}
@@ -439,16 +400,12 @@ export default function SessionPage() {
             <p className="text-gray-500 text-xs text-center">Session ended — standings locked in</p>
           )}
           {isAdmin && (
-            <button
-              onClick={deleteSession}
-              className="w-full bg-red-900/40 hover:bg-red-900/70 text-red-400 font-semibold rounded-lg py-2 text-sm transition-colors border border-red-900"
-            >
+            <button onClick={deleteSession} className="w-full bg-red-900/40 hover:bg-red-900/70 text-red-400 font-semibold rounded-lg py-2 text-sm transition-colors border border-red-900">
               Delete Session
             </button>
           )}
         </div>
       )}
-
     </div>
   )
 }

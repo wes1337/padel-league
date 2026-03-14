@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { nanoid } from 'nanoid'
 import { saveLeagueAdmin } from '../lib/admin'
-import type { League } from '../types'
+import type { League, ScoringType } from '../types'
 
 export default function Landing() {
   const navigate = useNavigate()
   const [leagueName, setLeagueName] = useState('')
+  const [scoringType, setScoringType] = useState<ScoringType>('americano')
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const recentLeagues: { id: string; name: string }[] = JSON.parse(localStorage.getItem('recent_leagues') || '[]')
@@ -61,7 +62,7 @@ export default function Landing() {
     }
     const id = nanoid(8)
     const admin_token = nanoid(8)
-    const { error } = await supabase.from('leagues').insert({ id, name: leagueName.trim(), admin_token })
+    const { error } = await supabase.from('leagues').insert({ id, name: leagueName.trim(), admin_token, scoring_type: scoringType })
     if (error) {
       console.error('Supabase error:', error)
       setError(`Error: ${error.message}`)
@@ -117,6 +118,23 @@ export default function Landing() {
             value={leagueName}
             onChange={e => setLeagueName(e.target.value)}
           />
+          <div className="flex flex-col gap-1.5">
+            <p className="text-gray-400 text-xs">Scoring format</p>
+            <div className="flex gap-2">
+              {(['americano', 'traditional'] as ScoringType[]).map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setScoringType(type)}
+                  className={`flex-1 py-2 rounded-xl font-semibold text-sm transition-colors capitalize ${
+                    scoringType === type ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {type === 'americano' ? '🎯 Americano' : '🎾 Traditional'}
+                </button>
+              ))}
+            </div>
+          </div>
           <button
             type="submit"
             disabled={creating || !leagueName.trim()}

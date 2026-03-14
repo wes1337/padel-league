@@ -3,8 +3,12 @@
 create table leagues (
   id text primary key,
   name text not null,
+  scoring_type text check (scoring_type in ('americano', 'traditional')) not null default 'americano',
   created_at timestamptz default now()
 );
+
+-- Migration (run this if the table already exists):
+-- alter table leagues add column scoring_type text check (scoring_type in ('americano', 'traditional')) not null default 'americano';
 
 create table players (
   id uuid primary key default gen_random_uuid(),

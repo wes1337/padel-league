@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
+import { usePlayers, useMultiSessionMatches } from '../lib/queries'
 import type { Player, Match, Session } from '../types'
 
 interface MatchDetail extends Match {
@@ -68,13 +69,18 @@ function StatRow({ label, value, sub }: { label: string; value: string; sub?: st
 }
 
 // ── Player row with W/L bar ───────────────────────────────────────────────────
-function PlayerStatRow({ name, wins, losses, highlight }: { name: string; wins: number; losses: number; highlight?: 'green' | 'red' }) {
+function PlayerStatRow({ name, wins, losses, diff, highlight }: { name: string; wins: number; losses: number; diff?: number; highlight?: 'green' | 'red' }) {
   const total = wins + losses
   const pct = total > 0 ? Math.round((wins / total) * 100) : 0
   return (
     <div className="flex items-center gap-3 py-2 border-b border-gray-800 last:border-0">
       <span className={`text-sm font-medium flex-1 ${highlight === 'green' ? 'text-green-400' : highlight === 'red' ? 'text-red-400' : 'text-white'}`}>{name}</span>
       <span className="text-gray-500 text-xs">{wins}W {losses}L</span>
+      {diff !== undefined && (
+        <span className={`text-xs w-10 text-right ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+          {diff > 0 ? `+${diff}` : diff}
+        </span>
+      )}
       <span className={`text-sm font-bold w-12 text-right ${pct >= 50 ? 'text-green-400' : 'text-red-400'}`}>{pct}%</span>
     </div>
   )
@@ -83,7 +89,45 @@ function PlayerStatRow({ name, wins, losses, highlight }: { name: string; wins: 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function PlayerProfile() {
   const { leagueId, playerId, sessionId } = useParams<{ leagueId: string; playerId: string; sessionId?: string }>()
+
+  const year = new Date().getFullYear()
+  const yearStart = `${year}-01-01`
+  const yearEnd   = `${year}-12-31`
+
+  // ── Raw data (cached) ────────────────────────────────────────────────────
+  const { data: allPlayersList = [] } = usePlayers(leagueId)
+
   const [player, setPlayer] = useState<Player | null>(null)
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [sessionsLoading, setSessionsLoading] = useState(true)
+
+  // Fetch the focal player + session list (these are profile-specific queries)
+  useEffect(() => {
+    setSessionsLoading(true)
+    const sessionsQuery = sessionId
+      ? supabase.from('sessions').select('*').eq('id', sessionId)
+      : supabase.from('sessions').select('*').eq('league_id', leagueId)
+          .eq('excluded', false).eq('confirmed', true).gte('date', yearStart).lte('date', yearEnd)
+
+    Promise.all([
+      supabase.from('players').select('*').eq('id', playerId).single(),
+      sessionsQuery,
+    ]).then(([playerRes, sessionsRes]) => {
+      if (playerRes.data) setPlayer(playerRes.data as Player)
+      setSessions((sessionsRes.data ?? []) as Session[])
+      setSessionsLoading(false)
+    })
+  }, [playerId, sessionId, leagueId, yearStart, yearEnd])
+
+  const sessionIds = sessions.map(s => s.id)
+  const { data: allMatches = [], isLoading: matchesLoading } = useMultiSessionMatches(
+    sessionIds,
+    `profile-${leagueId}-${sessionId ?? `season-${year}`}`
+  )
+
+  const loading = sessionsLoading || (sessionIds.length > 0 && matchesLoading)
+
+  // ── Derived state (complex computation) ──────────────────────────────────
   const [matchDetails, setMatchDetails] = useState<MatchDetail[]>([])
   const [totalSessions, setTotalSessions] = useState(0)
   const [regularPlayerIds, setRegularPlayerIds] = useState<Set<string>>(new Set())
@@ -93,44 +137,23 @@ export default function PlayerProfile() {
   const [highlightedIds, setHighlightedIds] = useState<Map<string, string>>(new Map())
   const [sessionRank, setSessionRank] = useState<{ rank: number; total: number } | null>(null)
   const [sessionAvg, setSessionAvg] = useState<{ scored: number; conceded: number } | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => { loadData() }, [playerId])
+  useEffect(() => {
+    if (!player || allPlayersList.length === 0 || sessionsLoading) return
+    if (sessions.length === 0) { setTotalSessions(0); setMatchDetails([]); return }
+    if (sessionIds.length > 0 && matchesLoading) return
 
-  async function loadData() {
-    setLoading(true)
-    const year = new Date().getFullYear()
-    const yearStart = `${year}-01-01`
-    const yearEnd = `${year}-12-31`
-
-    const sessionsQuery = sessionId
-      ? supabase.from('sessions').select('*').eq('id', sessionId)
-      : supabase.from('sessions').select('*').eq('league_id', leagueId)
-          .eq('excluded', false).eq('confirmed', true).gte('date', yearStart).lte('date', yearEnd)
-
-    const [playerRes, playersRes, sessionsRes] = await Promise.all([
-      supabase.from('players').select('*').eq('id', playerId).single(),
-      supabase.from('players').select('*').eq('league_id', leagueId),
-      sessionsQuery,
-    ])
-
-    if (playerRes.data) setPlayer(playerRes.data)
     const pMap = new Map<string, Player>()
-    for (const p of (playersRes.data || [])) pMap.set(p.id, p as Player)
+    for (const p of allPlayersList) pMap.set(p.id, p as Player)
 
-    const sessions = (sessionsRes.data || []) as Session[]
     setTotalSessions(sessions.length)
-    if (sessions.length === 0) { setLoading(false); return }
 
     const sessionMap = new Map<string, Session>()
     for (const s of sessions) sessionMap.set(s.id, s)
 
-    const { data: allMatches } = await supabase
-      .from('matches').select('*').in('session_id', sessions.map(s => s.id))
-
     // Compute attendance for every player — sessions attended / total sessions
     const playerSessionsMap = new Map<string, Set<string>>()
-    for (const m of (allMatches || []) as Match[]) {
+    for (const m of allMatches as Match[]) {
       for (const pid of [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2]) {
         if (!playerSessionsMap.has(pid)) playerSessionsMap.set(pid, new Set())
         playerSessionsMap.get(pid)!.add(m.session_id)
@@ -143,7 +166,7 @@ export default function PlayerProfile() {
     setRegularPlayerIds(regularIds)
 
     const details: MatchDetail[] = []
-    for (const m of (allMatches || []) as Match[]) {
+    for (const m of allMatches as Match[]) {
       const isT1 = m.team1_p1 === playerId || m.team1_p2 === playerId
       const isT2 = m.team2_p1 === playerId || m.team2_p2 === playerId
       if (!isT1 && !isT2) continue
@@ -173,14 +196,17 @@ export default function PlayerProfile() {
       })
     }
 
-    details.sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime())
+    details.sort((a, b) =>
+      new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime() ||
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
     setMatchDetails(details)
 
     // Season rank trendline (season mode only)
-    if (!sessionId && allMatches) {
+    if (!sessionId && allMatches.length >= 0) {
       const chronoSessions = [...sessions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       const sessionsWithMatches = chronoSessions.filter(s => (allMatches as Match[]).some(m => m.session_id === s.id))
-      const allPlayers = playersRes.data as Player[]
+      const allPlayers = allPlayersList as Player[]
 
       const history: Record<string, number | string>[] = []
       for (let i = 0; i < sessionsWithMatches.length; i++) {
@@ -193,8 +219,6 @@ export default function PlayerProfile() {
         stats.forEach((s, idx) => { point[s.player.id] = idx + 1 })
         history.push(point)
       }
-      setRankHistory(history)
-
       const playerIds = new Set<string>()
       history.forEach(h => Object.keys(h).filter(k => k !== 'label').forEach(k => playerIds.add(k)))
       // Count sessions each player appeared in and apply 30% threshold
@@ -205,14 +229,20 @@ export default function PlayerProfile() {
         })
       })
       const totalSess = sessionsWithMatches.length
-      const names = allPlayers
+      const names = (allPlayersList as Player[])
         .filter(p => playerIds.has(p.id) && (playerSessionCounts.get(p.id) ?? 0) / totalSess >= 0.3)
+
+      // Prepend a 'Start' point with all players at the midpoint rank
+      const midRank = Math.ceil(names.length / 2)
+      const startPoint: Record<string, number | string> = { label: 'Start' }
+      names.forEach(p => { startPoint[p.id] = midRank })
+      setRankHistory([startPoint, ...history])
       setAllPlayerNames(names)
       setHighlightedIds(new Map([[playerId!, '#22c55e']]))
     }
 
     // Session rank + averages
-    if (sessionId && allMatches) {
+    if (sessionId) {
       const sMap = new Map<string, { wins: number; pointDiff: number; scored: number; conceded: number }>()
       for (const m of allMatches as Match[]) {
         const t1Won = m.team1_score > m.team2_score
@@ -274,9 +304,7 @@ export default function PlayerProfile() {
       if (sorted[0]?.[0] === playerId) sessionsTopped++
     }
     setKingStats({ sessionsTopped, sessionsAttended: sessionsAttendedSet.size })
-
-    setLoading(false)
-  }
+  }, [player, allPlayersList, sessions, allMatches, sessionsLoading, matchesLoading, playerId, sessionId])
 
   if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-400">Loading...</div>
   if (!player) return <div className="flex justify-center items-center min-h-screen text-red-400">Player not found.</div>
@@ -301,11 +329,12 @@ export default function PlayerProfile() {
 
 
   // ── Partner chemistry ───────────────────────────────────────────────────────
-  const partnerMap = new Map<string, { name: string; wins: number; losses: number }>()
+  const partnerMap = new Map<string, { name: string; wins: number; losses: number; diff: number }>()
   for (const m of matchDetails) {
-    if (!partnerMap.has(m.partnerId)) partnerMap.set(m.partnerId, { name: m.partner, wins: 0, losses: 0 })
+    if (!partnerMap.has(m.partnerId)) partnerMap.set(m.partnerId, { name: m.partner, wins: 0, losses: 0, diff: 0 })
     const p = partnerMap.get(m.partnerId)!
     m.won ? p.wins++ : p.losses++
+    p.diff += m.myScore - m.oppScore
   }
   const partners = [...partnerMap.entries()]
     .filter(([id]) => regularPlayerIds.has(id))
@@ -313,18 +342,19 @@ export default function PlayerProfile() {
     .sort((a, b) => {
       const pctA = (a.wins / (a.wins + a.losses)) || 0
       const pctB = (b.wins / (b.wins + b.losses)) || 0
-      return pctB - pctA
+      return pctB - pctA || b.diff - a.diff
     })
   const bestPartner = partners[0]
   const worstPartner = partners[partners.length - 1]
 
   // ── Rivals (H2H vs opponents) ───────────────────────────────────────────────
-  const rivalMap = new Map<string, { name: string; wins: number; losses: number }>()
+  const rivalMap = new Map<string, { name: string; wins: number; losses: number; diff: number }>()
   for (const m of matchDetails) {
     for (const [id, name] of [[m.opp1Id, m.opp1Name], [m.opp2Id, m.opp2Name]] as [string, string][]) {
-      if (!rivalMap.has(id)) rivalMap.set(id, { name, wins: 0, losses: 0 })
+      if (!rivalMap.has(id)) rivalMap.set(id, { name, wins: 0, losses: 0, diff: 0 })
       const r = rivalMap.get(id)!
       m.won ? r.wins++ : r.losses++
+      r.diff += m.myScore - m.oppScore
     }
   }
   const rivals = [...rivalMap.entries()]
@@ -411,7 +441,7 @@ export default function PlayerProfile() {
         <div className="bg-yellow-900/20 border border-yellow-700 rounded-2xl p-4 flex items-center gap-4">
           <span className="text-4xl">👑</span>
           <div className="flex-1">
-            <p className="text-yellow-400 font-bold text-sm uppercase tracking-wide">King of the Court</p>
+            <p className="text-yellow-400 font-bold text-sm uppercase tracking-wide">Court Champion</p>
             <p className="text-white text-2xl font-bold mt-0.5">
               {kingStats.sessionsTopped} session{kingStats.sessionsTopped !== 1 ? 's' : ''} topped
             </p>
@@ -425,7 +455,7 @@ export default function PlayerProfile() {
       )}
 
       {/* Season rank trendline */}
-      {!sessionId && rankHistory.length > 1 && (() => {
+      {!sessionId && rankHistory.length >= 1 && (() => {
         const PALETTE = ['#3b82f6', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4', '#f97316']
         function togglePlayer(id: string) {
           if (id === playerId) return // current player always on
@@ -444,7 +474,7 @@ export default function PlayerProfile() {
         return (
           <div className="bg-gray-900 rounded-2xl p-4">
             <h2 className="font-semibold text-white mb-1">Season Rank Trend</h2>
-            <p className="text-gray-500 text-xs mb-3">Tap a line to compare — lower is better</p>
+            <p className="text-gray-500 text-xs mb-3">Tap a line to compare</p>
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={rankHistory} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
                 <XAxis dataKey="label" tick={false} tickLine={false} axisLine={false} />
@@ -466,7 +496,7 @@ export default function PlayerProfile() {
                       dataKey={p.id}
                       stroke={color ?? '#374151'}
                       strokeWidth={isHighlighted ? 2.5 : 1.5}
-                      dot={isHighlighted ? { r: 3, fill: color, strokeWidth: 0 } : false}
+                      dot={rankHistory.length === 1 ? { r: 4, fill: color ?? '#374151', strokeWidth: 0 } : isHighlighted ? { r: 3, fill: color, strokeWidth: 0 } : false}
                       connectNulls
                     />
                   )
@@ -531,15 +561,15 @@ export default function PlayerProfile() {
 
       {/* Scoring */}
       <Section title="Scoring" tooltip="How many points you score and concede on average, plus your most decisive results.">
-        {sessionId && <StatRow label="Total points scored" value={String(totalScored)} sub={sessionAvg ? `avg ${sessionAvg.scored}` : undefined} />}
-        {sessionId && <StatRow label="Total points conceded" value={String(totalConceded)} sub={sessionAvg ? `avg ${sessionAvg.conceded}` : undefined} />}
+        {sessionId && <StatRow label="Total points scored" value={String(totalScored)} sub={sessionAvg ? `vs session avg ${sessionAvg.scored}` : undefined} />}
+        {sessionId && <StatRow label="Total points conceded" value={String(totalConceded)} sub={sessionAvg ? `vs session avg ${sessionAvg.conceded}` : undefined} />}
         <StatRow label="Avg points scored" value={String(avgScored)} sub="per game" />
         <StatRow label="Avg points conceded" value={String(avgConceded)} sub="per game" />
         {biggestWin && (
-          <StatRow label="Biggest win" value={`${biggestWin.myScore} – ${biggestWin.oppScore}`} sub={`vs ${biggestWin.opponents} · ${biggestWin.sessionLabel}`} />
+          <StatRow label="Biggest win" value={`${biggestWin.myScore} – ${biggestWin.oppScore}`} sub={`with ${biggestWin.partner} · vs ${biggestWin.opponents} · ${biggestWin.sessionLabel}`} />
         )}
         {heaviestLoss && (
-          <StatRow label="Heaviest loss" value={`${heaviestLoss.myScore} – ${heaviestLoss.oppScore}`} sub={`vs ${heaviestLoss.opponents} · ${heaviestLoss.sessionLabel}`} />
+          <StatRow label="Heaviest loss" value={`${heaviestLoss.myScore} – ${heaviestLoss.oppScore}`} sub={`with ${heaviestLoss.partner} · vs ${heaviestLoss.opponents} · ${heaviestLoss.sessionLabel}`} />
         )}
       </Section>
 
@@ -563,7 +593,7 @@ export default function PlayerProfile() {
             )}
             {partners.map((p) => (
               <PlayerStatRow
-                key={p.name} name={p.name} wins={p.wins} losses={p.losses}
+                key={p.name} name={p.name} wins={p.wins} losses={p.losses} diff={p.diff}
                 highlight={p === bestPartner && p !== worstPartner ? 'green' : p === worstPartner && p !== bestPartner ? 'red' : undefined}
               />
             ))}
@@ -594,7 +624,7 @@ export default function PlayerProfile() {
               </div>
             )}
             {rivals.map(r => (
-              <PlayerStatRow key={r.name} name={r.name} wins={r.wins} losses={r.losses}
+              <PlayerStatRow key={r.name} name={r.name} wins={r.wins} losses={r.losses} diff={r.diff}
                 highlight={r === favVictim && r !== nemesis ? 'green' : r === nemesis && r !== favVictim ? 'red' : undefined}
               />
             ))}

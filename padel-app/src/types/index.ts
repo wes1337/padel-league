@@ -3,6 +3,7 @@ export type ScoringType = 'americano' | 'traditional'
 export interface League {
   id: string
   name: string
+  scoring_type: ScoringType
   admin_token?: string
   created_at: string
 }
