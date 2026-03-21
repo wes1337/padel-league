@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { usePlayers, useLeague, qk } from '../lib/queries'
-import type { Player, ScoringType } from '../types'
+import type { Player } from '../types'
 
 export default function AddMatch() {
   const { leagueId, sessionId } = useParams<{ leagueId: string; sessionId: string }>()
