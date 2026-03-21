@@ -116,6 +116,14 @@ export default function SessionPage() {
 
   const isAdmin = isLeagueAdmin(leagueId!)
   const isCreator = isSessionCreator(sessionId!, session?.creator_token)
+
+  async function swapMatches(a: Match, b: Match) {
+    await Promise.all([
+      supabase.from('matches').update({ created_at: b.created_at }).eq('id', a.id),
+      supabase.from('matches').update({ created_at: a.created_at }).eq('id', b.id),
+    ])
+    queryClient.invalidateQueries({ queryKey: qk.sessionMatches(sessionId!) })
+  }
   const unevenWarning = matches.length > 0 ? getUnevenWarning() : null
 
   return (
@@ -316,6 +324,16 @@ export default function SessionPage() {
                       Game {matches.length - i} · {(league?.scoring_type ?? m.scoring_type) === 'americano' ? 'Americano' : 'Traditional'}
                     </span>
                     <div className="flex items-center gap-2">
+                      {(isAdmin || isCreator) && !isEditing && (
+                        <>
+                          {i > 0 && (
+                            <button onClick={() => swapMatches(m, matches[matches.length - i])} className="text-gray-600 hover:text-white text-xs transition-colors">▲</button>
+                          )}
+                          {i < matches.length - 1 && (
+                            <button onClick={() => swapMatches(m, matches[matches.length - i - 2])} className="text-gray-600 hover:text-white text-xs transition-colors">▼</button>
+                          )}
+                        </>
+                      )}
                       {!isEditing && (
                         <button onClick={() => startEdit(m)} className="text-gray-500 hover:text-white text-xs transition-colors">Edit</button>
                       )}
