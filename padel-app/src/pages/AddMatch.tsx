@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
@@ -12,7 +12,7 @@ export default function AddMatch() {
 
   const { data: players = [] } = usePlayers(leagueId)
   const { data: league } = useLeague(leagueId)
-  const scoringType = (league?.scoring_type ?? 'americano') as ScoringType
+  const scoringType = league?.scoring_type ?? 'americano'
 
   const [selected, setSelected] = useState<(Player | null)[]>([null, null, null, null])
   const [team1Score, setTeam1Score] = useState('')
@@ -24,10 +24,14 @@ export default function AddMatch() {
   const [error, setError] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 
-  // Focus search when picker opens
-  if (activeTeam !== null) {
-    setTimeout(() => searchRef.current?.focus(), 100)
-  }
+  // Lock body scroll and focus search when picker opens
+  useEffect(() => {
+    if (activeTeam !== null) {
+      document.body.style.overflow = 'hidden'
+      setTimeout(() => searchRef.current?.focus(), 100)
+      return () => { document.body.style.overflow = '' }
+    }
+  }, [activeTeam])
 
   function openTeam(team: number) {
     const base = team * 2
@@ -90,6 +94,7 @@ export default function AddMatch() {
   }
 
   async function handleSave() {
+    if (!league) { setError('League data not loaded yet.'); return }
     if (selected.some(p => !p)) { setError('Please fill all 4 player slots.'); return }
     const s1 = parseInt(team1Score)
     const s2 = parseInt(team2Score)
@@ -155,11 +160,17 @@ export default function AddMatch() {
       {/* Player Picker Modal */}
       {activeTeam !== null && (
         <div className="fixed inset-0 bg-black/80 flex items-end z-50" onClick={() => setActiveTeam(null)}>
-          <div className="w-full bg-gray-900 rounded-t-3xl p-5 flex flex-col gap-4 max-h-[80vh]" onClick={e => e.stopPropagation()}>
+          <div className="w-full bg-gray-900 rounded-t-3xl p-5 flex flex-col gap-4 max-h-[80dvh]" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-white">{teamConfig[activeTeam].label}</h3>
-                <p className="text-xs text-gray-400">Picking Player {pickingPlayer + 1}</p>
+                {pickingPlayer === 1 && selected[activeTeam * 2] ? (
+                  <p className="text-xs text-gray-400">
+                    <span className="text-white font-medium">{selected[activeTeam * 2]!.name}</span> & <span className="italic">picking partner…</span>
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400">Pick first player</p>
+                )}
               </div>
               <button onClick={() => setActiveTeam(null)} className="text-gray-400 hover:text-white">✕</button>
             </div>

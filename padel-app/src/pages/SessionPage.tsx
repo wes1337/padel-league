@@ -5,7 +5,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
 import { isLeagueAdmin, isSessionCreator } from '../lib/admin'
-import { useSession, useSessionMatches, usePlayers, qk } from '../lib/queries'
+import { useSession, useSessionMatches, usePlayers, useLeague, qk } from '../lib/queries'
 import type { Match } from '../types'
 import Leaderboard from '../components/Leaderboard'
 import SessionSummary from '../components/SessionSummary'
@@ -27,6 +27,7 @@ export default function SessionPage() {
   const { data: session, isLoading: sessionLoading } = useSession(sessionId)
   const { data: matches = [], isLoading: matchesLoading } = useSessionMatches(sessionId)
   const { data: players = [], isLoading: playersLoading } = usePlayers(leagueId)
+  const { data: league } = useLeague(leagueId)
 
   const loading = sessionLoading || matchesLoading || playersLoading
 
@@ -312,7 +313,7 @@ export default function SessionPage() {
                 <div key={m.id} className="bg-gray-800 rounded-xl p-3 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500 uppercase tracking-wide">
-                      Game {matches.length - i} · {m.scoring_type === 'americano' ? 'Americano' : 'Traditional'}
+                      Game {matches.length - i} · {(league?.scoring_type ?? m.scoring_type) === 'americano' ? 'Americano' : 'Traditional'}
                     </span>
                     <div className="flex items-center gap-2">
                       {!isEditing && (
