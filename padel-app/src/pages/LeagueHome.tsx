@@ -95,7 +95,7 @@ export default function LeagueHome() {
 
   const { recentTopId, recentBottomId } = useMemo(() => {
     if (sessionIdsWithMatches.length === 0) return {}
-    const recentSessionId = sessionIdsWithMatches[sessionIdsWithMatches.length - 1]
+    const recentSessionId = sessionIdsWithMatches[0]
     const recentMatches = (seasonMatches as Match[]).filter(m => m.session_id === recentSessionId)
     if (recentMatches.length === 0) return {}
     const recentStats = computeStats(players as Player[], recentMatches)
