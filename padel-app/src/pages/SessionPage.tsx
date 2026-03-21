@@ -117,13 +117,6 @@ export default function SessionPage() {
   const isAdmin = isLeagueAdmin(leagueId!)
   const isCreator = isSessionCreator(sessionId!, session?.creator_token)
 
-  async function swapMatches(a: Match, b: Match) {
-    await Promise.all([
-      supabase.from('matches').update({ created_at: b.created_at }).eq('id', a.id),
-      supabase.from('matches').update({ created_at: a.created_at }).eq('id', b.id),
-    ])
-    queryClient.invalidateQueries({ queryKey: qk.sessionMatches(sessionId!) })
-  }
   const unevenWarning = matches.length > 0 ? getUnevenWarning() : null
 
   return (
@@ -324,16 +317,6 @@ export default function SessionPage() {
                       Game {matches.length - i} · {(league?.scoring_type ?? m.scoring_type) === 'americano' ? 'Americano' : 'Traditional'}
                     </span>
                     <div className="flex items-center gap-2">
-                      {(isAdmin || isCreator) && !isEditing && (
-                        <>
-                          {i > 0 && (
-                            <button onClick={() => swapMatches(m, matches[matches.length - i])} className="text-gray-600 hover:text-white text-xs transition-colors">▲</button>
-                          )}
-                          {i < matches.length - 1 && (
-                            <button onClick={() => swapMatches(m, matches[matches.length - i - 2])} className="text-gray-600 hover:text-white text-xs transition-colors">▼</button>
-                          )}
-                        </>
-                      )}
                       {!isEditing && (
                         <button onClick={() => startEdit(m)} className="text-gray-500 hover:text-white text-xs transition-colors">Edit</button>
                       )}
@@ -343,26 +326,28 @@ export default function SessionPage() {
 
                   {isEditing && es ? (
                     <div className="flex flex-col gap-2">
-                      <div className="flex gap-2">
-                        <select value={es.p1} onChange={e => setEditState({ ...es, p1: e.target.value })} className="flex-1 bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
-                          {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                        <select value={es.p2} onChange={e => setEditState({ ...es, p2: e.target.value })} className="flex-1 bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
-                          {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-2 justify-center">
-                        <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-14 bg-gray-700 rounded-lg px-2 py-1.5 text-white text-center text-sm outline-none focus:ring-2 focus:ring-green-500" value={es.s1} onChange={e => setEditState({ ...es, s1: e.target.value })} />
-                        <span className="text-gray-500 font-bold">–</span>
-                        <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-14 bg-gray-700 rounded-lg px-2 py-1.5 text-white text-center text-sm outline-none focus:ring-2 focus:ring-green-500" value={es.s2} onChange={e => setEditState({ ...es, s2: e.target.value })} />
-                      </div>
-                      <div className="flex gap-2">
-                        <select value={es.p3} onChange={e => setEditState({ ...es, p3: e.target.value })} className="flex-1 bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
-                          {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                        <select value={es.p4} onChange={e => setEditState({ ...es, p4: e.target.value })} className="flex-1 bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
-                          {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 flex flex-col gap-1">
+                          <select value={es.p1} onChange={e => setEditState({ ...es, p1: e.target.value })} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
+                            {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          <select value={es.p2} onChange={e => setEditState({ ...es, p2: e.target.value })} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
+                            {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-10 bg-gray-700 rounded-lg px-1 py-1.5 text-white text-center text-sm outline-none focus:ring-2 focus:ring-green-500" value={es.s1} onChange={e => setEditState({ ...es, s1: e.target.value })} />
+                          <span className="text-gray-500 font-bold">–</span>
+                          <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-10 bg-gray-700 rounded-lg px-1 py-1.5 text-white text-center text-sm outline-none focus:ring-2 focus:ring-green-500" value={es.s2} onChange={e => setEditState({ ...es, s2: e.target.value })} />
+                        </div>
+                        <div className="flex-1 flex flex-col gap-1">
+                          <select value={es.p3} onChange={e => setEditState({ ...es, p3: e.target.value })} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
+                            {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          <select value={es.p4} onChange={e => setEditState({ ...es, p4: e.target.value })} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
+                            {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                        </div>
                       </div>
                       <div className="flex gap-2 pt-1">
                         <button onClick={() => saveEdit(m.id)} className="flex-1 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold rounded-lg py-1.5 transition-colors">Save</button>
