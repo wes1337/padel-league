@@ -159,20 +159,21 @@ export default function AddMatch() {
 
       {/* Player Picker Modal */}
       {activeTeam !== null && (
-        <div className="fixed inset-0 bg-black/80 flex items-end z-50" onClick={() => setActiveTeam(null)}>
-          <div className="w-full bg-gray-900 rounded-t-3xl p-5 flex flex-col gap-4 max-h-[80dvh]" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/80 flex flex-col z-50" onClick={() => setActiveTeam(null)}>
+          <div className="flex-1" />
+          <div className="w-full bg-gray-900 rounded-t-3xl p-5 flex flex-col gap-4 h-[100dvh]" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-white">{teamConfig[activeTeam].label}</h3>
                 {pickingPlayer === 1 && selected[activeTeam * 2] ? (
-                  <p className="text-xs text-gray-400">
-                    <span className="text-white font-medium">{selected[activeTeam * 2]!.name}</span> & <span className="italic">picking partner…</span>
+                  <p className="text-sm text-gray-400">
+                    <span className={`font-semibold ${teamConfig[activeTeam].textColor}`}>{selected[activeTeam * 2]!.name}</span> & <span className="italic">picking partner…</span>
                   </p>
                 ) : (
                   <p className="text-xs text-gray-400">Pick first player</p>
                 )}
               </div>
-              <button onClick={() => setActiveTeam(null)} className="text-gray-400 hover:text-white">✕</button>
+              <button onClick={() => setActiveTeam(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
             </div>
 
             {/* Combined search / add input */}
