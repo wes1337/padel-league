@@ -362,18 +362,16 @@ export default function PlayerProfile() {
     .map(([, v]) => v)
     .sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses))
   const qualifiedRivals = [...rivalMap.entries()].filter(([id]) => regularPlayerIds.has(id)).map(([, v]) => v).filter(r => r.wins + r.losses >= 3)
-  const nemesisCandidate = [...qualifiedRivals].sort((a, b) => {
-    const lossRateA = a.losses / (a.wins + a.losses)
-    const lossRateB = b.losses / (b.wins + b.losses)
-    return lossRateB - lossRateA
-  })[0]
-  const nemesis = nemesisCandidate && nemesisCandidate.losses / (nemesisCandidate.wins + nemesisCandidate.losses) > 0.5 ? nemesisCandidate : undefined
-  const favVictimCandidate = [...qualifiedRivals].sort((a, b) => {
+  const favVictim = [...qualifiedRivals].sort((a, b) => {
     const winRateA = a.wins / (a.wins + a.losses)
     const winRateB = b.wins / (b.wins + b.losses)
     return winRateB - winRateA
-  })[0]
-  const favVictim = favVictimCandidate && favVictimCandidate.wins / (favVictimCandidate.wins + favVictimCandidate.losses) > 0.5 ? favVictimCandidate : undefined
+  })[0] ?? undefined
+  const nemesis = [...qualifiedRivals].sort((a, b) => {
+    const lossRateA = a.losses / (a.wins + a.losses)
+    const lossRateB = b.losses / (b.wins + b.losses)
+    return lossRateB - lossRateA
+  }).find(r => r !== favVictim) ?? undefined
 
   // ── Streaks ─────────────────────────────────────────────────────────────────
   const chronological = [...matchDetails].reverse()
