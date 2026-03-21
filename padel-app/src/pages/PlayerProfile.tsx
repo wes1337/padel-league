@@ -23,11 +23,12 @@ interface MatchDetail extends Match {
 }
 
 // ── Collapsible section with tooltip ─────────────────────────────────────────
-function Section({ title, tooltip, children, defaultOpen = true }: {
+function Section({ title, tooltip, children, defaultOpen = true, collapsible = true }: {
   title: string
   tooltip: string
   children: React.ReactNode
   defaultOpen?: boolean
+  collapsible?: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const [showTip, setShowTip] = useState(false)
@@ -41,9 +42,11 @@ function Section({ title, tooltip, children, defaultOpen = true }: {
           {title}
           <span className="text-gray-500 text-xs bg-gray-800 rounded-full w-4 h-4 flex items-center justify-center shrink-0">i</span>
         </button>
-        <button onClick={() => setOpen(v => !v)} className="text-gray-400 text-sm px-2">
-          {open ? '▲' : '▼'}
-        </button>
+        {collapsible && (
+          <button onClick={() => setOpen(v => !v)} className="text-gray-400 text-sm px-2">
+            {open ? '▲' : '▼'}
+          </button>
+        )}
       </div>
       {showTip && (
         <div className="px-4 py-2 bg-gray-800/50 text-gray-400 text-xs border-b border-gray-800">
@@ -69,13 +72,24 @@ function StatRow({ label, value, sub }: { label: string; value: string; sub?: st
 }
 
 // ── Player row with W/L bar ───────────────────────────────────────────────────
-function PlayerStatRow({ name, wins, losses, diff, highlight }: { name: string; wins: number; losses: number; diff?: number; highlight?: 'green' | 'red' }) {
+function PlayerStatRow({ name, wins, losses, diff, highlight, context }: { name: string; wins: number; losses: number; diff?: number; highlight?: 'green' | 'red'; context?: 'together' | 'against' }) {
   const total = wins + losses
   const pct = total > 0 ? Math.round((wins / total) * 100) : 0
+  const label = context === 'together' ? `${total} ${total === 1 ? 'game' : 'games'} together` : context === 'against' ? `${total} ${total === 1 ? 'game' : 'games'} against` : `${wins}W ${losses}L`
   return (
     <div className="flex items-center gap-3 py-2 border-b border-gray-800 last:border-0">
-      <span className={`text-sm font-medium flex-1 ${highlight === 'green' ? 'text-green-400' : highlight === 'red' ? 'text-red-400' : 'text-white'}`}>{name}</span>
-      <span className="text-gray-500 text-xs">{wins}W {losses}L</span>
+      <div className="flex-1 min-w-0">
+        <span className={`text-sm font-medium ${highlight === 'green' ? 'text-green-400' : highlight === 'red' ? 'text-red-400' : 'text-white'}`}>{name}</span>
+        <p className="text-gray-600 text-xs">{label}</p>
+      </div>
+      <span className="text-gray-500 text-xs">
+        {context === 'together'
+          ? <><span className="text-green-400">{wins} won</span> · <span className="text-red-400">{losses} lost</span></>
+          : context === 'against'
+          ? <><span className="text-green-400">{wins} won</span> · <span className="text-red-400">{losses} lost</span></>
+          : <>{wins}W {losses}L</>
+        }
+      </span>
       {diff !== undefined && (
         <span className={`text-xs w-10 text-right ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-400'}`}>
           {diff > 0 ? `+${diff}` : diff}
@@ -342,7 +356,7 @@ export default function PlayerProfile() {
     .sort((a, b) => {
       const pctA = (a.wins / (a.wins + a.losses)) || 0
       const pctB = (b.wins / (b.wins + b.losses)) || 0
-      return pctB - pctA || b.diff - a.diff
+      return pctB - pctA || (b.wins + b.losses) - (a.wins + a.losses) || b.diff - a.diff
     })
   const bestPartner = partners[0]
   const worstPartner = partners[partners.length - 1]
@@ -371,7 +385,7 @@ export default function PlayerProfile() {
     const lossRateA = a.losses / (a.wins + a.losses)
     const lossRateB = b.losses / (b.wins + b.losses)
     return lossRateB - lossRateA
-  }).find(r => r !== favVictim) ?? undefined
+  })[0] ?? undefined
 
   // ── Streaks ─────────────────────────────────────────────────────────────────
   const chronological = [...matchDetails].reverse()
@@ -561,7 +575,7 @@ export default function PlayerProfile() {
       })()}
 
       {/* Scoring */}
-      <Section title="Scoring" tooltip="How many points you score and concede on average, plus your most decisive results.">
+      <Section title="Scoring" tooltip="How many points you score and concede on average, plus your most decisive results." collapsible={false}>
         {sessionId && <StatRow label="Total points scored" value={String(totalScored)} sub={sessionAvg ? `vs session avg ${sessionAvg.scored}` : undefined} />}
         {sessionId && <StatRow label="Total points conceded" value={String(totalConceded)} sub={sessionAvg ? `vs session avg ${sessionAvg.conceded}` : undefined} />}
         <StatRow label="Avg points scored" value={String(avgScored)} sub="per game" />
@@ -575,7 +589,7 @@ export default function PlayerProfile() {
       </Section>
 
       {/* Partner Chemistry — season only */}
-      {!sessionId && <Section title="Partner Chemistry" tooltip="Your win rate with each partner. Best partner highlighted in green, worst in red (minimum 3 games together).">
+      {!sessionId && <Section title="Partner Chemistry" tooltip="Win rate when playing on the same team as each player. Ranked by win %, then games played together." collapsible={false}>
         {partners.length === 0 ? <p className="text-gray-500 text-sm">No data yet.</p> : (
           <>
             {bestPartner && bestPartner !== worstPartner && (
@@ -583,18 +597,18 @@ export default function PlayerProfile() {
                 <div className="flex-1 bg-green-900/30 border border-green-800 rounded-xl p-3 text-center">
                   <p className="text-green-400 text-xs mb-1">Best partner</p>
                   <p className="text-white font-bold">{bestPartner.name}</p>
-                  <p className="text-gray-400 text-xs">{Math.round(bestPartner.wins / (bestPartner.wins + bestPartner.losses) * 100)}% win rate</p>
+                  <p className="text-gray-400 text-xs">Won {bestPartner.wins} of {bestPartner.wins + bestPartner.losses} ({Math.round(bestPartner.wins / (bestPartner.wins + bestPartner.losses) * 100)}%)</p>
                 </div>
                 <div className="flex-1 bg-red-900/30 border border-red-800 rounded-xl p-3 text-center">
                   <p className="text-red-400 text-xs mb-1">Worst partner</p>
                   <p className="text-white font-bold">{worstPartner.name}</p>
-                  <p className="text-gray-400 text-xs">{Math.round(worstPartner.wins / (worstPartner.wins + worstPartner.losses) * 100)}% win rate</p>
+                  <p className="text-gray-400 text-xs">Won {worstPartner.wins} of {worstPartner.wins + worstPartner.losses} ({Math.round(worstPartner.wins / (worstPartner.wins + worstPartner.losses) * 100)}%)</p>
                 </div>
               </div>
             )}
             {partners.map((p) => (
               <PlayerStatRow
-                key={p.name} name={p.name} wins={p.wins} losses={p.losses} diff={p.diff}
+                key={p.name} name={p.name} wins={p.wins} losses={p.losses} diff={p.diff} context="together"
                 highlight={p === bestPartner && p !== worstPartner ? 'green' : p === worstPartner && p !== bestPartner ? 'red' : undefined}
               />
             ))}
@@ -603,7 +617,7 @@ export default function PlayerProfile() {
       </Section>}
 
       {/* Rivals — season only */}
-      {!sessionId && <Section title="Head to Head" tooltip="Your win/loss record against each opponent. Nemesis = player you lose to most. Favourite victim = player you beat most. Minimum 3 games to qualify.">
+      {!sessionId && <Section title="Head to Head" tooltip="Win rate when playing against each player (as an opponent). Nemesis = opponent you lose to most. Favourite victim = opponent you beat most. Minimum 3 games to qualify." collapsible={false}>
         {rivals.length === 0 ? <p className="text-gray-500 text-sm">No data yet.</p> : (
           <>
             {(nemesis || favVictim) && (
@@ -612,20 +626,20 @@ export default function PlayerProfile() {
                   <div className="flex-1 bg-green-900/30 border border-green-800 rounded-xl p-3 text-center">
                     <p className="text-green-400 text-xs mb-1">Favourite victim</p>
                     <p className="text-white font-bold">{favVictim.name}</p>
-                    <p className="text-gray-400 text-xs">{Math.round(favVictim.wins / (favVictim.wins + favVictim.losses) * 100)}% win rate</p>
+                    <p className="text-gray-400 text-xs">You won {favVictim.wins} of {favVictim.wins + favVictim.losses} ({Math.round(favVictim.wins / (favVictim.wins + favVictim.losses) * 100)}%)</p>
                   </div>
                 )}
                 {nemesis && (
                   <div className="flex-1 bg-red-900/30 border border-red-800 rounded-xl p-3 text-center">
                     <p className="text-red-400 text-xs mb-1">Nemesis</p>
                     <p className="text-white font-bold">{nemesis.name}</p>
-                    <p className="text-gray-400 text-xs">{Math.round(nemesis.losses / (nemesis.wins + nemesis.losses) * 100)}% loss rate</p>
+                    <p className="text-gray-400 text-xs">You lost {nemesis.losses} of {nemesis.wins + nemesis.losses} ({Math.round(nemesis.losses / (nemesis.wins + nemesis.losses) * 100)}%)</p>
                   </div>
                 )}
               </div>
             )}
             {rivals.map(r => (
-              <PlayerStatRow key={r.name} name={r.name} wins={r.wins} losses={r.losses} diff={r.diff}
+              <PlayerStatRow key={r.name} name={r.name} wins={r.wins} losses={r.losses} diff={r.diff} context="against"
                 highlight={r === favVictim && r !== nemesis ? 'green' : r === nemesis && r !== favVictim ? 'red' : undefined}
               />
             ))}
@@ -635,7 +649,7 @@ export default function PlayerProfile() {
 
       {/* Streaks — season only */}
       {!sessionId && (
-        <Section title="Streaks" tooltip="Counts individual matches, not sessions. Current streak = how many matches in a row you've won or lost most recently. Longest win streak = the most consecutive match wins you've had this season.">
+        <Section title="Streaks" tooltip="Counts individual matches, not sessions. Current streak = how many matches in a row you've won or lost most recently. Longest win streak = the most consecutive match wins you've had this season." collapsible={false}>
           {currentStreakType && (
             <StatRow
               label="Current streak"

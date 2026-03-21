@@ -256,7 +256,7 @@ export default function SessionPage() {
           <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
             <div>
               <h2 className="font-semibold text-white mb-3">Session Standings</h2>
-              <Leaderboard stats={stats} leagueId={leagueId!} sessionId={sessionId} />
+              <Leaderboard stats={stats} leagueId={leagueId!} sessionId={sessionId} crownPlayerId={stats[0]?.player.id} poopPlayerId={stats[stats.length - 1]?.player.id} />
             </div>
             {rounds.length > 1 && (
               <div className="pt-3 border-t border-gray-800 flex flex-col gap-5">

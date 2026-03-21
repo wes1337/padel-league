@@ -178,7 +178,7 @@ export default function LeagueHome() {
         {seasonStats.length === 0 ? (
           <p className="text-gray-500 text-sm">No matches played yet this season.</p>
         ) : (
-          <Leaderboard stats={seasonStats} leagueId={leagueId!} crownPlayerId={recentTopId} spoonPlayerId={recentBottomId} movements={movements} />
+          <Leaderboard stats={seasonStats} leagueId={leagueId!} crownPlayerId={recentTopId} poopPlayerId={recentBottomId} movements={movements} />
         )}
       </div>
 
