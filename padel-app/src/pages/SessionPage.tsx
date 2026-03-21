@@ -22,6 +22,7 @@ export default function SessionPage() {
 
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
   const [editState, setEditState] = useState<EditState | null>(null)
+  const [pinCopied, setPinCopied] = useState(false)
   const [rankHighlightedIds, setRankHighlightedIds] = useState<Map<string, string>>(new Map())
 
   const { data: session, isLoading: sessionLoading } = useSession(sessionId)
@@ -137,10 +138,13 @@ export default function SessionPage() {
       {session?.pin && !session.ended && (
         <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Session PIN</p>
+            <button
+              onClick={() => { navigator.clipboard.writeText(session.pin!); setPinCopied(true); setTimeout(() => setPinCopied(false), 1500) }}
+              className="text-left"
+            >
+              <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Session PIN <span className="text-gray-600 normal-case">{pinCopied ? '· Copied!' : '· Tap to copy'}</span></p>
               <p className="text-white text-3xl font-bold tracking-widest">{session.pin}</p>
-            </div>
+            </button>
             <div className="text-right">
               <p className="text-gray-500 text-xs max-w-[140px]">Share this PIN so others can join and enter scores</p>
             </div>
