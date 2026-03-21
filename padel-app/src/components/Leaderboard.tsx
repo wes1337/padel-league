@@ -5,25 +5,23 @@ interface Props {
   stats: PlayerStats[]
   leagueId: string
   sessionId?: string
-  flamePlayerId?: string
-  poopPlayerId?: string
+  crownPlayerId?: string
+  spoonPlayerId?: string
   movements?: Record<string, number>
 }
 
 const medals = ['🥇', '🥈', '🥉']
 
-export default function Leaderboard({ stats, leagueId, sessionId, flamePlayerId, poopPlayerId, movements }: Props) {
+export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId, spoonPlayerId, movements }: Props) {
   return (
     <div className="flex flex-col gap-2">
       {stats.map((s, i) => {
         const diff = s.pointDiff
         const winPct = Math.round(s.winRate * 100)
-        const isFlame = flamePlayerId
-          ? s.player.id === flamePlayerId
-          : s.currentStreak >= 3
-        const isPoop = poopPlayerId
-          ? s.player.id === poopPlayerId
-          : s.currentStreak <= -3
+        const isCrown = crownPlayerId && s.player.id === crownPlayerId
+        const isSpoon = spoonPlayerId && s.player.id === spoonPlayerId
+        const isFlame = s.currentStreak >= 3
+        const isPoop = s.currentStreak <= -3
         const movement = movements?.[s.player.id]
         const isNew = movement === Infinity
         return (
@@ -48,6 +46,8 @@ export default function Leaderboard({ stats, leagueId, sessionId, flamePlayerId,
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-white font-semibold truncate">{s.player.name}</span>
+                {isCrown && <span className="shrink-0">👑</span>}
+                {isSpoon && <span className="shrink-0">🥄</span>}
                 {isFlame && <span className="shrink-0">🔥</span>}
                 {isPoop && <span className="shrink-0">💩</span>}
                 {s.lowAttendance && (
