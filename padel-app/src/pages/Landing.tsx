@@ -1,9 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { nanoid } from 'nanoid'
 import { saveLeagueAdmin } from '../lib/admin'
 import type { League, ScoringType } from '../types'
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
 
 export default function Landing() {
   const navigate = useNavigate()
@@ -19,6 +24,42 @@ export default function Landing() {
   const [sessionPin, setSessionPin] = useState('')
   const [pinError, setPinError] = useState('')
   const [joiningPin, setJoiningPin] = useState(false)
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [showIOSInstall, setShowIOSInstall] = useState(false)
+  const [installDismissed, setInstallDismissed] = useState(() => sessionStorage.getItem('install_dismissed') === '1')
+
+  useEffect(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      || ('standalone' in navigator && (navigator as unknown as { standalone: boolean }).standalone)
+    if (isStandalone) return
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    if (isIOS) {
+      setShowIOSInstall(true)
+      return
+    }
+
+    const handler = (e: Event) => {
+      e.preventDefault()
+      setInstallPrompt(e as BeforeInstallPromptEvent)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  async function handleInstall() {
+    if (!installPrompt) return
+    await installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') setInstallPrompt(null)
+  }
+
+  function dismissInstallBanner() {
+    setInstallDismissed(true)
+    setInstallPrompt(null)
+    setShowIOSInstall(false)
+    sessionStorage.setItem('install_dismissed', '1')
+  }
 
   async function handleJoinPin(e: React.FormEvent) {
     e.preventDefault()
@@ -83,6 +124,35 @@ export default function Landing() {
       </div>
 
       <div className="w-full max-w-sm flex flex-col gap-6">
+        {/* Install app banner */}
+        {!installDismissed && installPrompt && (
+          <div className="bg-green-900/40 border border-green-700 rounded-2xl p-4 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-white text-sm">Install as App</h2>
+              <button onClick={dismissInstallBanner} className="text-gray-500 hover:text-gray-300 text-xs">dismiss</button>
+            </div>
+            <p className="text-green-300/80 text-xs">Add Padel League to your home screen for quick access — works like a native app.</p>
+            <button
+              onClick={handleInstall}
+              className="bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg py-2 text-sm transition-colors"
+            >
+              Install App
+            </button>
+          </div>
+        )}
+
+        {!installDismissed && showIOSInstall && (
+          <div className="bg-green-900/40 border border-green-700 rounded-2xl p-4 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-white text-sm">Install as App</h2>
+              <button onClick={dismissInstallBanner} className="text-gray-500 hover:text-gray-300 text-xs">dismiss</button>
+            </div>
+            <p className="text-green-300/80 text-xs">
+              Tap the <span className="inline-block text-white font-bold">[Share]</span> button in Safari, then <span className="text-white font-medium">"Add to Home Screen"</span> to install.
+            </p>
+          </div>
+        )}
+
         {/* Join session by PIN */}
         <form onSubmit={handleJoinPin} className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
           <h2 className="font-semibold text-white text-lg">Join a Session</h2>

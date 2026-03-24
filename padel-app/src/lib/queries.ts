@@ -15,11 +15,13 @@ export function useLeague(leagueId: string | undefined) {
   return useQuery({
     queryKey: qk.league(leagueId ?? ''),
     queryFn: async () => {
-      const { data } = await supabase.from('leagues').select('*').eq('id', leagueId!).single()
+      const { data, error } = await supabase.from('leagues').select('*').eq('id', leagueId!).single()
+      if (error) throw error
       return data as League | null
     },
     enabled: !!leagueId,
     staleTime: 5 * 60 * 1000,
+    retry: 2,
   })
 }
 
