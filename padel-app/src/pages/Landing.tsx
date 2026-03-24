@@ -148,7 +148,7 @@ export default function Landing() {
               <button onClick={dismissInstallBanner} className="text-gray-500 hover:text-gray-300 text-xs">dismiss</button>
             </div>
             <p className="text-green-300/80 text-xs">
-              Tap the <span className="inline-block text-white font-bold">[Share]</span> button in Safari, then <span className="text-white font-medium">"Add to Home Screen"</span> to install.
+              Tap the <span className="text-white font-medium">share button</span>, then <span className="text-white font-medium">"Add to Home Screen"</span> to install.
             </p>
           </div>
         )}

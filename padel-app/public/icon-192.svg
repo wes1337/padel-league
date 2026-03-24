@@ -1,4 +1,50 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-  <rect width="192" height="192" rx="32" fill="#16a34a"/>
-  <text x="96" y="120" text-anchor="middle" font-size="100" font-family="sans-serif">🎾</text>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="racket" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <linearGradient id="ball" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="100%" stop-color="#eab308"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="192" height="192" rx="40" fill="url(#bg)"/>
+  <!-- Racket head -->
+  <ellipse cx="88" cy="72" rx="38" ry="46" fill="url(#racket)" transform="rotate(-30 88 72)"/>
+  <!-- Racket hole pattern -->
+  <ellipse cx="88" cy="72" rx="30" ry="38" fill="none" stroke="#0f172a" stroke-width="1.5" opacity="0.3" transform="rotate(-30 88 72)"/>
+  <!-- Grid lines on racket -->
+  <g transform="rotate(-30 88 72)" opacity="0.25" stroke="#0f172a" stroke-width="1">
+    <line x1="88" y1="34" x2="88" y2="110"/>
+    <line x1="72" y1="36" x2="72" y2="108"/>
+    <line x1="104" y1="36" x2="104" y2="108"/>
+    <line x1="56" y1="72" x2="120" y2="72"/>
+    <line x1="58" y1="56" x2="118" y2="56"/>
+    <line x1="58" y1="88" x2="118" y2="88"/>
+  </g>
+  <!-- Racket handle -->
+  <rect x="48" y="118" width="14" height="40" rx="4" fill="#854d0e" transform="rotate(-30 55 138)"/>
+  <rect x="49.5" y="120" width="11" height="36" rx="3" fill="#a16207" transform="rotate(-30 55 138)"/>
+  <!-- Grip lines -->
+  <g transform="rotate(-30 55 138)" stroke="#854d0e" stroke-width="1.5" opacity="0.5">
+    <line x1="49" y1="128" x2="62" y2="128"/>
+    <line x1="49" y1="134" x2="62" y2="134"/>
+    <line x1="49" y1="140" x2="62" y2="140"/>
+    <line x1="49" y1="146" x2="62" y2="146"/>
+  </g>
+  <!-- Ball -->
+  <circle cx="134" cy="48" r="20" fill="url(#ball)"/>
+  <!-- Ball seam -->
+  <path d="M120 36 Q128 48 120 60" fill="none" stroke="#fefce8" stroke-width="2" opacity="0.6"/>
+  <path d="M148 36 Q140 48 148 60" fill="none" stroke="#fefce8" stroke-width="2" opacity="0.6"/>
+  <!-- Shine on ball -->
+  <circle cx="128" cy="42" r="5" fill="white" opacity="0.2"/>
+  <!-- Subtle glow behind ball -->
+  <circle cx="134" cy="48" r="24" fill="#eab308" opacity="0.08"/>
 </svg>

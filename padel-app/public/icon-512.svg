@@ -1,4 +1,55 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="64" fill="#16a34a"/>
-  <text x="256" y="320" text-anchor="middle" font-size="260" font-family="sans-serif">🎾</text>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="racket" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <linearGradient id="ball" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="100%" stop-color="#eab308"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- Racket head -->
+  <ellipse cx="230" cy="190" rx="102" ry="123" fill="url(#racket)" transform="rotate(-30 230 190)"/>
+  <!-- Racket inner outline -->
+  <ellipse cx="230" cy="190" rx="82" ry="103" fill="none" stroke="#0f172a" stroke-width="3" opacity="0.3" transform="rotate(-30 230 190)"/>
+  <!-- Grid lines on racket -->
+  <g transform="rotate(-30 230 190)" opacity="0.25" stroke="#0f172a" stroke-width="2.5">
+    <line x1="230" y1="80" x2="230" y2="300"/>
+    <line x1="200" y1="85" x2="200" y2="295"/>
+    <line x1="260" y1="85" x2="260" y2="295"/>
+    <line x1="170" y1="95" x2="170" y2="285"/>
+    <line x1="290" y1="95" x2="290" y2="285"/>
+    <line x1="140" y1="190" x2="320" y2="190"/>
+    <line x1="145" y1="150" x2="315" y2="150"/>
+    <line x1="145" y1="230" x2="315" y2="230"/>
+    <line x1="155" y1="120" x2="305" y2="120"/>
+    <line x1="155" y1="260" x2="305" y2="260"/>
+  </g>
+  <!-- Racket handle -->
+  <rect x="122" y="315" width="38" height="110" rx="10" fill="#854d0e" transform="rotate(-30 141 370)"/>
+  <rect x="126" y="319" width="30" height="102" rx="8" fill="#a16207" transform="rotate(-30 141 370)"/>
+  <!-- Grip lines -->
+  <g transform="rotate(-30 141 370)" stroke="#854d0e" stroke-width="3.5" opacity="0.5">
+    <line x1="124" y1="338" x2="158" y2="338"/>
+    <line x1="124" y1="354" x2="158" y2="354"/>
+    <line x1="124" y1="370" x2="158" y2="370"/>
+    <line x1="124" y1="386" x2="158" y2="386"/>
+    <line x1="124" y1="402" x2="158" y2="402"/>
+  </g>
+  <!-- Ball -->
+  <circle cx="358" cy="128" r="54" fill="url(#ball)"/>
+  <!-- Ball seams -->
+  <path d="M320 100 Q340 128 320 156" fill="none" stroke="#fefce8" stroke-width="4.5" opacity="0.6"/>
+  <path d="M396 100 Q376 128 396 156" fill="none" stroke="#fefce8" stroke-width="4.5" opacity="0.6"/>
+  <!-- Shine on ball -->
+  <circle cx="344" cy="112" r="14" fill="white" opacity="0.2"/>
+  <!-- Subtle glow behind ball -->
+  <circle cx="358" cy="128" r="64" fill="#eab308" opacity="0.08"/>
 </svg>
