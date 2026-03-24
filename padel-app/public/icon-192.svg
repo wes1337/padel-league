@@ -1,53 +1,66 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- OPTION D: Close-up racket face with ball impact -->
   <defs>
-    <linearGradient id="bgD" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#020617"/>
-      <stop offset="100%" stop-color="#0f172a"/>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
     </linearGradient>
-    <radialGradient id="impact" cx="0.55" cy="0.45" r="0.5">
-      <stop offset="0%" stop-color="#22c55e" stop-opacity="0.4"/>
-      <stop offset="40%" stop-color="#22c55e" stop-opacity="0.1"/>
-      <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
-    </radialGradient>
+    <linearGradient id="goldBody" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="50%" stop-color="#eab308"/>
+      <stop offset="100%" stop-color="#a16207"/>
+    </linearGradient>
+    <linearGradient id="goldBand" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="100%" stop-color="#ca8a04"/>
+    </linearGradient>
+    <linearGradient id="ballGrad" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0%" stop-color="#fff024"/>
+      <stop offset="100%" stop-color="#e6d200"/>
+    </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="96" fill="url(#bgD)"/>
-  <!-- Impact glow -->
-  <circle cx="280" cy="230" r="240" fill="url(#impact)"/>
-  <!-- Racket grid (close-up, filling most of frame, tilted) -->
-  <g transform="rotate(-15 256 256)" stroke="#22c55e" stroke-width="2.5" opacity="0.35">
-    <!-- Vertical lines -->
-    <line x1="80" y1="20" x2="80" y2="500"/>
-    <line x1="140" y1="20" x2="140" y2="500"/>
-    <line x1="200" y1="20" x2="200" y2="500"/>
-    <line x1="260" y1="20" x2="260" y2="500"/>
-    <line x1="320" y1="20" x2="320" y2="500"/>
-    <line x1="380" y1="20" x2="380" y2="500"/>
-    <line x1="440" y1="20" x2="440" y2="500"/>
-    <!-- Horizontal lines -->
-    <line x1="20" y1="60" x2="500" y2="60"/>
-    <line x1="20" y1="120" x2="500" y2="120"/>
-    <line x1="20" y1="180" x2="500" y2="180"/>
-    <line x1="20" y1="240" x2="500" y2="240"/>
-    <line x1="20" y1="300" x2="500" y2="300"/>
-    <line x1="20" y1="360" x2="500" y2="360"/>
-    <line x1="20" y1="420" x2="500" y2="420"/>
-    <line x1="20" y1="480" x2="500" y2="480"/>
+  <rect width="512" height="512" rx="96" fill="url(#bg3)"/>
+  <!-- Subtle glow behind crown+ball -->
+  <circle cx="256" cy="250" r="180" fill="#eab308" opacity="0.05"/>
+  <circle cx="256" cy="250" r="120" fill="#eab308" opacity="0.04"/>
+
+  <!-- === CROWN centered at x=256 === -->
+  <g transform="translate(256,148)">
+    <!-- Crown body — 5-point with smooth curves -->
+    <path d="M-120,30 L-95,-40 L-55,0 L-25,-60 L0,-90 L25,-60 L55,0 L95,-40 L120,30 Z" fill="url(#goldBody)"/>
+    <!-- Darker inner shadow for depth -->
+    <path d="M-100,30 L-80,-20 L-48,8 L-22,-42 L0,-68 L22,-42 L48,8 L80,-20 L100,30 Z" fill="#ca8a04" opacity="0.3"/>
+    <!-- Band at base -->
+    <rect x="-120" y="30" width="240" height="24" rx="4" fill="url(#goldBand)"/>
+    <!-- Band highlight line -->
+    <rect x="-118" y="32" width="236" height="4" rx="2" fill="#fef9c3" opacity="0.4"/>
+    <!-- Tip ornaments -->
+    <circle cx="-95" cy="-40" r="10" fill="#fde68a"/>
+    <circle cx="-95" cy="-40" r="5" fill="#fef9c3" opacity="0.5"/>
+    <circle cx="-25" cy="-60" r="9" fill="#fde68a"/>
+    <circle cx="-25" cy="-60" r="4.5" fill="#fef9c3" opacity="0.5"/>
+    <circle cx="0" cy="-90" r="12" fill="#fde68a"/>
+    <circle cx="0" cy="-90" r="6" fill="#fef9c3" opacity="0.5"/>
+    <circle cx="25" cy="-60" r="9" fill="#fde68a"/>
+    <circle cx="25" cy="-60" r="4.5" fill="#fef9c3" opacity="0.5"/>
+    <circle cx="95" cy="-40" r="10" fill="#fde68a"/>
+    <circle cx="95" cy="-40" r="5" fill="#fef9c3" opacity="0.5"/>
+    <!-- Gems on band -->
+    <circle cx="-60" cy="42" r="7" fill="#ef4444"/>
+    <circle cx="-60" cy="42" r="3" fill="#fca5a5" opacity="0.5"/>
+    <circle cx="0" cy="42" r="8" fill="#22c55e"/>
+    <circle cx="0" cy="42" r="3.5" fill="#86efac" opacity="0.5"/>
+    <circle cx="60" cy="42" r="7" fill="#3b82f6"/>
+    <circle cx="60" cy="42" r="3" fill="#93c5fd" opacity="0.5"/>
   </g>
-  <!-- Ball smashing through -->
-  <circle cx="280" cy="230" r="68" fill="#eab308"/>
-  <path d="M238 190 Q260 230 238 270" fill="none" stroke="#fefce8" stroke-width="5" opacity="0.5"/>
-  <path d="M322 190 Q300 230 322 270" fill="none" stroke="#fefce8" stroke-width="5" opacity="0.5"/>
-  <circle cx="264" cy="212" r="16" fill="white" opacity="0.18"/>
-  <!-- Impact burst lines -->
-  <g stroke="#22c55e" stroke-width="3" opacity="0.5" stroke-linecap="round">
-    <line x1="280" y1="140" x2="280" y2="110"/>
-    <line x1="200" y1="190" x2="175" y2="170"/>
-    <line x1="360" y1="190" x2="385" y2="170"/>
-    <line x1="200" y1="270" x2="175" y2="290"/>
-    <line x1="360" y1="270" x2="385" y2="290"/>
-    <line x1="280" y1="320" x2="280" y2="350"/>
-    <line x1="355" y1="230" x2="390" y2="230"/>
-    <line x1="205" y1="230" x2="170" y2="230"/>
-  </g>
+
+  <!-- === BALL centered below crown === -->
+  <circle cx="256" cy="310" r="72" fill="url(#ballGrad)"/>
+  <!-- Ball seams -->
+  <path d="M212 274 Q236 310 212 346" fill="none" stroke="#fefce8" stroke-width="4.5" opacity="0.45"/>
+  <path d="M300 274 Q276 310 300 346" fill="none" stroke="#fefce8" stroke-width="4.5" opacity="0.45"/>
+  <!-- Shine -->
+  <circle cx="236" cy="288" r="14" fill="white" opacity="0.14"/>
+
+  <!-- === PADEL text === -->
+  <text x="256" y="452" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="48" fill="white" letter-spacing="14">PADEL</text>
 </svg>
