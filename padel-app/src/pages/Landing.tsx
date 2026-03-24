@@ -131,7 +131,7 @@ export default function Landing() {
               <h2 className="font-semibold text-white text-sm">Install as App</h2>
               <button onClick={dismissInstallBanner} className="text-gray-500 hover:text-gray-300 text-xs">dismiss</button>
             </div>
-            <p className="text-green-300/80 text-xs">Add Padel League to your home screen for quick access — works like a native app.</p>
+            <p className="text-white text-xs">Add <span className="text-green-400 font-medium">Padel League</span> to your home screen for quick access — works like a native app.</p>
             <button
               onClick={handleInstall}
               className="bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg py-2 text-sm transition-colors"
@@ -147,8 +147,8 @@ export default function Landing() {
               <h2 className="font-semibold text-white text-sm">Install as App</h2>
               <button onClick={dismissInstallBanner} className="text-gray-500 hover:text-gray-300 text-xs">dismiss</button>
             </div>
-            <p className="text-green-300/80 text-xs">
-              Tap the <span className="text-white font-medium">share button</span>, then <span className="text-white font-medium">"Add to Home Screen"</span> to install.
+            <p className="text-white text-xs">
+              Tap the <span className="text-green-400 font-medium">share button</span>, then <span className="text-green-400 font-medium">"Add to Home Screen"</span> to install.
             </p>
           </div>
         )}
