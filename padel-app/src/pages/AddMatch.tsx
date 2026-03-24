@@ -49,8 +49,9 @@ export default function AddMatch() {
   )
 
   async function addNewPlayer() {
-    const name = search.trim()
-    if (!name) return
+    const raw = search.trim()
+    if (!raw) return
+    const name = raw.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
     const existing = players.find(p => p.name.toLowerCase() === name.toLowerCase())
     if (existing) {
       setError(`"${existing.name}" already exists — selected them.`)
