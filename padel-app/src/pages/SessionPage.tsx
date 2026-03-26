@@ -165,7 +165,6 @@ export default function SessionPage() {
   async function addSignup(player: Player) {
     await supabase.from('session_signups').insert({ session_id: sessionId, player_id: player.id })
     queryClient.invalidateQueries({ queryKey: qk.sessionSignups(sessionId!) })
-    setSignupSearch('')
   }
 
   async function removeSignup(playerId: string) {
