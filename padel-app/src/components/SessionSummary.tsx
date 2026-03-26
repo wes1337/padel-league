@@ -72,31 +72,30 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
     setSharing(true)
     try {
       const top = stats[0]
+      const url = window.location.href
       const text = top
-        ? `${sessionLabel} — ${top.player.name} crowned Court Champion! Check out the full results:`
-        : `${sessionLabel} — Check out the session results!`
+        ? `${sessionLabel} — ${top.player.name} crowned Court Champion! Check out the full results: ${url}`
+        : `${sessionLabel} — Check out the session results! ${url}`
 
       // Try to capture the card image
       let file: File | null = null
       try { file = await captureCard() } catch { /* ignore capture errors */ }
 
       if (typeof navigator.share === 'function') {
-        // Try sharing with image first
+        // Try sharing with image (URL goes in text, not as separate url param)
         if (file) {
-          try {
-            const withFile: ShareData = { title: sessionLabel, text, url: window.location.href, files: [file] }
-            if (navigator.canShare?.(withFile)) {
-              await navigator.share(withFile)
-              setSharing(false)
-              return
-            }
-          } catch { /* fall through to text-only share */ }
+          const withFile: ShareData = { text, files: [file] }
+          if (navigator.canShare?.(withFile)) {
+            await navigator.share(withFile)
+            setSharing(false)
+            return
+          }
         }
-        // Text-only share
-        await navigator.share({ title: sessionLabel, text, url: window.location.href })
+        // Fallback: text-only share
+        await navigator.share({ title: sessionLabel, text, url })
       } else {
         // Desktop fallback: copy link
-        navigator.clipboard.writeText(window.location.href)
+        navigator.clipboard.writeText(url)
         setCopied(true)
         setTimeout(() => setCopied(false), 1500)
       }
