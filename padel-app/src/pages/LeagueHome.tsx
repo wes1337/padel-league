@@ -171,7 +171,7 @@ export default function LeagueHome() {
           <h1 className="text-2xl font-bold text-white">{league.name}</h1>
           <p className="text-gray-400 text-sm">{year} Season</p>
         </div>
-        <Link to="/" className="text-gray-500 hover:text-white text-sm transition-colors pt-1">← Home</Link>
+        <Link to="/" className="text-gray-500 hover:text-white text-sm transition-colors pt-1">← Find / Create League</Link>
       </div>
 
       {/* New Session */}

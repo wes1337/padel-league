@@ -29,7 +29,12 @@
       "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run build 2>&1 | tail -8)",
       "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm install recharts 2>&1 | tail -5)",
       "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run build 2>&1 | tail -12)",
-      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run build 2>&1 | grep -E \"error|✓ built\")"
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run build 2>&1 | grep -E \"error|✓ built\")",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm install @tanstack/react-query)",
+      "Bash(cd \"C:\\\\Users\\\\wesl3\\\\AI Coding\\\\Cursor\\\\Padel League\\\\padel-app\" && npm run build 2>&1 | tail -30)",
+      "Bash(npx tsc:*)",
+      "Bash(gh api:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

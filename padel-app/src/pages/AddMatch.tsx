@@ -186,7 +186,7 @@ export default function AddMatch() {
         return (
           <div className="fixed inset-0 bg-black/80 flex flex-col z-50" onClick={() => setActiveTeam(null)}>
             <div className="flex-1" />
-            <div className="w-full bg-gray-900 rounded-t-3xl p-5 flex flex-col gap-4 h-[100dvh]" onClick={e => e.stopPropagation()}>
+            <div className="w-full bg-gray-900 rounded-t-3xl p-5 flex flex-col gap-4 h-[100dvh]" style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top))' }} onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className={`font-semibold ${tc.textColor}`}>{tc.label}</h3>

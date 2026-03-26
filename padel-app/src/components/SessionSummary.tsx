@@ -262,8 +262,8 @@ export default function SessionSummary({ matches, players, stats, sessionLabel, 
       const top = stats[0]
       const url = getShareUrl()
       const text = top
-        ? `${sessionLabel} — ${top.player.name} crowned Court Champion!\n\nCheck out the full results:\n${url}`
-        : `${sessionLabel} — Check out the session results!\n\n${url}`
+        ? `${sessionLabel} — ${top.player.name} crowned Court Champion!\n\nCheck out the full results:\n${url}\n\nTracked with Padello — free padel scoring app`
+        : `${sessionLabel} — Check out the session results!\n\n${url}\n\nTracked with Padello — free padel scoring app`
 
       // Generate card image
       const file = top ? await drawChampionCard(top, sessionLabel) : null

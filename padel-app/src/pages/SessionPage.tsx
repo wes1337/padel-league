@@ -102,6 +102,9 @@ export default function SessionPage() {
     localStorage.getItem(`awards_revealed_${sessionId}`) === '1'
   )
 
+  // Scroll to top when navigating to a session
+  useEffect(() => { window.scrollTo(0, 0) }, [sessionId])
+
   const loading = sessionLoading || matchesLoading || playersLoading
 
   // Auto-end session after 24 hours
@@ -209,7 +212,10 @@ export default function SessionPage() {
         <Link to={`/l/${leagueId}`} className="text-gray-400 hover:text-white text-xl">←</Link>
         <div className="flex-1">
           <h1 className="text-xl font-bold text-white">{session?.label || session?.date}</h1>
-          <p className="text-gray-400 text-sm">{matches.length} match{matches.length !== 1 ? 'es' : ''} played</p>
+          <p className="text-gray-400 text-sm">
+            <Link to={`/l/${leagueId}`} className="hover:text-white transition-colors">{league?.name ?? 'League'}</Link>
+            {' · '}{matches.length} match{matches.length !== 1 ? 'es' : ''} played
+          </p>
         </div>
         {session?.excluded && (
           <span className="text-xs bg-yellow-900/40 text-yellow-400 border border-yellow-700 rounded-lg px-2 py-1">Excluded</span>
@@ -498,6 +504,17 @@ export default function SessionPage() {
           🏆 Reveal Awards
         </button>
       )}
+
+      {/* Start your own league CTA */}
+      <div className="text-center py-2">
+        <p className="text-gray-500 text-sm">
+          🎾 Powered by{' '}
+          <Link to="/" className="text-green-400 hover:text-green-300 font-semibold transition-colors">Padello</Link>
+        </p>
+        <Link to="/" className="text-gray-500 hover:text-white text-xs transition-colors">
+          Start your own league →
+        </Link>
+      </div>
 
       {/* Session Settings — admin only */}
       {isAdmin && (
