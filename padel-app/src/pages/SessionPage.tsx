@@ -44,9 +44,26 @@ function drawInviteCard(leagueName: string, sessionDate: string): Promise<File |
     ctx.fillStyle = '#9ca3af'
     ctx.fillText(sessionDate, W / 2, H * 0.58)
 
-    // Ball emoji (renders as tennis ball on device)
-    ctx.font = '60px serif'
-    ctx.fillText('🎾', W / 2, H * 0.73)
+    // Tennis ball (matches home page SVG)
+    const bx = W / 2, by = H * 0.71, br = 32
+    const ballGrad = ctx.createRadialGradient(bx - 8, by - 10, 5, bx, by, br)
+    ballGrad.addColorStop(0, '#c4e632')
+    ballGrad.addColorStop(1, '#8ab800')
+    ctx.beginPath()
+    ctx.arc(bx, by, br, 0, Math.PI * 2)
+    ctx.fillStyle = ballGrad
+    ctx.fill()
+    // Seams
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'
+    ctx.lineWidth = 2.5
+    ctx.beginPath()
+    ctx.moveTo(bx - 11, by - 28)
+    ctx.quadraticCurveTo(bx - 20, by, bx - 14, by + 28)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(bx + 11, by - 28)
+    ctx.quadraticCurveTo(bx + 20, by, bx + 14, by + 28)
+    ctx.stroke()
 
     // Subtitle
     ctx.font = '600 16px system-ui, sans-serif'
