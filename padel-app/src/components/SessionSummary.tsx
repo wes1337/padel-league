@@ -129,7 +129,7 @@ function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: numb
 
 function drawChampionCard(player: PlayerStats, label: string): Promise<File | null> {
   return new Promise(resolve => {
-    const W = 680, H = 580, R = 40, pad = 50
+    const W = 680, H = 580, pad = 50
     const canvas = document.createElement('canvas')
     canvas.width = W; canvas.height = H
     const ctx = canvas.getContext('2d')
