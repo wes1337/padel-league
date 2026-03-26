@@ -160,6 +160,16 @@ export default function SessionPage() {
         </div>
       )}
 
+      {/* Add Match */}
+      {!session?.ended && (
+        <button
+          onClick={() => navigate(`/l/${leagueId}/session/${sessionId}/add-match`)}
+          className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl py-3 text-lg transition-colors"
+        >
+          + Add Match
+        </button>
+      )}
+
       {/* Uneven games warning */}
       {unevenWarning && (
         <div className="bg-yellow-900/30 border border-yellow-700 rounded-xl px-4 py-3 flex flex-col gap-1">
@@ -297,16 +307,6 @@ export default function SessionPage() {
           </div>
         )
       })()}
-
-      {/* Add Match */}
-      {!session?.ended && (
-        <button
-          onClick={() => navigate(`/l/${leagueId}/session/${sessionId}/add-match`)}
-          className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl py-3 text-lg transition-colors"
-        >
-          + Add Match
-        </button>
-      )}
 
       {/* Match List */}
       {matches.length > 0 && (
