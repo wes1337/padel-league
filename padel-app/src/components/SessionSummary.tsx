@@ -51,83 +51,194 @@ function Award({ emoji, title, first, second }: {
   )
 }
 
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y)
+  ctx.closePath()
+}
+
+function drawTrophy(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number) {
+  const s = size / 60
+  ctx.save()
+  ctx.translate(cx, cy)
+
+  // Cup body
+  ctx.beginPath()
+  ctx.moveTo(-18 * s, -22 * s)
+  ctx.quadraticCurveTo(-20 * s, 8 * s, -10 * s, 14 * s)
+  ctx.lineTo(10 * s, 14 * s)
+  ctx.quadraticCurveTo(20 * s, 8 * s, 18 * s, -22 * s)
+  ctx.closePath()
+  const cupGrad = ctx.createLinearGradient(0, -22 * s, 0, 14 * s)
+  cupGrad.addColorStop(0, '#fbbf24')
+  cupGrad.addColorStop(1, '#d97706')
+  ctx.fillStyle = cupGrad; ctx.fill()
+
+  // Cup shine
+  ctx.beginPath()
+  ctx.moveTo(-10 * s, -18 * s)
+  ctx.quadraticCurveTo(-12 * s, 4 * s, -6 * s, 10 * s)
+  ctx.lineTo(-2 * s, 10 * s)
+  ctx.quadraticCurveTo(-6 * s, 2 * s, -4 * s, -18 * s)
+  ctx.closePath()
+  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fill()
+
+  // Left handle
+  ctx.beginPath()
+  ctx.moveTo(-18 * s, -16 * s)
+  ctx.quadraticCurveTo(-28 * s, -10 * s, -24 * s, 2 * s)
+  ctx.quadraticCurveTo(-20 * s, 10 * s, -14 * s, 6 * s)
+  ctx.lineWidth = 3.5 * s; ctx.strokeStyle = '#d97706'; ctx.stroke()
+
+  // Right handle
+  ctx.beginPath()
+  ctx.moveTo(18 * s, -16 * s)
+  ctx.quadraticCurveTo(28 * s, -10 * s, 24 * s, 2 * s)
+  ctx.quadraticCurveTo(20 * s, 10 * s, 14 * s, 6 * s)
+  ctx.stroke()
+
+  // Stem
+  ctx.fillStyle = '#b45309'
+  ctx.fillRect(-3 * s, 14 * s, 6 * s, 10 * s)
+
+  // Base
+  roundRect(ctx, -14 * s, 24 * s, 28 * s, 6 * s, 3 * s)
+  ctx.fillStyle = '#d97706'; ctx.fill()
+
+  // Star on cup
+  drawStar(ctx, 0, -4 * s, 7 * s, 5, '#fef3c7')
+
+  ctx.restore()
+}
+
+function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, points: number, color: string) {
+  ctx.beginPath()
+  for (let i = 0; i < points * 2; i++) {
+    const angle = (i * Math.PI) / points - Math.PI / 2
+    const radius = i % 2 === 0 ? r : r * 0.4
+    const x = cx + Math.cos(angle) * radius
+    const y = cy + Math.sin(angle) * radius
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+  }
+  ctx.closePath()
+  ctx.fillStyle = color; ctx.fill()
+}
+
 function drawChampionCard(player: PlayerStats, label: string): Promise<File | null> {
   return new Promise(resolve => {
-    const W = 680, H = 520, R = 40
+    const W = 680, H = 580, R = 40, pad = 50
     const canvas = document.createElement('canvas')
     canvas.width = W; canvas.height = H
     const ctx = canvas.getContext('2d')
     if (!ctx) { resolve(null); return }
 
-    // Rounded rect background with gradient
+    // Background
     const grad = ctx.createLinearGradient(0, 0, W, H)
-    grad.addColorStop(0, '#1a1a2e')
-    grad.addColorStop(0.5, '#16213e')
-    grad.addColorStop(1, '#0f3460')
-    ctx.beginPath()
-    ctx.moveTo(R, 0); ctx.lineTo(W - R, 0); ctx.quadraticCurveTo(W, 0, W, R)
-    ctx.lineTo(W, H - R); ctx.quadraticCurveTo(W, H, W - R, H)
-    ctx.lineTo(R, H); ctx.quadraticCurveTo(0, H, 0, H - R)
-    ctx.lineTo(0, R); ctx.quadraticCurveTo(0, 0, R, 0)
-    ctx.closePath()
+    grad.addColorStop(0, '#0c0e1a')
+    grad.addColorStop(0.4, '#111936')
+    grad.addColorStop(1, '#0a1628')
+    roundRect(ctx, 0, 0, W, H, R)
     ctx.fillStyle = grad; ctx.fill()
 
-    // Trophy emoji
-    ctx.font = '60px sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillText('🏆', W / 2, 70)
+    // Subtle outer border
+    roundRect(ctx, 0, 0, W, H, R)
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 2; ctx.stroke()
+
+    // Glow behind trophy
+    const glow = ctx.createRadialGradient(W / 2, 100, 0, W / 2, 100, 140)
+    glow.addColorStop(0, 'rgba(251,191,36,0.12)')
+    glow.addColorStop(1, 'rgba(251,191,36,0)')
+    ctx.fillStyle = glow
+    ctx.fillRect(0, 0, W, 240)
+
+    // Trophy
+    drawTrophy(ctx, W / 2, 85, 70)
 
     // "COURT CHAMPION"
-    ctx.font = '600 14px system-ui, sans-serif'
-    ctx.fillStyle = '#facc15'
-    ctx.letterSpacing = '4px'
-    ctx.fillText('COURT CHAMPION', W / 2, 110)
+    ctx.textAlign = 'center'
+    ctx.font = '700 18px system-ui, sans-serif'
+    ctx.fillStyle = '#fbbf24'
+    ctx.letterSpacing = '6px'
+    ctx.fillText('COURT CHAMPION', W / 2, 160)
     ctx.letterSpacing = '0px'
 
     // Session label
-    ctx.font = '12px system-ui, sans-serif'
-    ctx.fillStyle = '#9ca3af'
-    ctx.fillText(label, W / 2, 132)
+    ctx.font = '400 14px system-ui, sans-serif'
+    ctx.fillStyle = '#6b7280'
+    ctx.fillText(label, W / 2, 184)
 
-    // Player name
-    ctx.font = '800 36px system-ui, sans-serif'
+    // Decorative line
+    const lineY = 200
+    const lineGrad = ctx.createLinearGradient(pad + 60, lineY, W - pad - 60, lineY)
+    lineGrad.addColorStop(0, 'rgba(251,191,36,0)')
+    lineGrad.addColorStop(0.5, 'rgba(251,191,36,0.3)')
+    lineGrad.addColorStop(1, 'rgba(251,191,36,0)')
+    ctx.fillStyle = lineGrad
+    ctx.fillRect(pad + 60, lineY, W - 2 * pad - 120, 1)
+
+    // Player name with glow
+    ctx.save()
+    ctx.shadowColor = 'rgba(255,255,255,0.15)'
+    ctx.shadowBlur = 20
+    ctx.font = '800 44px system-ui, sans-serif'
     ctx.fillStyle = '#ffffff'
-    ctx.fillText(player.player.name.toUpperCase(), W / 2, 185)
+    ctx.fillText(player.player.name.toUpperCase(), W / 2, 250)
+    ctx.restore()
 
     // Stats box
-    const boxX = 60, boxY = 215, boxW = W - 120, boxH = 110, boxR = 24
-    ctx.beginPath()
-    ctx.moveTo(boxX + boxR, boxY)
-    ctx.lineTo(boxX + boxW - boxR, boxY); ctx.quadraticCurveTo(boxX + boxW, boxY, boxX + boxW, boxY + boxR)
-    ctx.lineTo(boxX + boxW, boxY + boxH - boxR); ctx.quadraticCurveTo(boxX + boxW, boxY + boxH, boxX + boxW - boxR, boxY + boxH)
-    ctx.lineTo(boxX + boxR, boxY + boxH); ctx.quadraticCurveTo(boxX, boxY + boxH, boxX, boxY + boxH - boxR)
-    ctx.lineTo(boxX, boxY + boxR); ctx.quadraticCurveTo(boxX, boxY, boxX + boxR, boxY)
-    ctx.closePath()
-    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fill()
+    const boxX = pad + 20, boxY = 280, boxW = W - 2 * (pad + 20), boxH = 130, boxR = 20
 
-    // Stats values
-    const cols = [boxX + boxW / 6, boxX + boxW / 2, boxX + (5 * boxW) / 6]
+    // Box with subtle border
+    roundRect(ctx, boxX, boxY, boxW, boxH, boxR)
+    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill()
+    roundRect(ctx, boxX, boxY, boxW, boxH, boxR)
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.stroke()
+
+    // Divider lines in box
+    const third = boxW / 3
+    ctx.fillStyle = 'rgba(255,255,255,0.08)'
+    ctx.fillRect(boxX + third, boxY + 20, 1, boxH - 40)
+    ctx.fillRect(boxX + third * 2, boxY + 20, 1, boxH - 40)
+
+    // Stats
+    const cols = [boxX + third / 2, boxX + third * 1.5, boxX + third * 2.5]
     const diff = player.pointDiff
     const winRate = Math.round(player.winRate * 100)
 
-    ctx.font = '700 32px system-ui, sans-serif'
+    ctx.font = '700 38px system-ui, sans-serif'
     ctx.fillStyle = '#ffffff'
-    ctx.fillText(String(player.wins), cols[0], boxY + 50)
-    ctx.fillText(`${winRate}%`, cols[1], boxY + 50)
+    ctx.fillText(String(player.wins), cols[0], boxY + 60)
+    ctx.fillText(`${winRate}%`, cols[1], boxY + 60)
     ctx.fillStyle = diff > 0 ? '#4ade80' : diff < 0 ? '#f87171' : '#ffffff'
-    ctx.fillText(diff > 0 ? `+${diff}` : String(diff), cols[2], boxY + 50)
+    ctx.fillText(diff > 0 ? `+${diff}` : String(diff), cols[2], boxY + 60)
 
-    // Stats labels
-    ctx.font = '12px system-ui, sans-serif'
-    ctx.fillStyle = '#9ca3af'
-    ctx.fillText('Wins', cols[0], boxY + 78)
-    ctx.fillText('Win Rate', cols[1], boxY + 78)
-    ctx.fillText('Pt Diff', cols[2], boxY + 78)
-
-    // Footer
-    ctx.font = '12px system-ui, sans-serif'
+    // Labels
+    ctx.font = '500 13px system-ui, sans-serif'
     ctx.fillStyle = '#6b7280'
-    ctx.fillText('🎾 Padel League', W / 2, H - 30)
+    ctx.fillText('Wins', cols[0], boxY + 90)
+    ctx.fillText('Win Rate', cols[1], boxY + 90)
+    ctx.fillText('Pt Diff', cols[2], boxY + 90)
+
+    // Footer with subtle line
+    const footY = H - 55
+    const footGrad = ctx.createLinearGradient(pad + 100, footY, W - pad - 100, footY)
+    footGrad.addColorStop(0, 'rgba(255,255,255,0)')
+    footGrad.addColorStop(0.5, 'rgba(255,255,255,0.06)')
+    footGrad.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = footGrad
+    ctx.fillRect(pad + 100, footY, W - 2 * pad - 200, 1)
+
+    ctx.font = '500 13px system-ui, sans-serif'
+    ctx.fillStyle = '#4b5563'
+    ctx.fillText('Padel League', W / 2, H - 28)
+
+    // Small decorative dots
+    ctx.fillStyle = 'rgba(251,191,36,0.15)'
+    ctx.beginPath(); ctx.arc(W / 2 - 60, H - 28, 2, 0, Math.PI * 2); ctx.fill()
+    ctx.beginPath(); ctx.arc(W / 2 + 60, H - 28, 2, 0, Math.PI * 2); ctx.fill()
 
     canvas.toBlob(blob => {
       if (!blob) { resolve(null); return }
