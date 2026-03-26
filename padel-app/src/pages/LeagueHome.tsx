@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
 import { isLeagueAdmin, saveLeagueAdmin, saveSessionCreator } from '../lib/admin'
-import { useLeague, useSessions, usePlayers, useMultiSessionMatches, useSignupCounts, qk } from '../lib/queries'
+import { useLeague, useSessions, usePlayers, useMultiSessionMatches, qk } from '../lib/queries'
 import type { Session, Match, Player, PlayerStats } from '../types'
 import Leaderboard from '../components/Leaderboard'
 
@@ -56,9 +56,6 @@ export default function LeagueHome() {
     (sessions as Session[]).filter(s => !(s.date > today && !s.ended)),
     [sessions, today]
   )
-  const upcomingIds = useMemo(() => upcomingSessions.map(s => s.id), [upcomingSessions])
-  const { data: signupCounts = {} } = useSignupCounts(upcomingIds)
-
   const loading = leagueLoading || sessionsLoading || playersLoading ||
     (filteredSessionIds.length > 0 && matchesLoading)
 
@@ -264,12 +261,7 @@ export default function LeagueHome() {
                   className="flex-1 flex items-center justify-between bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
                 >
                   <span className="text-sm text-white">{s.label || s.date}</span>
-                  <div className="flex items-center gap-2">
-                    {(signupCounts[s.id] ?? 0) > 0 && (
-                      <span className="text-xs text-green-400">{signupCounts[s.id]} signed up</span>
-                    )}
-                    <span className="text-gray-400 text-sm">→</span>
-                  </div>
+                  <span className="text-gray-400 text-sm">→</span>
                 </Link>
                 {isAdmin && (
                   <button onClick={() => deleteSession(s.id)} className="text-gray-600 hover:text-red-400 bg-gray-800 rounded-xl px-3 py-3 transition-colors text-sm" title="Delete session">🗑</button>

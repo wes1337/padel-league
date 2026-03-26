@@ -5,8 +5,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
 import { isLeagueAdmin } from '../lib/admin'
-import { useSession, useSessionMatches, usePlayers, useLeague, useSessionSignups, qk } from '../lib/queries'
-import type { Match, Player } from '../types'
+import { useSession, useSessionMatches, usePlayers, useLeague, qk } from '../lib/queries'
+import type { Match } from '../types'
 import Leaderboard from '../components/Leaderboard'
 import SessionSummary from '../components/SessionSummary'
 
@@ -87,13 +87,10 @@ export default function SessionPage() {
   const { data: matches = [], isLoading: matchesLoading } = useSessionMatches(sessionId)
   const { data: players = [], isLoading: playersLoading } = usePlayers(leagueId)
   const { data: league } = useLeague(leagueId)
-  const { data: signups = [] } = useSessionSignups(sessionId)
 
   const [awardsRevealed, setAwardsRevealed] = useState(() =>
     localStorage.getItem(`awards_revealed_${sessionId}`) === '1'
   )
-  const [signupSearch, setSignupSearch] = useState('')
-  const [signupFocused, setSignupFocused] = useState(false)
 
   // Scroll to top when navigating to a session
   useEffect(() => { window.scrollTo(0, 0) }, [sessionId])
@@ -163,32 +160,6 @@ export default function SessionPage() {
     navigate(`/l/${leagueId}`)
   }
 
-  async function addSignup(player: Player) {
-    await supabase.from('session_signups').insert({ session_id: sessionId, player_id: player.id })
-    queryClient.invalidateQueries({ queryKey: qk.sessionSignups(sessionId!) })
-  }
-
-  async function removeSignup(playerId: string) {
-    await supabase.from('session_signups').delete().eq('session_id', sessionId!).eq('player_id', playerId)
-    queryClient.invalidateQueries({ queryKey: qk.sessionSignups(sessionId!) })
-  }
-
-  async function addNewPlayerAndSignup() {
-    const raw = signupSearch.trim()
-    if (!raw) return
-    const name = raw.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
-    const existing = players.find(p => p.name.toLowerCase() === name.toLowerCase())
-    if (existing) {
-      addSignup(existing)
-      return
-    }
-    const { data, error } = await supabase.from('players').insert({ league_id: leagueId, name }).select().single()
-    if (data && !error) {
-      queryClient.invalidateQueries({ queryKey: qk.players(leagueId!) })
-      addSignup(data as Player)
-    }
-  }
-
   async function toggleExcluded() {
     if (!session) return
     const next = !session.excluded
@@ -242,91 +213,6 @@ export default function SessionPage() {
         </div>
         <Link to={`/l/${leagueId}`} className="text-gray-500 hover:text-white text-sm transition-colors pt-1 shrink-0">← View Season</Link>
       </div>
-
-      {/* Who's Playing — sign-up roster (future sessions only) */}
-      {session && session.date > new Date().toISOString().split('T')[0] && (() => {
-        const signedUpIds = new Set(signups.map(s => s.player_id))
-        const signedUpPlayers = signups
-          .map(s => players.find(p => p.id === s.player_id))
-          .filter((p): p is Player => !!p)
-        const query = signupSearch.trim().toLowerCase()
-        const allSorted = [...players].sort((a, b) => a.name.localeCompare(b.name))
-        const filteredPlayers = query
-          ? allSorted.filter(p => p.name.toLowerCase().includes(query))
-          : allSorted
-        const exactMatch = query ? players.some(p => p.name.toLowerCase() === query) : false
-        const showDropdown = signupFocused && filteredPlayers.length > 0
-
-        if (signedUpPlayers.length === 0 && session?.ended) return null
-
-        return (
-          <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <p className="text-gray-400 text-xs uppercase tracking-wide">Who's Playing</p>
-              <span className="text-gray-500 text-xs">{signedUpPlayers.length} signed up</span>
-            </div>
-
-            {!session?.ended && (
-              <div className="relative">
-                <input
-                  className="w-full bg-gray-800 rounded-lg px-4 py-2.5 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Search players..."
-                  value={signupSearch}
-                  onChange={e => setSignupSearch(e.target.value)}
-                  onFocus={() => setSignupFocused(true)}
-                  onBlur={() => setTimeout(() => setSignupFocused(false), 200)}
-                />
-                {showDropdown && (
-                  <div className="absolute left-0 right-0 top-full mt-1 bg-gray-800 rounded-lg overflow-hidden z-10 shadow-lg border border-gray-700 max-h-60 overflow-y-auto" onMouseDown={e => e.preventDefault()} onTouchStart={e => e.preventDefault()}>
-                    {filteredPlayers.slice(0, 20).map(p => {
-                      const alreadyAdded = signedUpIds.has(p.id)
-                      return (
-                        <button
-                          key={p.id}
-                          onClick={() => !alreadyAdded && addSignup(p)}
-                          className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors ${
-                            alreadyAdded ? 'text-gray-500 cursor-default' : 'text-white hover:bg-gray-700'
-                          }`}
-                        >
-                          {alreadyAdded && <span className="text-green-400">✓</span>}
-                          {p.name}
-                        </button>
-                      )
-                    })}
-                    {!exactMatch && query.length >= 2 && (
-                      <button
-                        onClick={addNewPlayerAndSignup}
-                        className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-gray-700 transition-colors border-t border-gray-700"
-                      >
-                        + Add "{signupSearch.trim()}" as new player
-                      </button>
-                    )}
-                    {filteredPlayers.length === 0 && query.length >= 1 && (
-                      <p className="px-4 py-2.5 text-sm text-gray-500">No players found</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {signedUpPlayers.length > 0 && (
-              <div className="flex flex-col gap-1">
-                {signedUpPlayers.map((p, i) => (
-                  <div key={p.id} className="flex items-center justify-between bg-gray-800 rounded-xl px-4 py-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-gray-500 text-xs w-5 text-center">{i + 1}</span>
-                      <span className="text-white text-sm">{p.name}</span>
-                    </div>
-                    {!session?.ended && (
-                      <button onClick={() => removeSignup(p.id)} className="text-gray-600 hover:text-red-400 transition-colors text-sm">✕</button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )
-      })()}
 
       {/* Invite players */}
       {!session?.ended && (
