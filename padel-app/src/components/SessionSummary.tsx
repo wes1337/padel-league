@@ -135,24 +135,9 @@ function drawChampionCard(player: PlayerStats, label: string): Promise<File | nu
     const ctx = canvas.getContext('2d')
     if (!ctx) { resolve(null); return }
 
-    // Background
-    const grad = ctx.createLinearGradient(0, 0, W, H)
-    grad.addColorStop(0, '#0c0e1a')
-    grad.addColorStop(0.4, '#111936')
-    grad.addColorStop(1, '#0a1628')
-    roundRect(ctx, 0, 0, W, H, R)
-    ctx.fillStyle = grad; ctx.fill()
-
-    // Subtle outer border
-    roundRect(ctx, 0, 0, W, H, R)
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 2; ctx.stroke()
-
-    // Glow behind trophy
-    const glow = ctx.createRadialGradient(W / 2, 100, 0, W / 2, 100, 140)
-    glow.addColorStop(0, 'rgba(251,191,36,0.12)')
-    glow.addColorStop(1, 'rgba(251,191,36,0)')
-    ctx.fillStyle = glow
-    ctx.fillRect(0, 0, W, 240)
+    // Background — flat fill, no rounded corners
+    ctx.fillStyle = '#111936'
+    ctx.fillRect(0, 0, W, H)
 
     // Trophy
     drawTrophy(ctx, W / 2, 85, 70)
@@ -233,7 +218,7 @@ function drawChampionCard(player: PlayerStats, label: string): Promise<File | nu
 
     ctx.font = '500 13px system-ui, sans-serif'
     ctx.fillStyle = '#4b5563'
-    ctx.fillText('Padel League', W / 2, H - 28)
+    ctx.fillText('🎾 Padel League', W / 2, H - 28)
 
     // Small decorative dots
     ctx.fillStyle = 'rgba(251,191,36,0.15)'
