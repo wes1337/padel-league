@@ -35,10 +35,11 @@ export default function AddMatch() {
     }
   }, [activeTeam])
 
-  // Lock body scroll when score modal opens
+  // Lock body scroll and focus score input when score modal opens
   useEffect(() => {
     if (scoringTeam !== null) {
       document.body.style.overflow = 'hidden'
+      setTimeout(() => scoreRef.current?.focus(), 150)
       return () => { document.body.style.overflow = '' }
     }
   }, [scoringTeam])
@@ -96,7 +97,6 @@ export default function AddMatch() {
       setActiveTeam(null)
       setSearch('')
       setScoringTeam(team)
-      setTimeout(() => scoreRef.current?.focus(), 100)
     }
   }
 
@@ -248,6 +248,7 @@ export default function AddMatch() {
             </p>
             <input
               ref={scoreRef}
+              autoFocus
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
