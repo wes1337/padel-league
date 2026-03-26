@@ -10,7 +10,7 @@ import type { Match } from '../types'
 import Leaderboard from '../components/Leaderboard'
 import SessionSummary from '../components/SessionSummary'
 
-function drawInviteCard(label: string): Promise<File | null> {
+function drawInviteCard(leagueName: string, sessionDate: string): Promise<File | null> {
   return new Promise(resolve => {
     const W = 680, H = 480
     const canvas = document.createElement('canvas')
@@ -82,11 +82,14 @@ function drawInviteCard(label: string): Promise<File | null> {
     ctx.fillText('🔥', W / 2 - 60, H / 2 - 30)
     ctx.fillText('🔥', W / 2 + 60, H / 2 - 30)
 
-    // Session label at top
-    ctx.font = '600 20px system-ui, sans-serif'
+    // Session label at top — league name + date
     ctx.textAlign = 'center'
+    ctx.font = '700 22px system-ui, sans-serif'
     ctx.fillStyle = '#ffffff'
-    ctx.fillText(label, W / 2, 55)
+    ctx.fillText(leagueName, W / 2, 45)
+    ctx.font = '400 15px system-ui, sans-serif'
+    ctx.fillStyle = '#9ca3af'
+    ctx.fillText(sessionDate, W / 2, 68)
 
     // "GAME ON!" text
     ctx.font = '800 28px system-ui, sans-serif'
@@ -265,7 +268,8 @@ export default function SessionPage() {
                     ? `${window.location.origin}/s/${session.short_id}`
                     : window.location.href
                   const text = `Join our padel session and add your scores!\n\n${shareUrl}`
-                  const file = await drawInviteCard(session?.label || 'Padello')
+                  const datePart = session?.label?.replace(/^.+ – /, '') || session?.date || ''
+                  const file = await drawInviteCard(league?.name || 'Padello', datePart)
 
                   if (typeof navigator.share === 'function') {
                     if (file) {

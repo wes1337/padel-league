@@ -250,10 +250,13 @@ const styles: CardStyle[] = [
       ctx.fillStyle = '#22c55e'
       ctx.fillRect(W / 2 - 100, H * 0.42, 200, 6)
 
-      // Session info
-      ctx.font = '500 22px system-ui, sans-serif'
-      ctx.fillStyle = '#6b7280'
-      ctx.fillText('Padello – 26 Mar 2026', W / 2, H * 0.55)
+      // Session info — league name + date
+      ctx.font = '600 22px system-ui, sans-serif'
+      ctx.fillStyle = '#0a0a0a'
+      ctx.fillText('Friday Padel', W / 2, H * 0.52)
+      ctx.font = '400 16px system-ui, sans-serif'
+      ctx.fillStyle = '#9ca3af'
+      ctx.fillText('26 Mar 2026', W / 2, H * 0.58)
 
       // Emoji VS
       ctx.font = '60px serif'
