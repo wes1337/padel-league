@@ -10,6 +10,106 @@ import type { Match } from '../types'
 import Leaderboard from '../components/Leaderboard'
 import SessionSummary from '../components/SessionSummary'
 
+function drawInviteCard(label: string): Promise<File | null> {
+  return new Promise(resolve => {
+    const W = 680, H = 480
+    const canvas = document.createElement('canvas')
+    canvas.width = W; canvas.height = H
+    const ctx = canvas.getContext('2d')
+    if (!ctx) { resolve(null); return }
+
+    // Background
+    ctx.fillStyle = '#0a0e1a'
+    ctx.fillRect(0, 0, W, H)
+
+    // Diagonal stripes for energy
+    ctx.save()
+    ctx.globalAlpha = 0.04
+    for (let i = -H; i < W + H; i += 40) {
+      ctx.fillStyle = '#ffffff'
+      ctx.beginPath()
+      ctx.moveTo(i, 0); ctx.lineTo(i + 20, 0)
+      ctx.lineTo(i + 20 + H, H); ctx.lineTo(i + H, H)
+      ctx.closePath(); ctx.fill()
+    }
+    ctx.restore()
+
+    // Left side glow (blue team)
+    const leftGlow = ctx.createRadialGradient(120, H / 2, 0, 120, H / 2, 200)
+    leftGlow.addColorStop(0, 'rgba(59,130,246,0.15)')
+    leftGlow.addColorStop(1, 'rgba(59,130,246,0)')
+    ctx.fillStyle = leftGlow; ctx.fillRect(0, 0, W / 2, H)
+
+    // Right side glow (purple team)
+    const rightGlow = ctx.createRadialGradient(W - 120, H / 2, 0, W - 120, H / 2, 200)
+    rightGlow.addColorStop(0, 'rgba(168,85,247,0.15)')
+    rightGlow.addColorStop(1, 'rgba(168,85,247,0)')
+    ctx.fillStyle = rightGlow; ctx.fillRect(W / 2, 0, W / 2, H)
+
+    // Left racket emoji
+    ctx.font = '80px serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('🏓', 130, H / 2 + 25)
+
+    // Right racket emoji (mirrored via scale)
+    ctx.save()
+    ctx.translate(W - 130, H / 2 + 25)
+    ctx.scale(-1, 1)
+    ctx.fillText('🏓', 0, 0)
+    ctx.restore()
+
+    // Center divider line
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)'
+    ctx.lineWidth = 2
+    ctx.setLineDash([8, 8])
+    ctx.beginPath()
+    ctx.moveTo(W / 2, 40); ctx.lineTo(W / 2, H - 40)
+    ctx.stroke()
+    ctx.setLineDash([])
+
+    // "VS" text with glow
+    ctx.save()
+    ctx.shadowColor = 'rgba(250,204,21,0.4)'
+    ctx.shadowBlur = 30
+    ctx.font = '900 72px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillStyle = '#fbbf24'
+    ctx.fillText('VS', W / 2, H / 2 + 10)
+    ctx.restore()
+
+    // Fire emojis around VS
+    ctx.font = '28px serif'
+    ctx.fillText('🔥', W / 2 - 60, H / 2 - 30)
+    ctx.fillText('🔥', W / 2 + 60, H / 2 - 30)
+
+    // Session label at top
+    ctx.font = '600 20px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillStyle = '#ffffff'
+    ctx.fillText(label, W / 2, 55)
+
+    // "GAME ON!" text
+    ctx.font = '800 28px system-ui, sans-serif'
+    ctx.fillStyle = '#4ade80'
+    ctx.fillText('GAME ON!', W / 2, H - 80)
+
+    // Subtitle
+    ctx.font = '500 14px system-ui, sans-serif'
+    ctx.fillStyle = '#9ca3af'
+    ctx.fillText('Tap to join and track scores', W / 2, H - 52)
+
+    // Footer
+    ctx.font = '500 13px system-ui, sans-serif'
+    ctx.fillStyle = '#6b7280'
+    ctx.fillText('🎾 Padello', W / 2, H - 20)
+
+    canvas.toBlob(blob => {
+      if (!blob) { resolve(null); return }
+      resolve(new File([blob], 'padello-invite.png', { type: 'image/png' }))
+    }, 'image/png')
+  })
+}
+
 type EditState = {
   s1: string; s2: string
   p1: string; p2: string; p3: string; p4: string
@@ -23,6 +123,7 @@ export default function SessionPage() {
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
   const [editState, setEditState] = useState<EditState | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [inviting, setInviting] = useState(false)
   const [rankHighlightedIds, setRankHighlightedIds] = useState<Map<string, string>>(new Map())
 
   const { data: session, isLoading: sessionLoading } = useSession(sessionId)
@@ -157,21 +258,41 @@ export default function SessionPage() {
               <p className="text-gray-500 text-xs">Everyone can add scores and track standings</p>
             </div>
             <button
-              onClick={() => {
-                const shareUrl = session?.short_id
-                  ? `${window.location.origin}/s/${session.short_id}`
-                  : window.location.href
-                if (typeof navigator.share === 'function') {
-                  navigator.share({ title: session?.label || 'Padello', text: `Join our padel session and add your scores!\n\n${shareUrl}` })
-                } else {
-                  navigator.clipboard.writeText(shareUrl)
-                  setLinkCopied(true)
-                  setTimeout(() => setLinkCopied(false), 1500)
+              onClick={async () => {
+                setInviting(true)
+                try {
+                  const shareUrl = session?.short_id
+                    ? `${window.location.origin}/s/${session.short_id}`
+                    : window.location.href
+                  const text = `Join our padel session and add your scores!\n\n${shareUrl}`
+                  const file = await drawInviteCard(session?.label || 'Padello')
+
+                  if (typeof navigator.share === 'function') {
+                    if (file) {
+                      const withFile: ShareData = { text, files: [file] }
+                      if (navigator.canShare?.(withFile)) {
+                        await navigator.share(withFile)
+                        setInviting(false)
+                        return
+                      }
+                    }
+                    await navigator.share({ title: session?.label || 'Padello', text })
+                  } else {
+                    navigator.clipboard.writeText(shareUrl)
+                    setLinkCopied(true)
+                    setTimeout(() => setLinkCopied(false), 1500)
+                  }
+                } catch (err) {
+                  if (err instanceof Error && err.name !== 'AbortError') {
+                    console.error('Share failed:', err)
+                  }
                 }
+                setInviting(false)
               }}
-              className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shrink-0"
+              disabled={inviting}
+              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shrink-0"
             >
-              {linkCopied ? 'Copied!' : 'Invite'}
+              {linkCopied ? 'Copied!' : inviting ? '...' : 'Invite'}
             </button>
           </div>
         </div>
