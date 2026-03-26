@@ -274,10 +274,10 @@ export default function SessionPage() {
                   value={signupSearch}
                   onChange={e => setSignupSearch(e.target.value)}
                   onFocus={() => setSignupFocused(true)}
-                  onBlur={() => setTimeout(() => setSignupFocused(false), 150)}
+                  onBlur={() => setTimeout(() => setSignupFocused(false), 200)}
                 />
                 {showDropdown && (
-                  <div className="absolute left-0 right-0 top-full mt-1 bg-gray-800 rounded-lg overflow-hidden z-10 shadow-lg border border-gray-700 max-h-60 overflow-y-auto">
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-gray-800 rounded-lg overflow-hidden z-10 shadow-lg border border-gray-700 max-h-60 overflow-y-auto" onMouseDown={e => e.preventDefault()} onTouchStart={e => e.preventDefault()}>
                     {filteredPlayers.slice(0, 20).map(p => {
                       const alreadyAdded = signedUpIds.has(p.id)
                       return (
