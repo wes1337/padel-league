@@ -205,16 +205,6 @@ export default function SessionPage() {
         </div>
       )}
 
-      {/* Reveal Awards button — shown when awards not yet revealed and there are matches */}
-      {matches.length > 0 && !awardsRevealed && (
-        <button
-          onClick={revealAwards}
-          className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl py-4 text-lg transition-colors"
-        >
-          🏆 Reveal Awards
-        </button>
-      )}
-
       {/* Session Awards — only after reveal */}
       {matches.length > 0 && awardsRevealed && (
         <SessionSummary matches={matches} players={players} stats={stats} sessionLabel={session?.label || session?.date || ''} sessionShortId={session?.short_id} />
@@ -416,6 +406,16 @@ export default function SessionPage() {
             })}
           </div>
         </div>
+      )}
+
+      {/* Reveal Awards button — shown after matches */}
+      {matches.length > 0 && !awardsRevealed && (
+        <button
+          onClick={revealAwards}
+          className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl py-4 text-lg transition-colors"
+        >
+          🏆 Reveal Awards
+        </button>
       )}
 
       {/* Session Settings — admin/creator only */}
