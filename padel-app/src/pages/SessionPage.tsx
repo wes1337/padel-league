@@ -30,7 +30,9 @@ export default function SessionPage() {
   const { data: players = [], isLoading: playersLoading } = usePlayers(leagueId)
   const { data: league } = useLeague(leagueId)
 
-  const [revealing, setRevealing] = useState(false)
+  const [awardsRevealed, setAwardsRevealed] = useState(() =>
+    localStorage.getItem(`awards_revealed_${sessionId}`) === '1'
+  )
 
   const loading = sessionLoading || matchesLoading || playersLoading
 
@@ -88,11 +90,9 @@ export default function SessionPage() {
     queryClient.invalidateQueries({ queryKey: qk.sessions(leagueId!) })
   }
 
-  async function revealAwards() {
-    setRevealing(true)
-    await supabase.from('sessions').update({ awards_revealed: true }).eq('id', sessionId!)
-    queryClient.invalidateQueries({ queryKey: qk.session(sessionId!) })
-    setRevealing(false)
+  function revealAwards() {
+    localStorage.setItem(`awards_revealed_${sessionId}`, '1')
+    setAwardsRevealed(true)
   }
 
   async function deleteSession() {
@@ -206,23 +206,22 @@ export default function SessionPage() {
       )}
 
       {/* Reveal Awards button — shown when awards not yet revealed and there are matches */}
-      {matches.length > 0 && !session?.awards_revealed && (
+      {matches.length > 0 && !awardsRevealed && (
         <button
           onClick={revealAwards}
-          disabled={revealing}
-          className="w-full bg-yellow-600 hover:bg-yellow-500 disabled:opacity-50 text-white font-bold rounded-xl py-4 text-lg transition-colors"
+          className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl py-4 text-lg transition-colors"
         >
-          {revealing ? '...' : '🏆 Reveal Awards'}
+          🏆 Reveal Awards
         </button>
       )}
 
       {/* Session Awards — only after reveal */}
-      {matches.length > 0 && session?.awards_revealed && (
+      {matches.length > 0 && awardsRevealed && (
         <SessionSummary matches={matches} players={players} stats={stats} sessionLabel={session?.label || session?.date || ''} sessionShortId={session?.short_id} />
       )}
 
       {/* Session Standings + Charts — only after reveal */}
-      {session?.awards_revealed && stats.length > 0 && (() => {
+      {awardsRevealed && stats.length > 0 && (() => {
         const PALETTE = ['#22c55e', '#3b82f6', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4', '#f97316']
         const pMap = new Map(players.map(p => [p.id, p.name]))
 

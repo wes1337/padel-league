@@ -30,7 +30,6 @@ create table sessions (
 -- Migration (run this if the table already exists):
 -- alter table sessions add column excluded boolean default false;
 -- alter table sessions add column short_id text unique;
--- alter table sessions add column awards_revealed boolean default false;
 
 create table matches (
   id uuid primary key default gen_random_uuid(),

@@ -26,7 +26,6 @@ export interface Session {
   ended: boolean
   creator_token: string | null
   short_id: string | null
-  awards_revealed: boolean
   created_at: string
 }
 
