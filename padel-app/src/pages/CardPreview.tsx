@@ -244,7 +244,7 @@ const styles: CardStyle[] = [
       ctx.textAlign = 'center'
       ctx.font = '900 90px system-ui, sans-serif'
       ctx.fillStyle = '#0a0a0a'
-      ctx.fillText('READY?', W / 2, H * 0.38)
+      ctx.fillText('PADEL UP!', W / 2, H * 0.38)
 
       // Underline
       ctx.fillStyle = '#22c55e'
@@ -258,15 +258,21 @@ const styles: CardStyle[] = [
       ctx.fillStyle = '#9ca3af'
       ctx.fillText('26 Mar 2026', W / 2, H * 0.58)
 
-      // Emoji VS
-      ctx.font = '60px serif'
-      ctx.fillText('💪', W / 2 - 90, H * 0.73)
-      ctx.font = '700 32px system-ui, sans-serif'; ctx.fillStyle = '#22c55e'
-      ctx.fillText('vs', W / 2, H * 0.72)
-      ctx.font = '60px serif'
-      ctx.fillText('🔥', W / 2 + 90, H * 0.73)
+      // Tennis ball (drawn)
+      ctx.beginPath()
+      ctx.arc(W / 2, H * 0.71, 35, 0, Math.PI * 2)
+      ctx.fillStyle = '#c8e632'
+      ctx.fill()
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      ctx.arc(W / 2 - 12, H * 0.71, 30, -0.8, 0.8)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(W / 2 + 12, H * 0.71, 30, Math.PI - 0.8, Math.PI + 0.8)
+      ctx.stroke()
 
-      ctx.font = '600 16px system-ui, sans-serif'; ctx.fillStyle = '#4b5563'; ctx.fillText('Tap to join and track scores', W / 2, H - 50)
+      ctx.font = '600 16px system-ui, sans-serif'; ctx.fillStyle = '#4b5563'; ctx.fillText('Join Match · Track Scores · Earn Awards · Crown the Champ', W / 2, H - 50)
 
       // Footer bar
       ctx.fillStyle = '#f3f4f6'; ctx.fillRect(0, H - 35, W, 35)

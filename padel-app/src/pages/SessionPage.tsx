@@ -18,93 +18,57 @@ function drawInviteCard(leagueName: string, sessionDate: string): Promise<File |
     const ctx = canvas.getContext('2d')
     if (!ctx) { resolve(null); return }
 
-    // Background
-    ctx.fillStyle = '#0a0e1a'
+    // White background
+    ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, W, H)
 
-    // Diagonal stripes for energy
-    ctx.save()
-    ctx.globalAlpha = 0.04
-    for (let i = -H; i < W + H; i += 40) {
-      ctx.fillStyle = '#ffffff'
-      ctx.beginPath()
-      ctx.moveTo(i, 0); ctx.lineTo(i + 20, 0)
-      ctx.lineTo(i + 20 + H, H); ctx.lineTo(i + H, H)
-      ctx.closePath(); ctx.fill()
-    }
-    ctx.restore()
+    // Accent bar at top
+    ctx.fillStyle = '#22c55e'
+    ctx.fillRect(0, 0, W, 8)
 
-    // Left side glow (blue team)
-    const leftGlow = ctx.createRadialGradient(120, H / 2, 0, 120, H / 2, 200)
-    leftGlow.addColorStop(0, 'rgba(59,130,246,0.15)')
-    leftGlow.addColorStop(1, 'rgba(59,130,246,0)')
-    ctx.fillStyle = leftGlow; ctx.fillRect(0, 0, W / 2, H)
-
-    // Right side glow (purple team)
-    const rightGlow = ctx.createRadialGradient(W - 120, H / 2, 0, W - 120, H / 2, 200)
-    rightGlow.addColorStop(0, 'rgba(168,85,247,0.15)')
-    rightGlow.addColorStop(1, 'rgba(168,85,247,0)')
-    ctx.fillStyle = rightGlow; ctx.fillRect(W / 2, 0, W / 2, H)
-
-    // Left racket emoji
-    ctx.font = '80px serif'
+    // Big tagline
     ctx.textAlign = 'center'
-    ctx.fillText('🏓', 130, H / 2 + 25)
+    ctx.font = '900 90px system-ui, sans-serif'
+    ctx.fillStyle = '#0a0a0a'
+    ctx.fillText('PADEL UP!', W / 2, H * 0.38)
 
-    // Right racket emoji (mirrored via scale)
-    ctx.save()
-    ctx.translate(W - 130, H / 2 + 25)
-    ctx.scale(-1, 1)
-    ctx.fillText('🏓', 0, 0)
-    ctx.restore()
+    // Underline
+    ctx.fillStyle = '#22c55e'
+    ctx.fillRect(W / 2 - 100, H * 0.42, 200, 6)
 
-    // Center divider line
-    ctx.strokeStyle = 'rgba(255,255,255,0.1)'
-    ctx.lineWidth = 2
-    ctx.setLineDash([8, 8])
-    ctx.beginPath()
-    ctx.moveTo(W / 2, 40); ctx.lineTo(W / 2, H - 40)
-    ctx.stroke()
-    ctx.setLineDash([])
-
-    // "VS" text with glow
-    ctx.save()
-    ctx.shadowColor = 'rgba(250,204,21,0.4)'
-    ctx.shadowBlur = 30
-    ctx.font = '900 72px system-ui, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillStyle = '#fbbf24'
-    ctx.fillText('VS', W / 2, H / 2 + 10)
-    ctx.restore()
-
-    // Fire emojis around VS
-    ctx.font = '28px serif'
-    ctx.fillText('🔥', W / 2 - 60, H / 2 - 30)
-    ctx.fillText('🔥', W / 2 + 60, H / 2 - 30)
-
-    // Session label at top — league name + date
-    ctx.textAlign = 'center'
-    ctx.font = '700 22px system-ui, sans-serif'
-    ctx.fillStyle = '#ffffff'
-    ctx.fillText(leagueName, W / 2, 45)
-    ctx.font = '400 15px system-ui, sans-serif'
+    // League name + date
+    ctx.font = '600 22px system-ui, sans-serif'
+    ctx.fillStyle = '#0a0a0a'
+    ctx.fillText(leagueName, W / 2, H * 0.52)
+    ctx.font = '400 16px system-ui, sans-serif'
     ctx.fillStyle = '#9ca3af'
-    ctx.fillText(sessionDate, W / 2, 68)
+    ctx.fillText(sessionDate, W / 2, H * 0.58)
 
-    // "GAME ON!" text
-    ctx.font = '800 28px system-ui, sans-serif'
-    ctx.fillStyle = '#4ade80'
-    ctx.fillText('GAME ON!', W / 2, H - 80)
+    // Tennis ball (drawn)
+    ctx.beginPath()
+    ctx.arc(W / 2, H * 0.71, 35, 0, Math.PI * 2)
+    ctx.fillStyle = '#c8e632'
+    ctx.fill()
+    ctx.strokeStyle = '#ffffff'
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.arc(W / 2 - 12, H * 0.71, 30, -0.8, 0.8)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(W / 2 + 12, H * 0.71, 30, Math.PI - 0.8, Math.PI + 0.8)
+    ctx.stroke()
 
     // Subtitle
-    ctx.font = '500 14px system-ui, sans-serif'
-    ctx.fillStyle = '#9ca3af'
-    ctx.fillText('Tap to join and track scores', W / 2, H - 52)
+    ctx.font = '600 16px system-ui, sans-serif'
+    ctx.fillStyle = '#4b5563'
+    ctx.fillText('Join Match · Track Scores · Earn Awards · Crown the Champ', W / 2, H - 50)
 
-    // Footer
+    // Footer bar
+    ctx.fillStyle = '#f3f4f6'
+    ctx.fillRect(0, H - 35, W, 35)
     ctx.font = '500 13px system-ui, sans-serif'
     ctx.fillStyle = '#6b7280'
-    ctx.fillText('🎾 Padello', W / 2, H - 20)
+    ctx.fillText('🎾 Padello', W / 2, H - 12)
 
     canvas.toBlob(blob => {
       if (!blob) { resolve(null); return }
