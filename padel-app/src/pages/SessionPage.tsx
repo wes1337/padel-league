@@ -44,24 +44,14 @@ function drawInviteCard(leagueName: string, sessionDate: string): Promise<File |
     ctx.fillStyle = '#9ca3af'
     ctx.fillText(sessionDate, W / 2, H * 0.58)
 
-    // Tennis ball (drawn)
-    ctx.beginPath()
-    ctx.arc(W / 2, H * 0.71, 35, 0, Math.PI * 2)
-    ctx.fillStyle = '#c8e632'
-    ctx.fill()
-    ctx.strokeStyle = '#ffffff'
-    ctx.lineWidth = 3
-    ctx.beginPath()
-    ctx.arc(W / 2 - 12, H * 0.71, 30, -0.8, 0.8)
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.arc(W / 2 + 12, H * 0.71, 30, Math.PI - 0.8, Math.PI + 0.8)
-    ctx.stroke()
+    // Tennis ball emoji (matches home page)
+    ctx.font = '60px serif'
+    ctx.fillText('🎾', W / 2, H * 0.73)
 
     // Subtitle
     ctx.font = '600 16px system-ui, sans-serif'
     ctx.fillStyle = '#4b5563'
-    ctx.fillText('Join Match · Track Scores · Earn Awards · Crown the Champ', W / 2, H - 50)
+    ctx.fillText('Track Scores · Earn Awards · Crown the Champ', W / 2, H - 50)
 
     // Footer bar
     ctx.fillStyle = '#f3f4f6'
