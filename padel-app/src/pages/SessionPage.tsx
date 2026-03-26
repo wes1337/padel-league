@@ -44,7 +44,7 @@ function drawInviteCard(leagueName: string, sessionDate: string): Promise<File |
     ctx.fillStyle = '#9ca3af'
     ctx.fillText(sessionDate, W / 2, H * 0.58)
 
-    // Tennis ball emoji (matches home page)
+    // Ball emoji (renders as tennis ball on device)
     ctx.font = '60px serif'
     ctx.fillText('🎾', W / 2, H * 0.73)
 
