@@ -448,23 +448,23 @@ export default function SessionPage() {
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 flex flex-col gap-1">
-                          <select value={es.p1} onChange={e => setEditState({ ...es, p1: e.target.value })} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
+                          <select value={es.p1} onChange={e => setEditState({ ...es, p1: e.target.value })} className="w-full bg-gray-700 text-white text-base rounded-lg px-2 py-1.5 outline-none">
                             {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                           </select>
-                          <select value={es.p2} onChange={e => setEditState({ ...es, p2: e.target.value })} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
+                          <select value={es.p2} onChange={e => setEditState({ ...es, p2: e.target.value })} className="w-full bg-gray-700 text-white text-base rounded-lg px-2 py-1.5 outline-none">
                             {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                           </select>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-10 bg-gray-700 rounded-lg px-1 py-1.5 text-white text-center text-sm outline-none focus:ring-2 focus:ring-green-500" value={es.s1} onChange={e => setEditState({ ...es, s1: e.target.value })} />
+                          <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-10 bg-gray-700 rounded-lg px-1 py-1.5 text-white text-center text-base outline-none focus:ring-2 focus:ring-green-500" value={es.s1} onChange={e => setEditState({ ...es, s1: e.target.value })} />
                           <span className="text-gray-500 font-bold">–</span>
-                          <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-10 bg-gray-700 rounded-lg px-1 py-1.5 text-white text-center text-sm outline-none focus:ring-2 focus:ring-green-500" value={es.s2} onChange={e => setEditState({ ...es, s2: e.target.value })} />
+                          <input type="text" inputMode="numeric" pattern="[0-9]*" className="w-10 bg-gray-700 rounded-lg px-1 py-1.5 text-white text-center text-base outline-none focus:ring-2 focus:ring-green-500" value={es.s2} onChange={e => setEditState({ ...es, s2: e.target.value })} />
                         </div>
                         <div className="flex-1 flex flex-col gap-1">
-                          <select value={es.p3} onChange={e => setEditState({ ...es, p3: e.target.value })} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
+                          <select value={es.p3} onChange={e => setEditState({ ...es, p3: e.target.value })} className="w-full bg-gray-700 text-white text-base rounded-lg px-2 py-1.5 outline-none">
                             {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                           </select>
-                          <select value={es.p4} onChange={e => setEditState({ ...es, p4: e.target.value })} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 outline-none">
+                          <select value={es.p4} onChange={e => setEditState({ ...es, p4: e.target.value })} className="w-full bg-gray-700 text-white text-base rounded-lg px-2 py-1.5 outline-none">
                             {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                           </select>
                         </div>
