@@ -75,22 +75,30 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
       const text = top
         ? `${sessionLabel} — ${top.player.name} crowned Court Champion! Check out the full results:`
         : `${sessionLabel} — Check out the session results!`
-      const file = await captureCard()
+
+      // Try to capture the card image
+      let file: File | null = null
+      try { file = await captureCard() } catch { /* ignore capture errors */ }
 
       if (typeof navigator.share === 'function') {
-        const shareData: ShareData = { title: sessionLabel, text, url: window.location.href }
-        if (file && navigator.canShare?.({ files: [file] })) {
-          shareData.files = [file]
+        // Try sharing with image first
+        if (file) {
+          try {
+            const withFile: ShareData = { title: sessionLabel, text, url: window.location.href, files: [file] }
+            if (navigator.canShare?.(withFile)) {
+              await navigator.share(withFile)
+              setSharing(false)
+              return
+            }
+          } catch { /* fall through to text-only share */ }
         }
-        await navigator.share(shareData)
-      } else if (file) {
-        // Fallback: download the image
-        const url = URL.createObjectURL(file)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'court-champion.png'
-        a.click()
-        URL.revokeObjectURL(url)
+        // Text-only share
+        await navigator.share({ title: sessionLabel, text, url: window.location.href })
+      } else {
+        // Desktop fallback: copy link
+        navigator.clipboard.writeText(window.location.href)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
       }
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') {

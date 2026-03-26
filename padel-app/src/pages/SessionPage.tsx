@@ -138,9 +138,9 @@ export default function SessionPage() {
       {!session?.ended && (
         <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="min-w-0 mr-3">
               <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Invite Players</p>
-              <p className="text-gray-500 text-xs">Share a link so others can join and add scores</p>
+              <p className="text-gray-500 text-xs">Send a link to join this session</p>
             </div>
             <button
               onClick={() => {
@@ -152,7 +152,7 @@ export default function SessionPage() {
                   setTimeout(() => setLinkCopied(false), 1500)
                 }
               }}
-              className="bg-green-600 hover:bg-green-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+              className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shrink-0"
             >
               {linkCopied ? 'Copied!' : 'Invite'}
             </button>
