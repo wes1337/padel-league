@@ -22,6 +22,7 @@ export default function LeagueHome() {
   const [showRankingInfo, setShowRankingInfo] = useState(false)
   const [showCreateSession, setShowCreateSession] = useState(false)
   const [newSessionDate, setNewSessionDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [linkCopied, setLinkCopied] = useState(false)
 
   // Scroll to top on navigation
   useEffect(() => { window.scrollTo(0, 0) }, [leagueId])
@@ -189,7 +190,35 @@ export default function LeagueHome() {
           <h1 className="text-2xl font-bold text-white">{league.name}</h1>
           <p className="text-gray-400 text-sm">{year} Season</p>
         </div>
-        <Link to="/" className="text-gray-500 hover:text-white text-sm transition-colors pt-1 shrink-0 whitespace-nowrap">← Find / Create League</Link>
+        <Link to="/" className="text-gray-500 hover:text-white text-sm transition-colors pt-1 shrink-0 whitespace-nowrap">← Home</Link>
+      </div>
+
+      {/* Share League */}
+      <div className="bg-gray-900 rounded-2xl p-4 flex items-center justify-between">
+        <div className="min-w-0 mr-3">
+          <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Invite to League</p>
+          <p className="text-gray-500 text-xs">Share the link so others can join and track scores</p>
+        </div>
+        <button
+          onClick={async () => {
+            const shareUrl = `${window.location.origin}/l/${leagueId}`
+            const text = `🎾 Join ${league.name} on Padello — track scores, earn awards, and see who's on top!\n\n${shareUrl}`
+            if (typeof navigator.share === 'function') {
+              try {
+                await navigator.share({ title: league.name, text })
+              } catch (err) {
+                if (err instanceof Error && err.name !== 'AbortError') console.error(err)
+              }
+            } else {
+              navigator.clipboard.writeText(shareUrl)
+              setLinkCopied(true)
+              setTimeout(() => setLinkCopied(false), 1500)
+            }
+          }}
+          className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shrink-0"
+        >
+          {linkCopied ? 'Copied!' : 'Share'}
+        </button>
       </div>
 
       {/* New Session */}

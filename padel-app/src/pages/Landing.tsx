@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { nanoid } from 'nanoid'
 import { saveLeagueAdmin } from '../lib/admin'
-import type { League, ScoringType } from '../types'
+import type { ScoringType } from '../types'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -17,10 +17,6 @@ export default function Landing() {
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const recentLeagues: { id: string; name: string }[] = JSON.parse(localStorage.getItem('recent_leagues') || '[]')
-  const [nameSearch, setNameSearch] = useState('')
-  const [nameResults, setNameResults] = useState<League[]>([])
-  const [searching, setSearching] = useState(false)
-  const [hasSearched, setHasSearched] = useState(false)
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showIOSInstall, setShowIOSInstall] = useState(false)
   const [installDismissed, setInstallDismissed] = useState(() => sessionStorage.getItem('install_dismissed') === '1')
@@ -56,16 +52,6 @@ export default function Landing() {
     setInstallPrompt(null)
     setShowIOSInstall(false)
     sessionStorage.setItem('install_dismissed', '1')
-  }
-
-  async function handleNameSearch(e: React.FormEvent) {
-    e.preventDefault()
-    if (!nameSearch.trim()) return
-    setSearching(true)
-    setHasSearched(true)
-    const { data } = await supabase.from('leagues').select('*').ilike('name', `%${nameSearch.trim()}%`).limit(5)
-    setNameResults((data as League[]) || [])
-    setSearching(false)
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -151,46 +137,6 @@ export default function Landing() {
             ))}
           </div>
         )}
-
-        {/* Find league by name */}
-        <form onSubmit={handleNameSearch} className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
-          <h2 className="font-semibold text-white text-lg">Find a League</h2>
-          <div className="flex gap-2">
-            <input
-              className="flex-1 bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Search by league name..."
-              value={nameSearch}
-              onChange={e => { setNameSearch(e.target.value); setNameResults([]); setHasSearched(false) }}
-            />
-            <button
-              type="submit"
-              disabled={searching || !nameSearch.trim()}
-              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold px-4 rounded-lg transition-colors"
-            >
-              {searching ? '...' : 'Search'}
-            </button>
-          </div>
-          {nameResults.length > 0 && (
-            <div className="flex flex-col gap-2">
-              {nameResults.map(l => (
-                <button
-                  key={l.id}
-                  type="button"
-                  onClick={() => navigate(`/l/${l.id}`)}
-                  className="flex items-center justify-between bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
-                >
-                  <span className="text-white font-medium">{l.name}</span>
-                  <span className="text-gray-400 text-sm">→</span>
-                </button>
-              ))}
-            </div>
-          )}
-          {nameResults.length === 0 && hasSearched && !searching && (
-            <p className="text-gray-500 text-sm text-center">No leagues found.</p>
-          )}
-        </form>
-
-        <div className="text-center text-gray-500 text-sm">— or —</div>
 
         {/* Create league */}
         <form onSubmit={handleCreate} className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
