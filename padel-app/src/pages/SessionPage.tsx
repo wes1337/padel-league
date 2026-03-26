@@ -148,7 +148,7 @@ export default function SessionPage() {
                   ? `${window.location.origin}/s/${session.short_id}`
                   : window.location.href
                 if (typeof navigator.share === 'function') {
-                  navigator.share({ title: session?.label || 'Padel Session', text: `Join our padel session and add your scores!\n\n${shareUrl}` })
+                  navigator.share({ title: session?.label || 'Padello', text: `Join our padel session and add your scores!\n\n${shareUrl}` })
                 } else {
                   navigator.clipboard.writeText(shareUrl)
                   setLinkCopied(true)

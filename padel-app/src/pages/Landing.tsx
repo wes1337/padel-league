@@ -101,7 +101,7 @@ export default function Landing() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 gap-10">
       <div className="text-center">
         <div className="text-5xl mb-2">🎾</div>
-        <h1 className="text-3xl font-bold text-white">Padel League</h1>
+        <h1 className="text-3xl font-bold text-white">Padello</h1>
         <p className="text-gray-400 mt-1">Track scores. Crown champions.</p>
       </div>
 
@@ -113,7 +113,7 @@ export default function Landing() {
               <h2 className="font-semibold text-white text-sm">Install as App</h2>
               <button onClick={dismissInstallBanner} className="text-gray-500 hover:text-gray-300 text-xs">dismiss</button>
             </div>
-            <p className="text-white text-xs">Add <span className="text-green-400 font-medium">Padel League</span> to your home screen for quick access — works like a native app.</p>
+            <p className="text-white text-xs">Add <span className="text-green-400 font-medium">Padello</span> to your home screen for quick access — works like a native app.</p>
             <button
               onClick={handleInstall}
               className="bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg py-2 text-sm transition-colors"

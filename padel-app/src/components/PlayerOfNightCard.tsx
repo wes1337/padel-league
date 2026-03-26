@@ -50,7 +50,7 @@ export default function PlayerOfNightCard({ player, sessionLabel }: Props) {
         </div>
       </div>
 
-      <p className="text-gray-400 text-xs">🎾 Padel League</p>
+      <p className="text-gray-400 text-xs">🎾 Padello</p>
     </div>
   )
 }

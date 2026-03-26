@@ -10,8 +10,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Padel League',
-        short_name: 'Padel',
+        name: 'Padello',
+        short_name: 'Padello',
         description: 'Track scores. Crown champions.',
         theme_color: '#030712',
         background_color: '#030712',

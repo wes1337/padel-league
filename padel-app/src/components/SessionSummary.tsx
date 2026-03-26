@@ -237,7 +237,7 @@ function drawChampionCard(player: PlayerStats, label: string): Promise<File | nu
     // Footer
     ctx.font = '500 13px system-ui, sans-serif'
     ctx.fillStyle = '#9ca3af'
-    ctx.fillText('🎾 Padel League', W / 2, H - 28)
+    ctx.fillText('🎾 Padello', W / 2, H - 28)
 
     canvas.toBlob(blob => {
       if (!blob) { resolve(null); return }
