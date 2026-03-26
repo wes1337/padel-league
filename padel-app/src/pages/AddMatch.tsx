@@ -100,6 +100,15 @@ export default function AddMatch() {
     }
   }
 
+  function dismissScore() {
+    const team = scoringTeam
+    setScoringTeam(null)
+    // After entering Team 1 score, auto-open Team 2 picker if Team 2 is empty
+    if (team === 0 && !selected[2] && !selected[3]) {
+      setTimeout(() => openTeam(1), 150)
+    }
+  }
+
   function clearSlot(idx: number, e: React.MouseEvent) {
     e.stopPropagation()
     const next = [...selected]
@@ -172,67 +181,71 @@ export default function AddMatch() {
       </div>
 
       {/* Player Picker Modal */}
-      {activeTeam !== null && (
-        <div className="fixed inset-0 bg-black/80 flex flex-col z-50" onClick={() => setActiveTeam(null)}>
-          <div className="flex-1" />
-          <div className="w-full bg-gray-900 rounded-t-3xl p-5 flex flex-col gap-4 h-[100dvh]" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-white">{teamConfig[activeTeam].label}</h3>
-                {pickingPlayer === 1 && selected[activeTeam * 2] ? (
-                  <p className="text-sm text-gray-400">
-                    <span className={`font-semibold ${teamConfig[activeTeam].textColor}`}>{selected[activeTeam * 2]!.name}</span> & <span className="italic">picking partner…</span>
-                  </p>
-                ) : (
-                  <p className="text-xs text-gray-400">Pick first player</p>
-                )}
+      {activeTeam !== null && (() => {
+        const tc = teamConfig[activeTeam]
+        const isBlue = activeTeam === 0
+        return (
+          <div className="fixed inset-0 bg-black/80 flex flex-col z-50" onClick={() => setActiveTeam(null)}>
+            <div className="flex-1" />
+            <div className={`w-full rounded-t-3xl p-5 flex flex-col gap-4 h-[100dvh] ${isBlue ? 'bg-blue-950' : 'bg-purple-950'}`} onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className={`font-semibold ${tc.textColor}`}>{tc.label}</h3>
+                  {pickingPlayer === 1 && selected[activeTeam * 2] ? (
+                    <p className="text-sm text-gray-400">
+                      <span className={`font-semibold ${tc.textColor}`}>{selected[activeTeam * 2]!.name}</span> & <span className="italic">picking partner…</span>
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-400">Pick first player</p>
+                  )}
+                </div>
+                <button onClick={() => setActiveTeam(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
               </div>
-              <button onClick={() => setActiveTeam(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
-            </div>
 
-            {/* Combined search / add input */}
-            <input
-              ref={searchRef}
-              className="bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Search or type new name..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && search.trim() && filteredPlayers.length === 0) addNewPlayer()
-              }}
-            />
+              {/* Combined search / add input */}
+              <input
+                ref={searchRef}
+                className={`bg-black/30 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 ${isBlue ? 'focus:ring-blue-500' : 'focus:ring-purple-500'}`}
+                placeholder="Search or type new name..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && search.trim() && filteredPlayers.length === 0) addNewPlayer()
+                }}
+              />
 
-            {/* Player list */}
-            <div className="overflow-y-auto flex flex-col gap-2">
-              {/* Add new option — shown when typed name doesn't match any existing player */}
-              {search.trim() && !players.some(p => p.name.toLowerCase() === search.trim().toLowerCase()) && (
-                <button
-                  onClick={addNewPlayer}
-                  className="w-full text-left bg-blue-900/30 hover:bg-blue-900/50 border border-blue-800 rounded-xl px-4 py-3 text-blue-300 font-medium transition-colors"
-                >
-                  + Add "{search.trim()}"
-                </button>
-              )}
-              {filteredPlayers.length === 0 && !search.trim() && (
-                <p className="text-gray-500 text-sm text-center py-2">No players yet — type a name to add one.</p>
-              )}
-              {filteredPlayers.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => selectPlayer(p)}
-                  className="w-full text-left bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 text-white font-medium transition-colors"
-                >
-                  {p.name}
-                </button>
-              ))}
+              {/* Player list */}
+              <div className="overflow-y-auto flex flex-col gap-2">
+                {/* Add new option — shown when typed name doesn't match any existing player */}
+                {search.trim() && !players.some(p => p.name.toLowerCase() === search.trim().toLowerCase()) && (
+                  <button
+                    onClick={addNewPlayer}
+                    className={`w-full text-left rounded-xl px-4 py-3 font-medium transition-colors ${isBlue ? 'bg-blue-900/50 hover:bg-blue-900/70 border border-blue-800 text-blue-300' : 'bg-purple-900/50 hover:bg-purple-900/70 border border-purple-800 text-purple-300'}`}
+                  >
+                    + Add "{search.trim()}"
+                  </button>
+                )}
+                {filteredPlayers.length === 0 && !search.trim() && (
+                  <p className="text-gray-500 text-sm text-center py-2">No players yet — type a name to add one.</p>
+                )}
+                {filteredPlayers.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => selectPlayer(p)}
+                    className={`w-full text-left rounded-xl px-4 py-3 text-white font-medium transition-colors ${isBlue ? 'bg-blue-900/30 hover:bg-blue-900/50' : 'bg-purple-900/30 hover:bg-purple-900/50'}`}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Score Entry Modal */}
       {scoringTeam !== null && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4" onClick={() => setScoringTeam(null)}>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4" onClick={() => dismissScore()}>
           <div className="w-full max-w-sm bg-gray-900 rounded-2xl p-5 flex flex-col gap-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <div>
@@ -241,7 +254,7 @@ export default function AddMatch() {
                   {selected[scoringTeam * 2]?.name} & {selected[scoringTeam * 2 + 1]?.name}
                 </p>
               </div>
-              <button onClick={() => setScoringTeam(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
+              <button onClick={() => dismissScore()} className="text-gray-400 hover:text-white text-xl">✕</button>
             </div>
             <p className="text-gray-500 text-xs">
               {scoringType === 'americano' ? 'Points scored (e.g. 17)' : 'Games won (e.g. 6)'}
@@ -256,10 +269,10 @@ export default function AddMatch() {
               value={scoringTeam === 0 ? team1Score : team2Score}
               onChange={e => scoringTeam === 0 ? setTeam1Score(e.target.value) : setTeam2Score(e.target.value)}
               placeholder="0"
-              onKeyDown={e => { if (e.key === 'Enter') setScoringTeam(null) }}
+              onKeyDown={e => { if (e.key === 'Enter') dismissScore() }}
             />
             <button
-              onClick={() => setScoringTeam(null)}
+              onClick={() => dismissScore()}
               className={`w-full font-semibold rounded-lg py-3 text-white transition-colors ${scoringTeam === 0 ? 'bg-blue-600 hover:bg-blue-500' : 'bg-purple-600 hover:bg-purple-500'}`}
             >
               Done
