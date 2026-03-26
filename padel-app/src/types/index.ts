@@ -25,6 +25,7 @@ export interface Session {
   confirmed: boolean
   ended: boolean
   creator_token: string | null
+  short_id: string | null
   created_at: string
 }
 

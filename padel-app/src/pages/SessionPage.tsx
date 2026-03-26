@@ -144,10 +144,13 @@ export default function SessionPage() {
             </div>
             <button
               onClick={() => {
+                const shareUrl = session?.short_id
+                  ? `${window.location.origin}/s/${session.short_id}`
+                  : window.location.href
                 if (typeof navigator.share === 'function') {
-                  navigator.share({ title: session?.label || 'Padel Session', text: 'Join our padel session and add your scores!', url: window.location.href })
+                  navigator.share({ title: session?.label || 'Padel Session', text: `Join our padel session and add your scores!\n\n${shareUrl}` })
                 } else {
-                  navigator.clipboard.writeText(window.location.href)
+                  navigator.clipboard.writeText(shareUrl)
                   setLinkCopied(true)
                   setTimeout(() => setLinkCopied(false), 1500)
                 }
@@ -182,7 +185,7 @@ export default function SessionPage() {
 
       {/* Session Awards */}
       {matches.length > 0 && (
-        <SessionSummary matches={matches} players={players} stats={stats} sessionLabel={session?.label || session?.date || ''} />
+        <SessionSummary matches={matches} players={players} stats={stats} sessionLabel={session?.label || session?.date || ''} sessionShortId={session?.short_id} />
       )}
 
       {/* Session Standings + Charts */}
@@ -382,6 +385,31 @@ export default function SessionPage() {
           </div>
         </div>
       )}
+
+      {/* Get the App */}
+      <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="min-w-0 mr-3">
+            <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Get the App</p>
+            <p className="text-gray-500 text-xs">Add Padel League to your home screen for quick access</p>
+          </div>
+          <button
+            onClick={() => {
+              const appUrl = window.location.origin
+              if (typeof navigator.share === 'function') {
+                navigator.share({ title: 'Padel League', text: `Track scores and crown champions!\n\nAdd the app to your home screen:\n${appUrl}` })
+              } else {
+                navigator.clipboard.writeText(appUrl)
+                setLinkCopied(true)
+                setTimeout(() => setLinkCopied(false), 1500)
+              }
+            }}
+            className="bg-gray-700 hover:bg-gray-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shrink-0"
+          >
+            Share
+          </button>
+        </div>
+      </div>
 
       {/* Session Settings — admin/creator only */}
       {(isAdmin || isCreator) && (

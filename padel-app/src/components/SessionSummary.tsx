@@ -7,6 +7,7 @@ interface Props {
   players: Player[]
   stats: PlayerStats[]
   sessionLabel: string
+  sessionShortId?: string | null
 }
 
 type AwardEntry = { name: string; nameStat?: string; stat?: string; statColor?: string }
@@ -245,17 +246,24 @@ function drawChampionCard(player: PlayerStats, label: string): Promise<File | nu
   })
 }
 
-export default function SessionSummary({ matches, players, stats, sessionLabel }: Props) {
+export default function SessionSummary({ matches, players, stats, sessionLabel, sessionShortId }: Props) {
   const [sharing, setSharing] = useState(false)
+
+  function getShareUrl() {
+    if (sessionShortId) {
+      return `${window.location.origin}/s/${sessionShortId}`
+    }
+    return window.location.href
+  }
 
   async function handleShare() {
     setSharing(true)
     try {
       const top = stats[0]
-      const url = window.location.href
+      const url = getShareUrl()
       const text = top
-        ? `${sessionLabel} — ${top.player.name} crowned Court Champion! Check out the full results: ${url}`
-        : `${sessionLabel} — Check out the session results! ${url}`
+        ? `${sessionLabel} — ${top.player.name} crowned Court Champion!\n\nCheck out the full results:\n${url}`
+        : `${sessionLabel} — Check out the session results!\n\n${url}`
 
       // Generate card image
       const file = top ? await drawChampionCard(top, sessionLabel) : null

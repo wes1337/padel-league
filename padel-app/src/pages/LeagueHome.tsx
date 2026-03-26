@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { nanoid } from 'nanoid'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
 import { isLeagueAdmin, saveLeagueAdmin, saveSessionCreator } from '../lib/admin'
@@ -105,7 +106,7 @@ export default function LeagueHome() {
     const creator_token = crypto.randomUUID()
     const { data, error } = await supabase
       .from('sessions')
-      .insert({ league_id: leagueId, date: today, label, confirmed: true, creator_token })
+      .insert({ league_id: leagueId, date: today, label, confirmed: true, creator_token, short_id: nanoid(8) })
       .select()
       .single()
     if (data && !error) {
