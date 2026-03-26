@@ -140,7 +140,7 @@ export default function SessionPage() {
           <div className="flex items-center justify-between">
             <div className="min-w-0 mr-3">
               <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Invite Players</p>
-              <p className="text-gray-500 text-xs">Send a link to join this session</p>
+              <p className="text-gray-500 text-xs">Everyone can add scores and track standings</p>
             </div>
             <button
               onClick={() => {
