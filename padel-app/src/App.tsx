@@ -5,6 +5,7 @@ import SessionPage from './pages/SessionPage'
 import SessionRedirect from './pages/SessionRedirect'
 import AddMatch from './pages/AddMatch'
 import PlayerProfile from './pages/PlayerProfile'
+import CardPreview from './pages/CardPreview'
 
 export default function App() {
   return (
@@ -12,6 +13,7 @@ export default function App() {
       <div className="min-h-screen bg-gray-950 text-white">
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/card-preview" element={<CardPreview />} />
           <Route path="/s/:shortId" element={<SessionRedirect />} />
           <Route path="/l/:leagueId" element={<LeagueHome />} />
           <Route path="/l/:leagueId/session/:sessionId" element={<SessionPage />} />
