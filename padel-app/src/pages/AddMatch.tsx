@@ -183,11 +183,10 @@ export default function AddMatch() {
       {/* Player Picker Modal */}
       {activeTeam !== null && (() => {
         const tc = teamConfig[activeTeam]
-        const isBlue = activeTeam === 0
         return (
           <div className="fixed inset-0 bg-black/80 flex flex-col z-50" onClick={() => setActiveTeam(null)}>
             <div className="flex-1" />
-            <div className={`w-full rounded-t-3xl p-5 flex flex-col gap-4 h-[100dvh] ${isBlue ? 'bg-blue-950' : 'bg-purple-950'}`} onClick={e => e.stopPropagation()}>
+            <div className="w-full bg-gray-900 rounded-t-3xl p-5 flex flex-col gap-4 h-[100dvh]" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className={`font-semibold ${tc.textColor}`}>{tc.label}</h3>
@@ -205,7 +204,7 @@ export default function AddMatch() {
               {/* Combined search / add input */}
               <input
                 ref={searchRef}
-                className={`bg-black/30 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 ${isBlue ? 'focus:ring-blue-500' : 'focus:ring-purple-500'}`}
+                className="bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
                 placeholder="Search or type new name..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -220,7 +219,7 @@ export default function AddMatch() {
                 {search.trim() && !players.some(p => p.name.toLowerCase() === search.trim().toLowerCase()) && (
                   <button
                     onClick={addNewPlayer}
-                    className={`w-full text-left rounded-xl px-4 py-3 font-medium transition-colors ${isBlue ? 'bg-blue-900/50 hover:bg-blue-900/70 border border-blue-800 text-blue-300' : 'bg-purple-900/50 hover:bg-purple-900/70 border border-purple-800 text-purple-300'}`}
+                    className="w-full text-left bg-blue-900/30 hover:bg-blue-900/50 border border-blue-800 rounded-xl px-4 py-3 text-blue-300 font-medium transition-colors"
                   >
                     + Add "{search.trim()}"
                   </button>
@@ -232,7 +231,7 @@ export default function AddMatch() {
                   <button
                     key={p.id}
                     onClick={() => selectPlayer(p)}
-                    className={`w-full text-left rounded-xl px-4 py-3 text-white font-medium transition-colors ${isBlue ? 'bg-blue-900/30 hover:bg-blue-900/50' : 'bg-purple-900/30 hover:bg-purple-900/50'}`}
+                    className={`w-full text-left bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 font-medium transition-colors ${tc.textColor}`}
                   >
                     {p.name}
                   </button>
