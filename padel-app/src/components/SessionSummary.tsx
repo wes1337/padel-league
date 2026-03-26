@@ -248,7 +248,6 @@ function drawChampionCard(player: PlayerStats, label: string): Promise<File | nu
 }
 
 export default function SessionSummary({ matches, players, stats, sessionLabel }: Props) {
-  const [copied, setCopied] = useState(false)
   const [sharing, setSharing] = useState(false)
 
   async function handleShare() {
@@ -275,8 +274,6 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
         await navigator.share({ title: sessionLabel, text, url })
       } else {
         navigator.clipboard.writeText(url)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1500)
       }
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') {
@@ -286,11 +283,6 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
     setSharing(false)
   }
 
-  async function handleCopyLink() {
-    navigator.clipboard.writeText(window.location.href)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
-  }
 
   if (matches.length === 0) return null
 
@@ -368,21 +360,13 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
     <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="font-semibold text-white text-lg">🏆 Session Awards</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={handleShare}
-            disabled={sharing}
-            className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-          >
-            {sharing ? '...' : 'Share'}
-          </button>
-          <button
-            onClick={handleCopyLink}
-            className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-          >
-            {copied ? 'Copied!' : 'Copy Link'}
-          </button>
-        </div>
+        <button
+          onClick={handleShare}
+          disabled={sharing}
+          className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+        >
+          {sharing ? '...' : 'Share'}
+        </button>
       </div>
 
       {/* King of the Court card */}
