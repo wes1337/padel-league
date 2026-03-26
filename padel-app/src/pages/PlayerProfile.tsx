@@ -228,7 +228,7 @@ export default function PlayerProfile() {
         const cumulativeMatches = (allMatches as Match[]).filter(m => cumulativeSessionIds.has(m.session_id))
         const stats = computeStats(allPlayers, cumulativeMatches, i + 1, true)
         const point: Record<string, number | string> = {
-          label: sessionsWithMatches[i].label?.replace('Session – ', '') ?? sessionsWithMatches[i].date
+          label: sessionsWithMatches[i].label?.replace(/^(Session|Padello) – /, '') ?? sessionsWithMatches[i].date
         }
         stats.forEach((s, idx) => { point[s.player.id] = idx + 1 })
         history.push(point)

@@ -102,7 +102,7 @@ export default function LeagueHome() {
   // ── Actions ────────────────────────────────────────────────────────────────
   async function createSession() {
     const today = new Date().toISOString().split('T')[0]
-    const label = `Session – ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    const label = `Padello – ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
     const creator_token = crypto.randomUUID()
     const { data, error } = await supabase
       .from('sessions')
