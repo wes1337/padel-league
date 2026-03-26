@@ -255,12 +255,15 @@ const styles: CardStyle[] = [
       ctx.fillStyle = '#6b7280'
       ctx.fillText('Padello – 26 Mar 2026', W / 2, H * 0.55)
 
-      // Emojis
+      // Emoji VS
       ctx.font = '60px serif'
-      ctx.fillText('🎾', W / 2 - 80, H * 0.73)
-      ctx.fillText('🔥', W / 2 + 80, H * 0.73)
+      ctx.fillText('💪', W / 2 - 90, H * 0.73)
+      ctx.font = '700 32px system-ui, sans-serif'; ctx.fillStyle = '#22c55e'
+      ctx.fillText('vs', W / 2, H * 0.72)
+      ctx.font = '60px serif'
+      ctx.fillText('🔥', W / 2 + 90, H * 0.73)
 
-      ctx.font = '500 14px system-ui, sans-serif'; ctx.fillStyle = '#9ca3af'; ctx.fillText('Tap to join and track scores', W / 2, H - 50)
+      ctx.font = '600 16px system-ui, sans-serif'; ctx.fillStyle = '#4b5563'; ctx.fillText('Tap to join and track scores', W / 2, H - 50)
 
       // Footer bar
       ctx.fillStyle = '#f3f4f6'; ctx.fillRect(0, H - 35, W, 35)
