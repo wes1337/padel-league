@@ -251,7 +251,7 @@ export default function SessionPage() {
           .filter((p): p is Player => !!p)
         const query = signupSearch.trim().toLowerCase()
         const filteredPlayers = query
-          ? players.filter(p => !signedUpIds.has(p.id) && p.name.toLowerCase().includes(query))
+          ? players.filter(p => p.name.toLowerCase().includes(query))
           : []
         const exactMatch = query ? players.some(p => p.name.toLowerCase() === query) : false
 
@@ -262,35 +262,30 @@ export default function SessionPage() {
               <span className="text-gray-500 text-xs">{signedUpPlayers.length} signed up</span>
             </div>
 
-            {signedUpPlayers.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {signedUpPlayers.map(p => (
-                  <span key={p.id} className="flex items-center gap-1.5 bg-gray-800 rounded-full px-3 py-1.5 text-sm text-white">
-                    {p.name}
-                    <button onClick={() => removeSignup(p.id)} className="text-gray-500 hover:text-red-400 transition-colors text-xs ml-0.5">✕</button>
-                  </span>
-                ))}
-              </div>
-            )}
-
             <div className="relative">
               <input
                 className="w-full bg-gray-800 rounded-lg px-4 py-2.5 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Add a player..."
+                placeholder="Search players..."
                 value={signupSearch}
                 onChange={e => setSignupSearch(e.target.value)}
               />
               {query && (
                 <div className="absolute left-0 right-0 top-full mt-1 bg-gray-800 rounded-lg overflow-hidden z-10 shadow-lg border border-gray-700">
-                  {filteredPlayers.slice(0, 6).map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => addSignup(p)}
-                      className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-gray-700 transition-colors"
-                    >
-                      {p.name}
-                    </button>
-                  ))}
+                  {filteredPlayers.slice(0, 6).map(p => {
+                    const alreadyAdded = signedUpIds.has(p.id)
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => !alreadyAdded && addSignup(p)}
+                        className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors ${
+                          alreadyAdded ? 'text-gray-500 cursor-default' : 'text-white hover:bg-gray-700'
+                        }`}
+                      >
+                        {alreadyAdded && <span className="text-green-400">✓</span>}
+                        {p.name}
+                      </button>
+                    )
+                  })}
                   {!exactMatch && query.length >= 2 && (
                     <button
                       onClick={addNewPlayerAndSignup}
@@ -299,12 +294,26 @@ export default function SessionPage() {
                       + Add "{signupSearch.trim()}" as new player
                     </button>
                   )}
-                  {filteredPlayers.length === 0 && (exactMatch || query.length < 2) && (
-                    <p className="px-4 py-2.5 text-sm text-gray-500">No more players to add</p>
+                  {filteredPlayers.length === 0 && query.length >= 1 && (
+                    <p className="px-4 py-2.5 text-sm text-gray-500">No players found</p>
                   )}
                 </div>
               )}
             </div>
+
+            {signedUpPlayers.length > 0 && (
+              <div className="flex flex-col gap-1">
+                {signedUpPlayers.map((p, i) => (
+                  <div key={p.id} className="flex items-center justify-between bg-gray-800 rounded-xl px-4 py-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-gray-500 text-xs w-5 text-center">{i + 1}</span>
+                      <span className="text-white text-sm">{p.name}</span>
+                    </div>
+                    <button onClick={() => removeSignup(p.id)} className="text-gray-600 hover:text-red-400 transition-colors text-sm">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )
       })()}
