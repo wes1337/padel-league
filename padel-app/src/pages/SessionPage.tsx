@@ -210,18 +210,15 @@ export default function SessionPage() {
   return (
     <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link to={`/l/${leagueId}`} className="text-gray-400 hover:text-white text-xl">←</Link>
-        <div className="flex-1">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-bold text-white">{session?.label || session?.date}</h1>
-          <p className="text-gray-400 text-sm">
-            <Link to={`/l/${leagueId}`} className="hover:text-white transition-colors">{league?.name ?? 'League'}</Link>
-            {' · '}{matches.length} match{matches.length !== 1 ? 'es' : ''} played
-          </p>
+          <p className="text-gray-400 text-sm">{league?.name ?? 'League'} · {matches.length} match{matches.length !== 1 ? 'es' : ''}</p>
+          {session?.excluded && (
+            <span className="inline-block text-xs bg-yellow-900/40 text-yellow-400 border border-yellow-700 rounded-lg px-2 py-1 mt-1">Excluded</span>
+          )}
         </div>
-        {session?.excluded && (
-          <span className="text-xs bg-yellow-900/40 text-yellow-400 border border-yellow-700 rounded-lg px-2 py-1">Excluded</span>
-        )}
+        <Link to={`/l/${leagueId}`} className="text-gray-500 hover:text-white text-sm transition-colors pt-1 shrink-0">← View Season</Link>
       </div>
 
       {/* Invite players */}

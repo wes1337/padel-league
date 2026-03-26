@@ -199,6 +199,7 @@ export default function Landing() {
             className="bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
             placeholder="League name (e.g. Friday Padel)"
             value={leagueName}
+            maxLength={50}
             onChange={e => setLeagueName(e.target.value)}
           />
           <div className="flex flex-col gap-1.5">
