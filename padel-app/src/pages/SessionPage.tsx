@@ -93,6 +93,7 @@ export default function SessionPage() {
     localStorage.getItem(`awards_revealed_${sessionId}`) === '1'
   )
   const [signupSearch, setSignupSearch] = useState('')
+  const [signupFocused, setSignupFocused] = useState(false)
 
   // Scroll to top when navigating to a session
   useEffect(() => { window.scrollTo(0, 0) }, [sessionId])
@@ -249,10 +250,12 @@ export default function SessionPage() {
           .map(s => players.find(p => p.id === s.player_id))
           .filter((p): p is Player => !!p)
         const query = signupSearch.trim().toLowerCase()
+        const allSorted = [...players].sort((a, b) => a.name.localeCompare(b.name))
         const filteredPlayers = query
-          ? players.filter(p => p.name.toLowerCase().includes(query))
-          : []
+          ? allSorted.filter(p => p.name.toLowerCase().includes(query))
+          : allSorted
         const exactMatch = query ? players.some(p => p.name.toLowerCase() === query) : false
+        const showDropdown = signupFocused && filteredPlayers.length > 0
 
         return (
           <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
@@ -267,10 +270,12 @@ export default function SessionPage() {
                 placeholder="Search players..."
                 value={signupSearch}
                 onChange={e => setSignupSearch(e.target.value)}
+                onFocus={() => setSignupFocused(true)}
+                onBlur={() => setTimeout(() => setSignupFocused(false), 150)}
               />
-              {query && (
-                <div className="absolute left-0 right-0 top-full mt-1 bg-gray-800 rounded-lg overflow-hidden z-10 shadow-lg border border-gray-700">
-                  {filteredPlayers.slice(0, 6).map(p => {
+              {showDropdown && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-gray-800 rounded-lg overflow-hidden z-10 shadow-lg border border-gray-700 max-h-60 overflow-y-auto">
+                  {filteredPlayers.slice(0, 20).map(p => {
                     const alreadyAdded = signedUpIds.has(p.id)
                     return (
                       <button
