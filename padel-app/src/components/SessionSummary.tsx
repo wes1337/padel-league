@@ -25,8 +25,8 @@ function Award({ emoji, title, first, second }: {
             <p className="text-white font-bold text-sm truncate">{e.name}</p>
             {(e.nameStat || e.stat) && (
               <p className="text-xs flex gap-2">
-                {e.nameStat && <span className="text-gray-500">{e.nameStat}</span>}
-                {e.stat && <span className={e.statColor ?? 'text-gray-500'}>{e.stat}</span>}
+                {e.nameStat && <span className="text-gray-400">{e.nameStat}</span>}
+                {e.stat && <span className={e.statColor ?? 'text-gray-400'}>{e.stat}</span>}
               </p>
             )}
           </div>
@@ -36,11 +36,11 @@ function Award({ emoji, title, first, second }: {
         <div className="border-t border-gray-700 pt-1.5 flex flex-col gap-1">
           {second.map((e, i) => (
             <div key={i}>
-              <p className="text-gray-300 text-xs font-semibold truncate">{e.name}</p>
+              <p className="text-white text-xs font-semibold truncate">{e.name}</p>
               {(e.nameStat || e.stat) && (
                 <p className="text-xs flex gap-2">
-                  {e.nameStat && <span className="text-gray-600">{e.nameStat}</span>}
-                  {e.stat && <span className={e.statColor ?? 'text-gray-600'}>{e.stat}</span>}
+                  {e.nameStat && <span className="text-gray-400">{e.nameStat}</span>}
+                  {e.stat && <span className={e.statColor ?? 'text-gray-400'}>{e.stat}</span>}
                 </p>
               )}
             </div>
@@ -407,7 +407,7 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
           <p className="text-gray-500 text-xs uppercase tracking-wide mb-2">Match Awards</p>
           <div className="grid grid-cols-2 gap-2">
             {motn1.map((entry, i) => (
-              <Award key={`motn-${i}`} emoji="🎯" title="Match of the Session"
+              <Award key={`motn-${i}`} emoji="🎯" title="Best Match"
                 first={[entry]}
                 second={motn1.length === 1 ? motn2 : undefined}
               />
