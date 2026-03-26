@@ -1,5 +1,4 @@
-import { useRef, useState } from 'react'
-import html2canvas from 'html2canvas'
+import { useState } from 'react'
 import type { Match, Player, PlayerStats } from '../types'
 import PlayerOfNightCard from './PlayerOfNightCard'
 
@@ -52,21 +51,94 @@ function Award({ emoji, title, first, second }: {
   )
 }
 
+function drawChampionCard(player: PlayerStats, label: string): Promise<File | null> {
+  return new Promise(resolve => {
+    const W = 680, H = 520, R = 40
+    const canvas = document.createElement('canvas')
+    canvas.width = W; canvas.height = H
+    const ctx = canvas.getContext('2d')
+    if (!ctx) { resolve(null); return }
+
+    // Rounded rect background with gradient
+    const grad = ctx.createLinearGradient(0, 0, W, H)
+    grad.addColorStop(0, '#1a1a2e')
+    grad.addColorStop(0.5, '#16213e')
+    grad.addColorStop(1, '#0f3460')
+    ctx.beginPath()
+    ctx.moveTo(R, 0); ctx.lineTo(W - R, 0); ctx.quadraticCurveTo(W, 0, W, R)
+    ctx.lineTo(W, H - R); ctx.quadraticCurveTo(W, H, W - R, H)
+    ctx.lineTo(R, H); ctx.quadraticCurveTo(0, H, 0, H - R)
+    ctx.lineTo(0, R); ctx.quadraticCurveTo(0, 0, R, 0)
+    ctx.closePath()
+    ctx.fillStyle = grad; ctx.fill()
+
+    // Trophy emoji
+    ctx.font = '60px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('🏆', W / 2, 70)
+
+    // "COURT CHAMPION"
+    ctx.font = '600 14px system-ui, sans-serif'
+    ctx.fillStyle = '#facc15'
+    ctx.letterSpacing = '4px'
+    ctx.fillText('COURT CHAMPION', W / 2, 110)
+    ctx.letterSpacing = '0px'
+
+    // Session label
+    ctx.font = '12px system-ui, sans-serif'
+    ctx.fillStyle = '#9ca3af'
+    ctx.fillText(label, W / 2, 132)
+
+    // Player name
+    ctx.font = '800 36px system-ui, sans-serif'
+    ctx.fillStyle = '#ffffff'
+    ctx.fillText(player.player.name.toUpperCase(), W / 2, 185)
+
+    // Stats box
+    const boxX = 60, boxY = 215, boxW = W - 120, boxH = 110, boxR = 24
+    ctx.beginPath()
+    ctx.moveTo(boxX + boxR, boxY)
+    ctx.lineTo(boxX + boxW - boxR, boxY); ctx.quadraticCurveTo(boxX + boxW, boxY, boxX + boxW, boxY + boxR)
+    ctx.lineTo(boxX + boxW, boxY + boxH - boxR); ctx.quadraticCurveTo(boxX + boxW, boxY + boxH, boxX + boxW - boxR, boxY + boxH)
+    ctx.lineTo(boxX + boxR, boxY + boxH); ctx.quadraticCurveTo(boxX, boxY + boxH, boxX, boxY + boxH - boxR)
+    ctx.lineTo(boxX, boxY + boxR); ctx.quadraticCurveTo(boxX, boxY, boxX + boxR, boxY)
+    ctx.closePath()
+    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fill()
+
+    // Stats values
+    const cols = [boxX + boxW / 6, boxX + boxW / 2, boxX + (5 * boxW) / 6]
+    const diff = player.pointDiff
+    const winRate = Math.round(player.winRate * 100)
+
+    ctx.font = '700 32px system-ui, sans-serif'
+    ctx.fillStyle = '#ffffff'
+    ctx.fillText(String(player.wins), cols[0], boxY + 50)
+    ctx.fillText(`${winRate}%`, cols[1], boxY + 50)
+    ctx.fillStyle = diff > 0 ? '#4ade80' : diff < 0 ? '#f87171' : '#ffffff'
+    ctx.fillText(diff > 0 ? `+${diff}` : String(diff), cols[2], boxY + 50)
+
+    // Stats labels
+    ctx.font = '12px system-ui, sans-serif'
+    ctx.fillStyle = '#9ca3af'
+    ctx.fillText('Wins', cols[0], boxY + 78)
+    ctx.fillText('Win Rate', cols[1], boxY + 78)
+    ctx.fillText('Pt Diff', cols[2], boxY + 78)
+
+    // Footer
+    ctx.font = '12px system-ui, sans-serif'
+    ctx.fillStyle = '#6b7280'
+    ctx.fillText('🎾 Padel League', W / 2, H - 30)
+
+    canvas.toBlob(blob => {
+      if (!blob) { resolve(null); return }
+      resolve(new File([blob], 'court-champion.png', { type: 'image/png' }))
+    }, 'image/png')
+  })
+}
+
 export default function SessionSummary({ matches, players, stats, sessionLabel }: Props) {
   const [copied, setCopied] = useState(false)
   const [sharing, setSharing] = useState(false)
-  const cardRef = useRef<HTMLDivElement>(null)
-
-  async function captureCard(): Promise<File | null> {
-    if (!cardRef.current) return null
-    const canvas = await html2canvas(cardRef.current, { backgroundColor: null, scale: 2 })
-    return new Promise(resolve => {
-      canvas.toBlob(blob => {
-        if (!blob) { resolve(null); return }
-        resolve(new File([blob], 'court-champion.png', { type: 'image/png' }))
-      }, 'image/png')
-    })
-  }
 
   async function handleShare() {
     setSharing(true)
@@ -77,12 +149,10 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
         ? `${sessionLabel} — ${top.player.name} crowned Court Champion! Check out the full results: ${url}`
         : `${sessionLabel} — Check out the session results! ${url}`
 
-      // Try to capture the card image
-      let file: File | null = null
-      try { file = await captureCard() } catch { /* ignore capture errors */ }
+      // Generate card image
+      const file = top ? await drawChampionCard(top, sessionLabel) : null
 
       if (typeof navigator.share === 'function') {
-        // Try sharing with image (URL goes in text, not as separate url param)
         if (file) {
           const withFile: ShareData = { text, files: [file] }
           if (navigator.canShare?.(withFile)) {
@@ -91,10 +161,8 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
             return
           }
         }
-        // Fallback: text-only share
         await navigator.share({ title: sessionLabel, text, url })
       } else {
-        // Desktop fallback: copy link
         navigator.clipboard.writeText(url)
         setCopied(true)
         setTimeout(() => setCopied(false), 1500)
@@ -109,20 +177,6 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
 
   async function handleCopyLink() {
     navigator.clipboard.writeText(window.location.href)
-    // Also try to copy the image to clipboard
-    try {
-      const file = await captureCard()
-      if (file) {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            'image/png': file,
-            'text/plain': new Blob([window.location.href], { type: 'text/plain' }),
-          }),
-        ])
-      }
-    } catch {
-      // fallback — link already copied above
-    }
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
@@ -222,7 +276,7 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
 
       {/* King of the Court card */}
       {topPlayer && (
-        <div className="flex justify-center" ref={cardRef}>
+        <div className="flex justify-center">
           <PlayerOfNightCard player={topPlayer} sessionLabel={sessionLabel} />
         </div>
       )}
