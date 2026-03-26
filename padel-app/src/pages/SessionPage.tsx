@@ -243,8 +243,8 @@ export default function SessionPage() {
         <Link to={`/l/${leagueId}`} className="text-gray-500 hover:text-white text-sm transition-colors pt-1 shrink-0">← View Season</Link>
       </div>
 
-      {/* Who's Playing — sign-up roster */}
-      {(() => {
+      {/* Who's Playing — sign-up roster (future sessions only) */}
+      {session && session.date > new Date().toISOString().split('T')[0] && (() => {
         const signedUpIds = new Set(signups.map(s => s.player_id))
         const signedUpPlayers = signups
           .map(s => players.find(p => p.id === s.player_id))
