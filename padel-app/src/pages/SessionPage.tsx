@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
@@ -30,7 +30,22 @@ export default function SessionPage() {
   const { data: players = [], isLoading: playersLoading } = usePlayers(leagueId)
   const { data: league } = useLeague(leagueId)
 
+  const [revealing, setRevealing] = useState(false)
+
   const loading = sessionLoading || matchesLoading || playersLoading
+
+  // Auto-end session after 24 hours
+  useEffect(() => {
+    if (!session || session.ended) return
+    const created = new Date(session.created_at).getTime()
+    const elapsed = Date.now() - created
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000
+    if (elapsed >= TWENTY_FOUR_HOURS) {
+      supabase.from('sessions').update({ ended: true }).eq('id', session.id).then(() => {
+        queryClient.invalidateQueries({ queryKey: qk.session(sessionId!) })
+      })
+    }
+  }, [session, sessionId, queryClient])
 
   const stats = useMemo(() => {
     if (matches.length === 0 || players.length === 0) return []
@@ -71,6 +86,13 @@ export default function SessionPage() {
     await supabase.from('sessions').update({ ended: true }).eq('id', sessionId!)
     queryClient.invalidateQueries({ queryKey: qk.session(sessionId!) })
     queryClient.invalidateQueries({ queryKey: qk.sessions(leagueId!) })
+  }
+
+  async function revealAwards() {
+    setRevealing(true)
+    await supabase.from('sessions').update({ awards_revealed: true }).eq('id', sessionId!)
+    queryClient.invalidateQueries({ queryKey: qk.session(sessionId!) })
+    setRevealing(false)
   }
 
   async function deleteSession() {
@@ -183,13 +205,24 @@ export default function SessionPage() {
         </div>
       )}
 
-      {/* Session Awards */}
-      {matches.length > 0 && (
+      {/* Reveal Awards button — shown when awards not yet revealed and there are matches */}
+      {matches.length > 0 && !session?.awards_revealed && (
+        <button
+          onClick={revealAwards}
+          disabled={revealing}
+          className="w-full bg-yellow-600 hover:bg-yellow-500 disabled:opacity-50 text-white font-bold rounded-xl py-4 text-lg transition-colors"
+        >
+          {revealing ? '...' : '🏆 Reveal Awards'}
+        </button>
+      )}
+
+      {/* Session Awards — only after reveal */}
+      {matches.length > 0 && session?.awards_revealed && (
         <SessionSummary matches={matches} players={players} stats={stats} sessionLabel={session?.label || session?.date || ''} sessionShortId={session?.short_id} />
       )}
 
-      {/* Session Standings + Charts */}
-      {stats.length > 0 && (() => {
+      {/* Session Standings + Charts — only after reveal */}
+      {session?.awards_revealed && stats.length > 0 && (() => {
         const PALETTE = ['#22c55e', '#3b82f6', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4', '#f97316']
         const pMap = new Map(players.map(p => [p.id, p.name]))
 
