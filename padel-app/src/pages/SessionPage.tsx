@@ -244,7 +244,7 @@ export default function SessionPage() {
       </div>
 
       {/* Who's Playing — sign-up roster */}
-      {!session?.ended && (() => {
+      {(() => {
         const signedUpIds = new Set(signups.map(s => s.player_id))
         const signedUpPlayers = signups
           .map(s => players.find(p => p.id === s.player_id))
@@ -257,6 +257,8 @@ export default function SessionPage() {
         const exactMatch = query ? players.some(p => p.name.toLowerCase() === query) : false
         const showDropdown = signupFocused && filteredPlayers.length > 0
 
+        if (signedUpPlayers.length === 0 && session?.ended) return null
+
         return (
           <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
             <div className="flex items-center justify-between">
@@ -264,46 +266,48 @@ export default function SessionPage() {
               <span className="text-gray-500 text-xs">{signedUpPlayers.length} signed up</span>
             </div>
 
-            <div className="relative">
-              <input
-                className="w-full bg-gray-800 rounded-lg px-4 py-2.5 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Search players..."
-                value={signupSearch}
-                onChange={e => setSignupSearch(e.target.value)}
-                onFocus={() => setSignupFocused(true)}
-                onBlur={() => setTimeout(() => setSignupFocused(false), 150)}
-              />
-              {showDropdown && (
-                <div className="absolute left-0 right-0 top-full mt-1 bg-gray-800 rounded-lg overflow-hidden z-10 shadow-lg border border-gray-700 max-h-60 overflow-y-auto">
-                  {filteredPlayers.slice(0, 20).map(p => {
-                    const alreadyAdded = signedUpIds.has(p.id)
-                    return (
+            {!session?.ended && (
+              <div className="relative">
+                <input
+                  className="w-full bg-gray-800 rounded-lg px-4 py-2.5 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Search players..."
+                  value={signupSearch}
+                  onChange={e => setSignupSearch(e.target.value)}
+                  onFocus={() => setSignupFocused(true)}
+                  onBlur={() => setTimeout(() => setSignupFocused(false), 150)}
+                />
+                {showDropdown && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-gray-800 rounded-lg overflow-hidden z-10 shadow-lg border border-gray-700 max-h-60 overflow-y-auto">
+                    {filteredPlayers.slice(0, 20).map(p => {
+                      const alreadyAdded = signedUpIds.has(p.id)
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => !alreadyAdded && addSignup(p)}
+                          className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors ${
+                            alreadyAdded ? 'text-gray-500 cursor-default' : 'text-white hover:bg-gray-700'
+                          }`}
+                        >
+                          {alreadyAdded && <span className="text-green-400">✓</span>}
+                          {p.name}
+                        </button>
+                      )
+                    })}
+                    {!exactMatch && query.length >= 2 && (
                       <button
-                        key={p.id}
-                        onClick={() => !alreadyAdded && addSignup(p)}
-                        className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors ${
-                          alreadyAdded ? 'text-gray-500 cursor-default' : 'text-white hover:bg-gray-700'
-                        }`}
+                        onClick={addNewPlayerAndSignup}
+                        className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-gray-700 transition-colors border-t border-gray-700"
                       >
-                        {alreadyAdded && <span className="text-green-400">✓</span>}
-                        {p.name}
+                        + Add "{signupSearch.trim()}" as new player
                       </button>
-                    )
-                  })}
-                  {!exactMatch && query.length >= 2 && (
-                    <button
-                      onClick={addNewPlayerAndSignup}
-                      className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-gray-700 transition-colors border-t border-gray-700"
-                    >
-                      + Add "{signupSearch.trim()}" as new player
-                    </button>
-                  )}
-                  {filteredPlayers.length === 0 && query.length >= 1 && (
-                    <p className="px-4 py-2.5 text-sm text-gray-500">No players found</p>
-                  )}
-                </div>
-              )}
-            </div>
+                    )}
+                    {filteredPlayers.length === 0 && query.length >= 1 && (
+                      <p className="px-4 py-2.5 text-sm text-gray-500">No players found</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {signedUpPlayers.length > 0 && (
               <div className="flex flex-col gap-1">
@@ -313,7 +317,9 @@ export default function SessionPage() {
                       <span className="text-gray-500 text-xs w-5 text-center">{i + 1}</span>
                       <span className="text-white text-sm">{p.name}</span>
                     </div>
-                    <button onClick={() => removeSignup(p.id)} className="text-gray-600 hover:text-red-400 transition-colors text-sm">✕</button>
+                    {!session?.ended && (
+                      <button onClick={() => removeSignup(p.id)} className="text-gray-600 hover:text-red-400 transition-colors text-sm">✕</button>
+                    )}
                   </div>
                 ))}
               </div>
