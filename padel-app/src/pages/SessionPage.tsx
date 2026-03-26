@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
-import { isLeagueAdmin, isSessionCreator } from '../lib/admin'
+import { isLeagueAdmin } from '../lib/admin'
 import { useSession, useSessionMatches, usePlayers, useLeague, qk } from '../lib/queries'
 import type { Match } from '../types'
 import Leaderboard from '../components/Leaderboard'
@@ -40,9 +40,7 @@ export default function SessionPage() {
   useEffect(() => {
     if (!session || session.ended) return
     const created = new Date(session.created_at).getTime()
-    const elapsed = Date.now() - created
-    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000
-    if (elapsed >= TWENTY_FOUR_HOURS) {
+    if (Date.now() - created >= 24 * 60 * 60 * 1000) {
       supabase.from('sessions').update({ ended: true }).eq('id', session.id).then(() => {
         queryClient.invalidateQueries({ queryKey: qk.session(sessionId!) })
       })
@@ -82,12 +80,6 @@ export default function SessionPage() {
   async function deleteMatch(matchId: string) {
     await supabase.from('matches').delete().eq('id', matchId)
     queryClient.invalidateQueries({ queryKey: qk.sessionMatches(sessionId!) })
-  }
-
-  async function endSession() {
-    await supabase.from('sessions').update({ ended: true }).eq('id', sessionId!)
-    queryClient.invalidateQueries({ queryKey: qk.session(sessionId!) })
-    queryClient.invalidateQueries({ queryKey: qk.sessions(leagueId!) })
   }
 
   function revealAwards() {
@@ -138,7 +130,7 @@ export default function SessionPage() {
   if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-400">Loading...</div>
 
   const isAdmin = isLeagueAdmin(leagueId!)
-  const isCreator = isSessionCreator(sessionId!, session?.creator_token)
+
 
   const unevenWarning = matches.length > 0 ? getUnevenWarning() : null
 
@@ -418,8 +410,8 @@ export default function SessionPage() {
         </button>
       )}
 
-      {/* Session Settings — admin/creator only */}
-      {(isAdmin || isCreator) && (
+      {/* Session Settings — admin only */}
+      {isAdmin && (
         <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div>
@@ -437,19 +429,9 @@ export default function SessionPage() {
               {session?.excluded ? 'Re-include' : 'Exclude'}
             </button>
           </div>
-          {!session?.ended && (
-            <button onClick={endSession} className="w-full bg-blue-900/40 hover:bg-blue-900/70 text-blue-400 font-semibold rounded-lg py-2 text-sm transition-colors border border-blue-900">
-              End Session
-            </button>
-          )}
-          {session?.ended && (
-            <p className="text-gray-500 text-xs text-center">Session ended — standings locked in</p>
-          )}
-          {isAdmin && (
-            <button onClick={deleteSession} className="w-full bg-red-900/40 hover:bg-red-900/70 text-red-400 font-semibold rounded-lg py-2 text-sm transition-colors border border-red-900">
-              Delete Session
-            </button>
-          )}
+          <button onClick={deleteSession} className="w-full bg-red-900/40 hover:bg-red-900/70 text-red-400 font-semibold rounded-lg py-2 text-sm transition-colors border border-red-900">
+            Delete Session
+          </button>
         </div>
       )}
     </div>

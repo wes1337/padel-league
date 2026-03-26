@@ -57,6 +57,31 @@ export default function LeagueHome() {
     localStorage.setItem('recent_leagues', JSON.stringify(updated))
   }, [league])
 
+  // Auto-delete empty sessions older than 24 hours
+  useEffect(() => {
+    if (sessions.length === 0) return
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000
+    const now = Date.now()
+    const oldSessions = (sessions as Session[]).filter(s =>
+      now - new Date(s.created_at).getTime() >= TWENTY_FOUR_HOURS
+    )
+    if (oldSessions.length === 0) return
+    // Check which old sessions have zero matches
+    Promise.all(oldSessions.map(async s => {
+      const { count } = await supabase.from('matches').select('id', { count: 'exact', head: true }).eq('session_id', s.id)
+      return { session: s, count: count ?? 0 }
+    })).then(async results => {
+      const toDelete = results.filter(r => r.count === 0).map(r => r.session.id)
+      const toEnd = results.filter(r => r.count > 0 && !r.session.ended).map(r => r.session.id)
+      const changed = toDelete.length > 0 || toEnd.length > 0
+      if (toDelete.length > 0) await Promise.all(toDelete.map(id => supabase.from('sessions').delete().eq('id', id)))
+      if (toEnd.length > 0) await Promise.all(toEnd.map(id => supabase.from('sessions').update({ ended: true }).eq('id', id)))
+      if (changed) {
+        queryClient.invalidateQueries({ queryKey: qk.sessions(leagueId!) })
+      }
+    })
+  }, [sessions, leagueId, queryClient])
+
   // ── Computed season stats ──────────────────────────────────────────────────
   const sessionIdsWithMatches = useMemo(() =>
     filteredSessionIds.filter(id => (seasonMatches as Match[]).some(m => m.session_id === id)),
