@@ -44,31 +44,9 @@ function drawInviteCard(leagueName: string, sessionDate: string): Promise<File |
     ctx.fillStyle = '#9ca3af'
     ctx.fillText(sessionDate, W / 2, H * 0.58)
 
-    // Tennis ball (matches app icon)
-    const bx = W / 2, by = H * 0.71, br = 32
-    const ballGrad = ctx.createLinearGradient(bx - br, by - br, bx + br, by + br)
-    ballGrad.addColorStop(0, '#fff024')
-    ballGrad.addColorStop(1, '#e6d200')
-    ctx.beginPath()
-    ctx.arc(bx, by, br, 0, Math.PI * 2)
-    ctx.fillStyle = ballGrad
-    ctx.fill()
-    // Seams
-    ctx.strokeStyle = 'rgba(254,252,232,0.45)'
-    ctx.lineWidth = 2.5
-    ctx.beginPath()
-    ctx.moveTo(bx - 14, by - 22)
-    ctx.quadraticCurveTo(bx - 4, by, bx - 14, by + 22)
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.moveTo(bx + 14, by - 22)
-    ctx.quadraticCurveTo(bx + 4, by, bx + 14, by + 22)
-    ctx.stroke()
-    // Shine
-    ctx.beginPath()
-    ctx.arc(bx - 8, by - 10, 7, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(255,255,255,0.14)'
-    ctx.fill()
+    // Tennis ball emoji
+    ctx.font = '60px serif'
+    ctx.fillText('🎾', W / 2, H * 0.73)
 
     // Subtitle
     ctx.font = '600 16px system-ui, sans-serif'

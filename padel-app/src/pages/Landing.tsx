@@ -100,18 +100,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 gap-10">
       <div className="text-center">
-        <svg width="56" height="56" viewBox="0 0 144 144" className="mx-auto mb-2">
-          <defs>
-            <linearGradient id="ballG" x1="0.3" y1="0" x2="0.7" y2="1">
-              <stop offset="0%" stopColor="#fff024"/>
-              <stop offset="100%" stopColor="#e6d200"/>
-            </linearGradient>
-          </defs>
-          <circle cx="72" cy="72" r="72" fill="url(#ballG)"/>
-          <path d="M44 30 Q68 72 44 114" fill="none" stroke="#fefce8" strokeWidth="4.5" opacity="0.45"/>
-          <path d="M100 30 Q76 72 100 114" fill="none" stroke="#fefce8" strokeWidth="4.5" opacity="0.45"/>
-          <circle cx="52" cy="48" r="14" fill="white" opacity="0.14"/>
-        </svg>
+        <div className="text-5xl mb-2">🎾</div>
         <h1 className="text-3xl font-bold text-white">Padello</h1>
         <p className="text-gray-400 mt-1">Track scores. Crown champions.</p>
       </div>
