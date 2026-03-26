@@ -21,6 +21,9 @@ export default function LeagueHome() {
   const [showAdminCode, setShowAdminCode] = useState(false)
   const [showRankingInfo, setShowRankingInfo] = useState(false)
 
+  // Scroll to top on navigation
+  useEffect(() => { window.scrollTo(0, 0) }, [leagueId])
+
   // ── Queries ────────────────────────────────────────────────────────────────
   const { data: league, isLoading: leagueLoading } = useLeague(leagueId)
   const { data: sessions = [], isLoading: sessionsLoading } = useSessions(leagueId)
@@ -289,6 +292,11 @@ export default function LeagueHome() {
           )}
         </div>
       )}
+
+      {/* Footer */}
+      <div className="text-center py-2">
+        <p className="text-gray-500 text-sm">🎾 Powered by <Link to="/" className="text-green-400 hover:text-green-300 font-semibold transition-colors">Padello</Link></p>
+      </div>
     </div>
   )
 }

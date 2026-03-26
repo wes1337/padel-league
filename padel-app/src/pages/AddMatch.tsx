@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { usePlayers, useLeague, qk } from '../lib/queries'
@@ -249,7 +249,7 @@ export default function AddMatch() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-white">{teamConfig[scoringTeam].label} Score</h3>
-                <p className="text-gray-400 text-xs">
+                <p className={`text-xs font-medium ${teamConfig[scoringTeam].textColor}`}>
                   {selected[scoringTeam * 2]?.name} & {selected[scoringTeam * 2 + 1]?.name}
                 </p>
               </div>
@@ -327,6 +327,11 @@ export default function AddMatch() {
       >
         {saving ? 'Saving...' : 'Save Match'}
       </button>
+
+      {/* Footer */}
+      <div className="text-center py-2">
+        <p className="text-gray-500 text-sm">🎾 Powered by <Link to="/" className="text-green-400 hover:text-green-300 font-semibold transition-colors">Padello</Link></p>
+      </div>
     </div>
   )
 }

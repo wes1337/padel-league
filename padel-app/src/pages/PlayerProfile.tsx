@@ -104,6 +104,9 @@ function PlayerStatRow({ name, wins, losses, diff, highlight, context }: { name:
 export default function PlayerProfile() {
   const { leagueId, playerId, sessionId } = useParams<{ leagueId: string; playerId: string; sessionId?: string }>()
 
+  // Scroll to top on navigation
+  useEffect(() => { window.scrollTo(0, 0) }, [playerId])
+
   const year = new Date().getFullYear()
   const yearStart = `${year}-01-01`
   const yearEnd   = `${year}-12-31`
@@ -723,6 +726,11 @@ export default function PlayerProfile() {
           </div>
         )}
       </Section>
+
+      {/* Footer */}
+      <div className="text-center py-2">
+        <p className="text-gray-500 text-sm">🎾 Powered by <Link to="/" className="text-green-400 hover:text-green-300 font-semibold transition-colors">Padello</Link></p>
+      </div>
     </div>
   )
 }

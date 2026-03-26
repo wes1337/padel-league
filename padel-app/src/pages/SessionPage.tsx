@@ -149,6 +149,7 @@ export default function SessionPage() {
   }
 
   async function deleteMatch(matchId: string) {
+    if (!window.confirm('Delete this match? This cannot be undone.')) return
     await supabase.from('matches').delete().eq('id', matchId)
     queryClient.invalidateQueries({ queryKey: qk.sessionMatches(sessionId!) })
   }
@@ -156,6 +157,7 @@ export default function SessionPage() {
   function revealAwards() {
     localStorage.setItem(`awards_revealed_${sessionId}`, '1')
     setAwardsRevealed(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function deleteSession() {
