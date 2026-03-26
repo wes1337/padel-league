@@ -1,3 +1,5 @@
+import { useRef, useState } from 'react'
+import html2canvas from 'html2canvas'
 import type { Match, Player, PlayerStats } from '../types'
 import PlayerOfNightCard from './PlayerOfNightCard'
 
@@ -51,6 +53,73 @@ function Award({ emoji, title, first, second }: {
 }
 
 export default function SessionSummary({ matches, players, stats, sessionLabel }: Props) {
+  const [copied, setCopied] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  async function captureCard(): Promise<File | null> {
+    if (!cardRef.current) return null
+    const canvas = await html2canvas(cardRef.current, { backgroundColor: null, scale: 2 })
+    return new Promise(resolve => {
+      canvas.toBlob(blob => {
+        if (!blob) { resolve(null); return }
+        resolve(new File([blob], 'court-champion.png', { type: 'image/png' }))
+      }, 'image/png')
+    })
+  }
+
+  async function handleShare() {
+    setSharing(true)
+    try {
+      const top = stats[0]
+      const text = top
+        ? `${sessionLabel} — ${top.player.name} crowned Court Champion! Check out the full results:`
+        : `${sessionLabel} — Check out the session results!`
+      const file = await captureCard()
+
+      if (typeof navigator.share === 'function') {
+        const shareData: ShareData = { title: sessionLabel, text, url: window.location.href }
+        if (file && navigator.canShare?.({ files: [file] })) {
+          shareData.files = [file]
+        }
+        await navigator.share(shareData)
+      } else if (file) {
+        // Fallback: download the image
+        const url = URL.createObjectURL(file)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'court-champion.png'
+        a.click()
+        URL.revokeObjectURL(url)
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Share failed:', err)
+      }
+    }
+    setSharing(false)
+  }
+
+  async function handleCopyLink() {
+    navigator.clipboard.writeText(window.location.href)
+    // Also try to copy the image to clipboard
+    try {
+      const file = await captureCard()
+      if (file) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'image/png': file,
+            'text/plain': new Blob([window.location.href], { type: 'text/plain' }),
+          }),
+        ])
+      }
+    } catch {
+      // fallback — link already copied above
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
   if (matches.length === 0) return null
 
   const pMap = new Map(players.map(p => [p.id, p.name]))
@@ -125,11 +194,28 @@ export default function SessionSummary({ matches, players, stats, sessionLabel }
 
   return (
     <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-4">
-      <h2 className="font-semibold text-white text-lg">🏆 Session Awards</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold text-white text-lg">🏆 Session Awards</h2>
+        <div className="flex gap-2">
+          <button
+            onClick={handleShare}
+            disabled={sharing}
+            className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+          >
+            {sharing ? '...' : 'Share'}
+          </button>
+          <button
+            onClick={handleCopyLink}
+            className="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+          >
+            {copied ? 'Copied!' : 'Copy Link'}
+          </button>
+        </div>
+      </div>
 
       {/* King of the Court card */}
       {topPlayer && (
-        <div className="flex justify-center">
+        <div className="flex justify-center" ref={cardRef}>
           <PlayerOfNightCard player={topPlayer} sessionLabel={sessionLabel} />
         </div>
       )}

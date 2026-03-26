@@ -19,10 +19,12 @@ export default function AddMatch() {
   const [team2Score, setTeam2Score] = useState('')
   const [activeTeam, setActiveTeam] = useState<number | null>(null)
   const [pickingPlayer, setPickingPlayer] = useState(0)
+  const [scoringTeam, setScoringTeam] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
+  const scoreRef = useRef<HTMLInputElement>(null)
 
   // Lock body scroll and focus search when picker opens
   useEffect(() => {
@@ -32,6 +34,14 @@ export default function AddMatch() {
       return () => { document.body.style.overflow = '' }
     }
   }, [activeTeam])
+
+  // Lock body scroll when score modal opens
+  useEffect(() => {
+    if (scoringTeam !== null) {
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = '' }
+    }
+  }, [scoringTeam])
 
   function openTeam(team: number) {
     const base = team * 2
@@ -81,9 +91,12 @@ export default function AddMatch() {
       setPickingPlayer(1)
       setSearch('')
     } else {
-      // Both picked — close modal
+      // Both picked — show score modal for this team
+      const team = activeTeam
       setActiveTeam(null)
       setSearch('')
+      setScoringTeam(team)
+      setTimeout(() => scoreRef.current?.focus(), 100)
     }
   }
 
@@ -213,6 +226,43 @@ export default function AddMatch() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Score Entry Modal */}
+      {scoringTeam !== null && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4" onClick={() => setScoringTeam(null)}>
+          <div className="w-full max-w-sm bg-gray-900 rounded-2xl p-5 flex flex-col gap-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-white">{teamConfig[scoringTeam].label} Score</h3>
+                <p className="text-gray-400 text-xs">
+                  {selected[scoringTeam * 2]?.name} & {selected[scoringTeam * 2 + 1]?.name}
+                </p>
+              </div>
+              <button onClick={() => setScoringTeam(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
+            </div>
+            <p className="text-gray-500 text-xs">
+              {scoringType === 'americano' ? 'Points scored (e.g. 17)' : 'Games won (e.g. 6)'}
+            </p>
+            <input
+              ref={scoreRef}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              className={`w-full bg-gray-800 rounded-lg px-2 py-4 text-white text-3xl font-bold text-center outline-none focus:ring-2 ${scoringTeam === 0 ? 'focus:ring-blue-500' : 'focus:ring-purple-500'}`}
+              value={scoringTeam === 0 ? team1Score : team2Score}
+              onChange={e => scoringTeam === 0 ? setTeam1Score(e.target.value) : setTeam2Score(e.target.value)}
+              placeholder="0"
+              onKeyDown={e => { if (e.key === 'Enter') setScoringTeam(null) }}
+            />
+            <button
+              onClick={() => setScoringTeam(null)}
+              className={`w-full font-semibold rounded-lg py-3 text-white transition-colors ${scoringTeam === 0 ? 'bg-blue-600 hover:bg-blue-500' : 'bg-purple-600 hover:bg-purple-500'}`}
+            >
+              Done
+            </button>
           </div>
         </div>
       )}

@@ -56,13 +56,6 @@ export default function LeagueHome() {
     localStorage.setItem('recent_leagues', JSON.stringify(updated))
   }, [league])
 
-  useEffect(() => {
-    if (!leagueId) return
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    supabase.from('sessions').delete()
-      .eq('league_id', leagueId).eq('confirmed', false).lt('created_at', oneDayAgo)
-  }, [leagueId])
-
   // ── Computed season stats ──────────────────────────────────────────────────
   const sessionIdsWithMatches = useMemo(() =>
     filteredSessionIds.filter(id => (seasonMatches as Match[]).some(m => m.session_id === id)),
@@ -109,11 +102,10 @@ export default function LeagueHome() {
   async function createSession() {
     const today = new Date().toISOString().split('T')[0]
     const label = `Session – ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
-    const pin = String(Math.floor(1000 + Math.random() * 9000))
     const creator_token = crypto.randomUUID()
     const { data, error } = await supabase
       .from('sessions')
-      .insert({ league_id: leagueId, date: today, label, pin, creator_token })
+      .insert({ league_id: leagueId, date: today, label, confirmed: true, creator_token })
       .select()
       .single()
     if (data && !error) {
@@ -156,6 +148,14 @@ export default function LeagueHome() {
         <Link to="/" className="text-gray-500 hover:text-white text-sm transition-colors pt-1">← Home</Link>
       </div>
 
+      {/* New Session */}
+      <button
+        onClick={createSession}
+        className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl py-3 text-lg transition-colors"
+      >
+        + New Session
+      </button>
+
       {/* Season Leaderboard */}
       <div className="bg-gray-900 rounded-2xl p-4">
         <div className="flex items-center justify-between mb-3">
@@ -182,22 +182,14 @@ export default function LeagueHome() {
         )}
       </div>
 
-      {/* New Session */}
-      <button
-        onClick={createSession}
-        className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl py-3 text-lg transition-colors"
-      >
-        + New Session
-      </button>
-
       {/* Past Sessions */}
       <div className="bg-gray-900 rounded-2xl p-4">
         <h2 className="font-semibold text-white mb-3">Sessions</h2>
-        {sessions.filter((s: Session) => isAdmin || s.confirmed).length === 0 ? (
+        {sessions.length === 0 ? (
           <p className="text-gray-500 text-sm">No sessions yet.</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {sessions.filter((s: Session) => isAdmin || s.confirmed).map((s: Session) => (
+            {sessions.map((s: Session) => (
               <div key={s.id} className="flex items-center gap-2">
                 <Link
                   to={`/l/${leagueId}/session/${s.id}`}
@@ -206,8 +198,6 @@ export default function LeagueHome() {
                   <span className={`text-sm ${s.excluded ? 'text-gray-500' : !s.confirmed ? 'text-gray-500' : 'text-white'}`}>{s.label || s.date}</span>
                   <div className="flex items-center gap-2">
                     {s.excluded && <span className="text-xs text-yellow-600">excluded</span>}
-                    {!s.confirmed && <span className="text-xs text-gray-600">unconfirmed</span>}
-                    {s.pin && !s.ended && !s.excluded && <span className="text-xs font-mono bg-gray-700 text-gray-300 rounded px-1.5 py-0.5">PIN: {s.pin}</span>}
                     <span className="text-gray-400 text-sm">→</span>
                   </div>
                 </Link>

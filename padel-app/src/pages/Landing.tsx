@@ -21,9 +21,6 @@ export default function Landing() {
   const [nameResults, setNameResults] = useState<League[]>([])
   const [searching, setSearching] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
-  const [sessionPin, setSessionPin] = useState('')
-  const [pinError, setPinError] = useState('')
-  const [joiningPin, setJoiningPin] = useState(false)
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showIOSInstall, setShowIOSInstall] = useState(false)
   const [installDismissed, setInstallDismissed] = useState(() => sessionStorage.getItem('install_dismissed') === '1')
@@ -59,21 +56,6 @@ export default function Landing() {
     setInstallPrompt(null)
     setShowIOSInstall(false)
     sessionStorage.setItem('install_dismissed', '1')
-  }
-
-  async function handleJoinPin(e: React.FormEvent) {
-    e.preventDefault()
-    if (!sessionPin.trim()) return
-    setJoiningPin(true)
-    setPinError('')
-    const { data } = await supabase.from('sessions').select('id, league_id').eq('pin', sessionPin.trim()).maybeSingle()
-    if (data) {
-      await supabase.from('sessions').update({ confirmed: true }).eq('id', data.id)
-      navigate(`/l/${data.league_id}/session/${data.id}`)
-    } else {
-      setPinError('No active session found with that PIN.')
-      setJoiningPin(false)
-    }
   }
 
   async function handleNameSearch(e: React.FormEvent) {
@@ -153,68 +135,22 @@ export default function Landing() {
           </div>
         )}
 
-        {/* Join session by PIN */}
-        <form onSubmit={handleJoinPin} className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
-          <h2 className="font-semibold text-white text-lg">Join a Session</h2>
-          <p className="text-gray-500 text-xs -mt-1">Ask the organiser for the 4-digit session PIN</p>
-          <div className="flex gap-2">
-            <input
-              className="w-0 flex-1 bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500 text-2xl font-bold tracking-widest text-center min-w-0"
-              placeholder="0000"
-              value={sessionPin}
-              maxLength={4}
-              inputMode="numeric"
-              onChange={e => { setSessionPin(e.target.value.replace(/\D/g, '')); setPinError('') }}
-            />
-            <button
-              type="submit"
-              disabled={joiningPin || sessionPin.length !== 4}
-              className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold px-5 rounded-lg transition-colors"
-            >
-              {joiningPin ? '...' : 'Join'}
-            </button>
+        {/* Recent leagues */}
+        {recentLeagues.length > 0 && (
+          <div className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
+            <h2 className="font-semibold text-white text-lg">Recent Leagues</h2>
+            {recentLeagues.map(l => (
+              <button
+                key={l.id}
+                onClick={() => navigate(`/l/${l.id}`)}
+                className="flex items-center justify-between bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
+              >
+                <span className="text-white font-medium">{l.name}</span>
+                <span className="text-gray-400 text-sm">→</span>
+              </button>
+            ))}
           </div>
-          {pinError && <p className="text-red-400 text-sm">{pinError}</p>}
-        </form>
-
-        <div className="text-center text-gray-500 text-sm">— or —</div>
-
-        {/* Create league */}
-        <form onSubmit={handleCreate} className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
-          <h2 className="font-semibold text-white text-lg">Create a League</h2>
-          <input
-            className="bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="League name (e.g. Friday Padel)"
-            value={leagueName}
-            onChange={e => setLeagueName(e.target.value)}
-          />
-          <div className="flex flex-col gap-1.5">
-            <p className="text-gray-400 text-xs">Scoring format</p>
-            <div className="flex gap-2">
-              {(['americano', 'traditional'] as ScoringType[]).map(type => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setScoringType(type)}
-                  className={`flex-1 py-2 rounded-xl font-semibold text-sm transition-colors capitalize ${
-                    scoringType === type ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                  }`}
-                >
-                  {type === 'americano' ? '🎯 Americano' : '🎾 Traditional'}
-                </button>
-              ))}
-            </div>
-          </div>
-          <button
-            type="submit"
-            disabled={creating || !leagueName.trim()}
-            className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold rounded-lg py-2.5 transition-colors"
-          >
-            {creating ? 'Creating...' : 'Create League'}
-          </button>
-        </form>
-
-        <div className="text-center text-gray-500 text-sm">— or —</div>
+        )}
 
         {/* Find league by name */}
         <form onSubmit={handleNameSearch} className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
@@ -254,24 +190,44 @@ export default function Landing() {
           )}
         </form>
 
-        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+        <div className="text-center text-gray-500 text-sm">— or —</div>
 
-        {/* Recent leagues */}
-        {recentLeagues.length > 0 && (
-          <div className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
-            <h2 className="font-semibold text-white text-lg">Recent Leagues</h2>
-            {recentLeagues.map(l => (
-              <button
-                key={l.id}
-                onClick={() => navigate(`/l/${l.id}`)}
-                className="flex items-center justify-between bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
-              >
-                <span className="text-white font-medium">{l.name}</span>
-                <span className="text-gray-400 text-sm">→</span>
-              </button>
-            ))}
+        {/* Create league */}
+        <form onSubmit={handleCreate} className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
+          <h2 className="font-semibold text-white text-lg">Create a League</h2>
+          <input
+            className="bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
+            placeholder="League name (e.g. Friday Padel)"
+            value={leagueName}
+            onChange={e => setLeagueName(e.target.value)}
+          />
+          <div className="flex flex-col gap-1.5">
+            <p className="text-gray-400 text-xs">Scoring format</p>
+            <div className="flex gap-2">
+              {(['americano', 'traditional'] as ScoringType[]).map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setScoringType(type)}
+                  className={`flex-1 py-2 rounded-xl font-semibold text-sm transition-colors capitalize ${
+                    scoringType === type ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {type === 'americano' ? '🎯 Americano' : '🎾 Traditional'}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
+          <button
+            type="submit"
+            disabled={creating || !leagueName.trim()}
+            className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold rounded-lg py-2.5 transition-colors"
+          >
+            {creating ? 'Creating...' : 'Create League'}
+          </button>
+        </form>
+
+        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
       </div>
     </div>
   )

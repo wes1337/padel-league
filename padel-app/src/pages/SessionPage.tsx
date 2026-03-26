@@ -22,7 +22,7 @@ export default function SessionPage() {
 
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
   const [editState, setEditState] = useState<EditState | null>(null)
-  const [pinCopied, setPinCopied] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
   const [rankHighlightedIds, setRankHighlightedIds] = useState<Map<string, string>>(new Map())
 
   const { data: session, isLoading: sessionLoading } = useSession(sessionId)
@@ -134,26 +134,29 @@ export default function SessionPage() {
         )}
       </div>
 
-      {/* Session PIN — hidden once session is ended */}
-      {session?.pin && !session.ended && (
+      {/* Invite players */}
+      {!session?.ended && (
         <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <button
-              onClick={() => { navigator.clipboard.writeText(session.pin!); setPinCopied(true); setTimeout(() => setPinCopied(false), 1500) }}
-              className="text-left"
-            >
-              <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Session PIN <span className="text-gray-600 normal-case">{pinCopied ? '· Copied!' : '· Tap to copy'}</span></p>
-              <p className="text-white text-3xl font-bold tracking-widest">{session.pin}</p>
-            </button>
-            <div className="text-right">
-              <p className="text-gray-500 text-xs max-w-[140px]">Share this PIN so others can join and enter scores</p>
+            <div>
+              <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Invite Players</p>
+              <p className="text-gray-500 text-xs">Share a link so others can join and add scores</p>
             </div>
+            <button
+              onClick={() => {
+                if (typeof navigator.share === 'function') {
+                  navigator.share({ title: session?.label || 'Padel Session', text: 'Join our padel session and add your scores!', url: window.location.href })
+                } else {
+                  navigator.clipboard.writeText(window.location.href)
+                  setLinkCopied(true)
+                  setTimeout(() => setLinkCopied(false), 1500)
+                }
+              }}
+              className="bg-green-600 hover:bg-green-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+            >
+              {linkCopied ? 'Copied!' : 'Invite'}
+            </button>
           </div>
-          {!session.confirmed && (
-            <p className="text-yellow-400 text-xs bg-yellow-900/20 border border-yellow-800 rounded-lg px-3 py-2">
-              At least one other player must join with this PIN for the session to be confirmed and logged in the league standings.
-            </p>
-          )}
         </div>
       )}
 
