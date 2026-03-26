@@ -152,7 +152,7 @@ function drawChampionCard(player: PlayerStats, label: string): Promise<File | nu
 
     // Session label
     ctx.font = '400 14px system-ui, sans-serif'
-    ctx.fillStyle = '#6b7280'
+    ctx.fillStyle = '#d1d5db'
     ctx.fillText(label, W / 2, 184)
 
     // Decorative line
@@ -173,57 +173,70 @@ function drawChampionCard(player: PlayerStats, label: string): Promise<File | nu
     ctx.fillText(player.player.name.toUpperCase(), W / 2, 250)
     ctx.restore()
 
-    // Stats box
-    const boxX = pad + 20, boxY = 280, boxW = W - 2 * (pad + 20), boxH = 130, boxR = 20
+    // Stats box — 2x2 grid
+    const boxX = pad + 20, boxY = 280, boxW = W - 2 * (pad + 20), boxH = 170, boxR = 20
 
-    // Box with subtle border
     roundRect(ctx, boxX, boxY, boxW, boxH, boxR)
     ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill()
     roundRect(ctx, boxX, boxY, boxW, boxH, boxR)
     ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.stroke()
 
-    // Divider lines in box
-    const third = boxW / 3
+    // Divider lines
+    const half = boxW / 2
     ctx.fillStyle = 'rgba(255,255,255,0.08)'
-    ctx.fillRect(boxX + third, boxY + 20, 1, boxH - 40)
-    ctx.fillRect(boxX + third * 2, boxY + 20, 1, boxH - 40)
+    ctx.fillRect(boxX + half, boxY + 18, 1, boxH - 36)
+    ctx.fillRect(boxX + 30, boxY + boxH / 2, boxW - 60, 1)
 
-    // Stats
-    const cols = [boxX + third / 2, boxX + third * 1.5, boxX + third * 2.5]
     const diff = player.pointDiff
     const winRate = Math.round(player.winRate * 100)
 
-    ctx.font = '700 38px system-ui, sans-serif'
+    // Top-left: Matches
+    const colL = boxX + half / 2, colR = boxX + half * 1.5
+    const rowT = boxY + 55, rowB = boxY + boxH / 2 + 50
+
+    ctx.font = '700 36px system-ui, sans-serif'
     ctx.fillStyle = '#ffffff'
-    ctx.fillText(String(player.wins), cols[0], boxY + 60)
-    ctx.fillText(`${winRate}%`, cols[1], boxY + 60)
+    ctx.fillText(String(player.matchesPlayed), colL, rowT)
+    ctx.font = '500 13px system-ui, sans-serif'
+    ctx.fillStyle = '#d1d5db'
+    ctx.fillText('Matches', colL, rowT + 24)
+
+    // Top-right: Win Rate
+    ctx.font = '700 36px system-ui, sans-serif'
+    ctx.fillStyle = '#ffffff'
+    ctx.fillText(`${winRate}%`, colR, rowT)
+    ctx.font = '500 13px system-ui, sans-serif'
+    ctx.fillStyle = '#d1d5db'
+    ctx.fillText('Win Rate', colR, rowT + 24)
+
+    // Bottom-left: W – L
+    ctx.font = '700 36px system-ui, sans-serif'
+    ctx.fillStyle = '#4ade80'
+    const wText = String(player.wins)
+    const wWidth = ctx.measureText(wText).width
+    ctx.fillText(wText, colL - 30, rowB)
+    ctx.fillStyle = '#9ca3af'
+    ctx.font = '400 28px system-ui, sans-serif'
+    ctx.fillText('–', colL - 30 + wWidth / 2 + 14, rowB)
+    ctx.font = '700 36px system-ui, sans-serif'
+    ctx.fillStyle = '#f87171'
+    ctx.fillText(String(player.losses), colL + 30, rowB)
+    ctx.font = '500 13px system-ui, sans-serif'
+    ctx.fillStyle = '#d1d5db'
+    ctx.fillText('W – L', colL, rowB + 24)
+
+    // Bottom-right: Pt Diff
+    ctx.font = '700 36px system-ui, sans-serif'
     ctx.fillStyle = diff > 0 ? '#4ade80' : diff < 0 ? '#f87171' : '#ffffff'
-    ctx.fillText(diff > 0 ? `+${diff}` : String(diff), cols[2], boxY + 60)
-
-    // Labels
+    ctx.fillText(diff > 0 ? `+${diff}` : String(diff), colR, rowB)
     ctx.font = '500 13px system-ui, sans-serif'
-    ctx.fillStyle = '#6b7280'
-    ctx.fillText('Wins', cols[0], boxY + 90)
-    ctx.fillText('Win Rate', cols[1], boxY + 90)
-    ctx.fillText('Pt Diff', cols[2], boxY + 90)
+    ctx.fillStyle = '#d1d5db'
+    ctx.fillText('Pt Diff', colR, rowB + 24)
 
-    // Footer with subtle line
-    const footY = H - 55
-    const footGrad = ctx.createLinearGradient(pad + 100, footY, W - pad - 100, footY)
-    footGrad.addColorStop(0, 'rgba(255,255,255,0)')
-    footGrad.addColorStop(0.5, 'rgba(255,255,255,0.06)')
-    footGrad.addColorStop(1, 'rgba(255,255,255,0)')
-    ctx.fillStyle = footGrad
-    ctx.fillRect(pad + 100, footY, W - 2 * pad - 200, 1)
-
+    // Footer
     ctx.font = '500 13px system-ui, sans-serif'
-    ctx.fillStyle = '#4b5563'
+    ctx.fillStyle = '#9ca3af'
     ctx.fillText('🎾 Padel League', W / 2, H - 28)
-
-    // Small decorative dots
-    ctx.fillStyle = 'rgba(251,191,36,0.15)'
-    ctx.beginPath(); ctx.arc(W / 2 - 60, H - 28, 2, 0, Math.PI * 2); ctx.fill()
-    ctx.beginPath(); ctx.arc(W / 2 + 60, H - 28, 2, 0, Math.PI * 2); ctx.fill()
 
     canvas.toBlob(blob => {
       if (!blob) { resolve(null); return }

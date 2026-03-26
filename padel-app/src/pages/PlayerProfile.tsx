@@ -581,10 +581,10 @@ export default function PlayerProfile() {
         <StatRow label="Avg points scored" value={String(avgScored)} sub="per game" />
         <StatRow label="Avg points conceded" value={String(avgConceded)} sub="per game" />
         {biggestWin && (
-          <StatRow label="Biggest win" value={`${biggestWin.myScore} – ${biggestWin.oppScore}`} sub={`with ${biggestWin.partner} · vs ${biggestWin.opponents} · ${biggestWin.sessionLabel}`} />
+          <StatRow label="Biggest win" value={`${biggestWin.myScore} – ${biggestWin.oppScore}`} sub={`with ${biggestWin.partner} · vs ${biggestWin.opponents}${sessionId ? '' : ` · ${biggestWin.sessionLabel}`}`} />
         )}
         {heaviestLoss && (
-          <StatRow label="Heaviest loss" value={`${heaviestLoss.myScore} – ${heaviestLoss.oppScore}`} sub={`with ${heaviestLoss.partner} · vs ${heaviestLoss.opponents} · ${heaviestLoss.sessionLabel}`} />
+          <StatRow label="Heaviest loss" value={`${heaviestLoss.myScore} – ${heaviestLoss.oppScore}`} sub={`with ${heaviestLoss.partner} · vs ${heaviestLoss.opponents}${sessionId ? '' : ` · ${heaviestLoss.sessionLabel}`}`} />
         )}
       </Section>
 
