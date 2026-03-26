@@ -213,7 +213,8 @@ export default function SessionPage() {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-xl font-bold text-white">{session?.label || session?.date}</h1>
-          <p className="text-gray-400 text-sm">{league?.name ?? 'League'} · {matches.length} match{matches.length !== 1 ? 'es' : ''}</p>
+          <p className="text-gray-400 text-sm">{league?.name ?? 'League'}</p>
+          <p className="text-gray-500 text-xs">{matches.length} match{matches.length !== 1 ? 'es' : ''} played</p>
           {session?.excluded && (
             <span className="inline-block text-xs bg-yellow-900/40 text-yellow-400 border border-yellow-700 rounded-lg px-2 py-1 mt-1">Excluded</span>
           )}
@@ -236,9 +237,10 @@ export default function SessionPage() {
                   const shareUrl = session?.short_id
                     ? `${window.location.origin}/s/${session.short_id}`
                     : window.location.href
-                  const text = `Join our padel session and add your scores!\n\n${shareUrl}`
                   const datePart = session?.label?.replace(/^.+ – /, '') || session?.date || ''
-                  const file = await drawInviteCard(league?.name || 'Padello', datePart)
+                  const leagueName = league?.name || 'Padello'
+                  const text = `🎾 ${leagueName} — ${datePart}\n\nIt's game time! Join the session, log your scores, and see who takes the crown.\n\n${shareUrl}`
+                  const file = await drawInviteCard(leagueName, datePart)
 
                   if (typeof navigator.share === 'function') {
                     if (file) {
@@ -504,17 +506,6 @@ export default function SessionPage() {
         </button>
       )}
 
-      {/* Start your own league CTA */}
-      <div className="text-center py-2">
-        <p className="text-gray-500 text-sm">
-          🎾 Powered by{' '}
-          <Link to="/" className="text-green-400 hover:text-green-300 font-semibold transition-colors">Padello</Link>
-        </p>
-        <Link to="/" className="text-gray-500 hover:text-white text-xs transition-colors">
-          Start your own league →
-        </Link>
-      </div>
-
       {/* Session Settings — admin only */}
       {isAdmin && (
         <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
@@ -539,6 +530,12 @@ export default function SessionPage() {
           </button>
         </div>
       )}
+
+      {/* Footer */}
+      <div className="text-center py-2">
+        <p className="text-gray-500 text-sm">🎾 Powered by <Link to="/" className="text-green-400 hover:text-green-300 font-semibold transition-colors">Padello</Link></p>
+        <Link to="/" className="text-gray-500 hover:text-white text-xs transition-colors">Start your own league →</Link>
+      </div>
     </div>
   )
 }

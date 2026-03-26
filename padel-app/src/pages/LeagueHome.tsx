@@ -174,7 +174,7 @@ export default function LeagueHome() {
           <h1 className="text-2xl font-bold text-white">{league.name}</h1>
           <p className="text-gray-400 text-sm">{year} Season</p>
         </div>
-        <Link to="/" className="text-gray-500 hover:text-white text-sm transition-colors pt-1">← Find / Create League</Link>
+        <Link to="/" className="text-gray-500 hover:text-white text-sm transition-colors pt-1 shrink-0 whitespace-nowrap">← Find / Create League</Link>
       </div>
 
       {/* New Session */}
@@ -296,6 +296,7 @@ export default function LeagueHome() {
       {/* Footer */}
       <div className="text-center py-2">
         <p className="text-gray-500 text-sm">🎾 Powered by <Link to="/" className="text-green-400 hover:text-green-300 font-semibold transition-colors">Padello</Link></p>
+        <Link to="/" className="text-gray-500 hover:text-white text-xs transition-colors">Start your own league →</Link>
       </div>
     </div>
   )

@@ -730,6 +730,7 @@ export default function PlayerProfile() {
       {/* Footer */}
       <div className="text-center py-2">
         <p className="text-gray-500 text-sm">🎾 Powered by <Link to="/" className="text-green-400 hover:text-green-300 font-semibold transition-colors">Padello</Link></p>
+        <Link to="/" className="text-gray-500 hover:text-white text-xs transition-colors">Start your own league →</Link>
       </div>
     </div>
   )
