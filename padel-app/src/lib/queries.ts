@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from './supabase'
-import type { League, Session, Match, Player } from '../types'
+import type { League, Session, Match, Player, SessionSignup } from '../types'
 
 // Centralised cache keys — import these when invalidating after mutations
 export const qk = {
@@ -9,6 +9,7 @@ export const qk = {
   session:       (id: string)       => ['session', id] as const,
   players:       (leagueId: string) => ['players', leagueId] as const,
   sessionMatches:(sessionId: string)=> ['matches', sessionId] as const,
+  sessionSignups:(sessionId: string)=> ['session_signups', sessionId] as const,
 }
 
 export function useLeague(leagueId: string | undefined) {
@@ -69,6 +70,34 @@ export function useSessionMatches(sessionId: string | undefined) {
       return (data ?? []) as Match[]
     },
     enabled: !!sessionId,
+    staleTime: 30 * 1000,
+  })
+}
+
+export function useSessionSignups(sessionId: string | undefined) {
+  return useQuery({
+    queryKey: qk.sessionSignups(sessionId ?? ''),
+    queryFn: async () => {
+      const { data } = await supabase.from('session_signups').select('*').eq('session_id', sessionId!).order('created_at')
+      return (data ?? []) as SessionSignup[]
+    },
+    enabled: !!sessionId,
+    staleTime: 30 * 1000,
+  })
+}
+
+export function useSignupCounts(sessionIds: string[]) {
+  return useQuery({
+    queryKey: ['signup_counts', sessionIds.join(',')],
+    queryFn: async () => {
+      const { data } = await supabase.from('session_signups').select('session_id').in('session_id', sessionIds)
+      const counts: Record<string, number> = {}
+      for (const row of data ?? []) {
+        counts[row.session_id] = (counts[row.session_id] ?? 0) + 1
+      }
+      return counts
+    },
+    enabled: sessionIds.length > 0,
     staleTime: 30 * 1000,
   })
 }

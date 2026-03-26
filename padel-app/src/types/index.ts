@@ -42,6 +42,13 @@ export interface Match {
   created_at: string
 }
 
+export interface SessionSignup {
+  id: string
+  session_id: string
+  player_id: string
+  created_at: string
+}
+
 export interface PlayerStats {
   player: Player
   matchesPlayed: number

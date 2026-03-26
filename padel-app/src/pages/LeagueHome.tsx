@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
 import { isLeagueAdmin, saveLeagueAdmin, saveSessionCreator } from '../lib/admin'
-import { useLeague, useSessions, usePlayers, useMultiSessionMatches, qk } from '../lib/queries'
+import { useLeague, useSessions, usePlayers, useMultiSessionMatches, useSignupCounts, qk } from '../lib/queries'
 import type { Session, Match, Player, PlayerStats } from '../types'
 import Leaderboard from '../components/Leaderboard'
 
@@ -20,6 +20,8 @@ export default function LeagueHome() {
   const [claimError, setClaimError] = useState('')
   const [showAdminCode, setShowAdminCode] = useState(false)
   const [showRankingInfo, setShowRankingInfo] = useState(false)
+  const [showCreateSession, setShowCreateSession] = useState(false)
+  const [newSessionDate, setNewSessionDate] = useState(() => new Date().toISOString().split('T')[0])
 
   // Scroll to top on navigation
   useEffect(() => { window.scrollTo(0, 0) }, [leagueId])
@@ -44,6 +46,18 @@ export default function LeagueHome() {
     filteredSessionIds,
     `${leagueId}-${year}`
   )
+
+  const today = new Date().toISOString().split('T')[0]
+  const upcomingSessions = useMemo(() =>
+    (sessions as Session[]).filter(s => s.date > today && !s.ended).sort((a, b) => a.date.localeCompare(b.date)),
+    [sessions, today]
+  )
+  const pastSessions = useMemo(() =>
+    (sessions as Session[]).filter(s => !(s.date > today && !s.ended)),
+    [sessions, today]
+  )
+  const upcomingIds = useMemo(() => upcomingSessions.map(s => s.id), [upcomingSessions])
+  const { data: signupCounts = {} } = useSignupCounts(upcomingIds)
 
   const loading = leagueLoading || sessionsLoading || playersLoading ||
     (filteredSessionIds.length > 0 && matchesLoading)
@@ -70,12 +84,13 @@ export default function LeagueHome() {
     )
     if (oldSessions.length === 0) return
     // Check which old sessions have zero matches
+    const today = new Date().toISOString().split('T')[0]
     Promise.all(oldSessions.map(async s => {
       const { count } = await supabase.from('matches').select('id', { count: 'exact', head: true }).eq('session_id', s.id)
       return { session: s, count: count ?? 0 }
     })).then(async results => {
-      const toDelete = results.filter(r => r.count === 0).map(r => r.session.id)
-      const toEnd = results.filter(r => r.count > 0 && !r.session.ended).map(r => r.session.id)
+      const toDelete = results.filter(r => r.count === 0 && r.session.date <= today).map(r => r.session.id)
+      const toEnd = results.filter(r => r.count > 0 && !r.session.ended && r.session.date <= today).map(r => r.session.id)
       const changed = toDelete.length > 0 || toEnd.length > 0
       if (toDelete.length > 0) await Promise.all(toDelete.map(id => supabase.from('sessions').delete().eq('id', id)))
       if (toEnd.length > 0) await Promise.all(toEnd.map(id => supabase.from('sessions').update({ ended: true }).eq('id', id)))
@@ -129,17 +144,20 @@ export default function LeagueHome() {
 
   // ── Actions ────────────────────────────────────────────────────────────────
   async function createSession() {
-    const today = new Date().toISOString().split('T')[0]
-    const label = `Padello – ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    const date = newSessionDate
+    const dateObj = new Date(date + 'T12:00:00')
+    const label = `Padello – ${dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
     const creator_token = crypto.randomUUID()
     const { data, error } = await supabase
       .from('sessions')
-      .insert({ league_id: leagueId, date: today, label, confirmed: true, creator_token, short_id: nanoid(8) })
+      .insert({ league_id: leagueId, date, label, confirmed: true, creator_token, short_id: nanoid(8) })
       .select()
       .single()
     if (data && !error) {
       saveSessionCreator(data.id, creator_token)
       queryClient.invalidateQueries({ queryKey: qk.sessions(leagueId!) })
+      setShowCreateSession(false)
+      setNewSessionDate(new Date().toISOString().split('T')[0])
       navigate(`/l/${leagueId}/session/${data.id}`)
     }
   }
@@ -178,12 +196,35 @@ export default function LeagueHome() {
       </div>
 
       {/* New Session */}
-      <button
-        onClick={createSession}
-        className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl py-3 text-lg transition-colors"
-      >
-        + New Session
-      </button>
+      {showCreateSession ? (
+        <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
+          <h2 className="font-semibold text-white">New Session</h2>
+          <div className="flex flex-col gap-1">
+            <label className="text-gray-400 text-xs">Session date</label>
+            <input
+              type="date"
+              value={newSessionDate}
+              onChange={e => setNewSessionDate(e.target.value)}
+              className="bg-gray-800 rounded-lg px-4 py-2.5 text-white text-base outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={createSession} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg py-2.5 transition-colors">
+              Create
+            </button>
+            <button onClick={() => { setShowCreateSession(false); setNewSessionDate(new Date().toISOString().split('T')[0]) }} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg py-2.5 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowCreateSession(true)}
+          className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl py-3 text-lg transition-colors"
+        >
+          + New Session
+        </button>
+      )}
 
       {/* Season Leaderboard */}
       <div className="bg-gray-900 rounded-2xl p-4">
@@ -211,14 +252,42 @@ export default function LeagueHome() {
         )}
       </div>
 
-      {/* Past Sessions */}
+      {/* Upcoming Sessions */}
+      {upcomingSessions.length > 0 && (
+        <div className="bg-gray-900 rounded-2xl p-4">
+          <h2 className="font-semibold text-white mb-3">Upcoming</h2>
+          <div className="flex flex-col gap-2">
+            {upcomingSessions.map((s: Session) => (
+              <div key={s.id} className="flex items-center gap-2">
+                <Link
+                  to={`/l/${leagueId}/session/${s.id}`}
+                  className="flex-1 flex items-center justify-between bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
+                >
+                  <span className="text-sm text-white">{s.label || s.date}</span>
+                  <div className="flex items-center gap-2">
+                    {(signupCounts[s.id] ?? 0) > 0 && (
+                      <span className="text-xs text-green-400">{signupCounts[s.id]} signed up</span>
+                    )}
+                    <span className="text-gray-400 text-sm">→</span>
+                  </div>
+                </Link>
+                {isAdmin && (
+                  <button onClick={() => deleteSession(s.id)} className="text-gray-600 hover:text-red-400 bg-gray-800 rounded-xl px-3 py-3 transition-colors text-sm" title="Delete session">🗑</button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sessions */}
       <div className="bg-gray-900 rounded-2xl p-4">
-        <h2 className="font-semibold text-white mb-3">Sessions</h2>
-        {sessions.length === 0 ? (
+        <h2 className="font-semibold text-white mb-3">{upcomingSessions.length > 0 ? 'Past Sessions' : 'Sessions'}</h2>
+        {pastSessions.length === 0 ? (
           <p className="text-gray-500 text-sm">No sessions yet.</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {sessions.map((s: Session) => (
+            {pastSessions.map((s: Session) => (
               <div key={s.id} className="flex items-center gap-2">
                 <Link
                   to={`/l/${leagueId}/session/${s.id}`}
@@ -231,13 +300,7 @@ export default function LeagueHome() {
                   </div>
                 </Link>
                 {isAdmin && (
-                  <button
-                    onClick={() => deleteSession(s.id)}
-                    className="text-gray-600 hover:text-red-400 bg-gray-800 rounded-xl px-3 py-3 transition-colors text-sm"
-                    title="Delete session"
-                  >
-                    🗑
-                  </button>
+                  <button onClick={() => deleteSession(s.id)} className="text-gray-600 hover:text-red-400 bg-gray-800 rounded-xl px-3 py-3 transition-colors text-sm" title="Delete session">🗑</button>
                 )}
               </div>
             ))}

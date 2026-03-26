@@ -44,6 +44,23 @@ create table matches (
   created_at timestamptz default now()
 );
 
+create table session_signups (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid references sessions(id) on delete cascade not null,
+  player_id uuid references players(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  unique (session_id, player_id)
+);
+
+-- Migration (run this if the table already exists):
+-- create table session_signups (
+--   id uuid primary key default gen_random_uuid(),
+--   session_id uuid references sessions(id) on delete cascade not null,
+--   player_id uuid references players(id) on delete cascade not null,
+--   created_at timestamptz default now(),
+--   unique (session_id, player_id)
+-- );
+
 -- Enable Row Level Security (open read/write via anon key — link = access)
 alter table leagues enable row level security;
 alter table players enable row level security;
@@ -54,3 +71,5 @@ create policy "Public access" on leagues for all using (true) with check (true);
 create policy "Public access" on players for all using (true) with check (true);
 create policy "Public access" on sessions for all using (true) with check (true);
 create policy "Public access" on matches for all using (true) with check (true);
+alter table session_signups enable row level security;
+create policy "Public access" on session_signups for all using (true) with check (true);

@@ -5,8 +5,8 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
 import { isLeagueAdmin } from '../lib/admin'
-import { useSession, useSessionMatches, usePlayers, useLeague, qk } from '../lib/queries'
-import type { Match } from '../types'
+import { useSession, useSessionMatches, usePlayers, useLeague, useSessionSignups, qk } from '../lib/queries'
+import type { Match, Player } from '../types'
 import Leaderboard from '../components/Leaderboard'
 import SessionSummary from '../components/SessionSummary'
 
@@ -87,19 +87,23 @@ export default function SessionPage() {
   const { data: matches = [], isLoading: matchesLoading } = useSessionMatches(sessionId)
   const { data: players = [], isLoading: playersLoading } = usePlayers(leagueId)
   const { data: league } = useLeague(leagueId)
+  const { data: signups = [] } = useSessionSignups(sessionId)
 
   const [awardsRevealed, setAwardsRevealed] = useState(() =>
     localStorage.getItem(`awards_revealed_${sessionId}`) === '1'
   )
+  const [signupSearch, setSignupSearch] = useState('')
 
   // Scroll to top when navigating to a session
   useEffect(() => { window.scrollTo(0, 0) }, [sessionId])
 
   const loading = sessionLoading || matchesLoading || playersLoading
 
-  // Auto-end session after 24 hours
+  // Auto-end session after 24 hours (skip future sessions)
   useEffect(() => {
     if (!session || session.ended) return
+    const today = new Date().toISOString().split('T')[0]
+    if (session.date > today) return
     const created = new Date(session.created_at).getTime()
     if (Date.now() - created >= 24 * 60 * 60 * 1000) {
       supabase.from('sessions').update({ ended: true }).eq('id', session.id).then(() => {
@@ -158,6 +162,33 @@ export default function SessionPage() {
     navigate(`/l/${leagueId}`)
   }
 
+  async function addSignup(player: Player) {
+    await supabase.from('session_signups').insert({ session_id: sessionId, player_id: player.id })
+    queryClient.invalidateQueries({ queryKey: qk.sessionSignups(sessionId!) })
+    setSignupSearch('')
+  }
+
+  async function removeSignup(playerId: string) {
+    await supabase.from('session_signups').delete().eq('session_id', sessionId!).eq('player_id', playerId)
+    queryClient.invalidateQueries({ queryKey: qk.sessionSignups(sessionId!) })
+  }
+
+  async function addNewPlayerAndSignup() {
+    const raw = signupSearch.trim()
+    if (!raw) return
+    const name = raw.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+    const existing = players.find(p => p.name.toLowerCase() === name.toLowerCase())
+    if (existing) {
+      addSignup(existing)
+      return
+    }
+    const { data, error } = await supabase.from('players').insert({ league_id: leagueId, name }).select().single()
+    if (data && !error) {
+      queryClient.invalidateQueries({ queryKey: qk.players(leagueId!) })
+      addSignup(data as Player)
+    }
+  }
+
   async function toggleExcluded() {
     if (!session) return
     const next = !session.excluded
@@ -211,6 +242,72 @@ export default function SessionPage() {
         </div>
         <Link to={`/l/${leagueId}`} className="text-gray-500 hover:text-white text-sm transition-colors pt-1 shrink-0">← View Season</Link>
       </div>
+
+      {/* Who's Playing — sign-up roster */}
+      {!session?.ended && (() => {
+        const signedUpIds = new Set(signups.map(s => s.player_id))
+        const signedUpPlayers = signups
+          .map(s => players.find(p => p.id === s.player_id))
+          .filter((p): p is Player => !!p)
+        const query = signupSearch.trim().toLowerCase()
+        const filteredPlayers = query
+          ? players.filter(p => !signedUpIds.has(p.id) && p.name.toLowerCase().includes(query))
+          : []
+        const exactMatch = query ? players.some(p => p.name.toLowerCase() === query) : false
+
+        return (
+          <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <p className="text-gray-400 text-xs uppercase tracking-wide">Who's Playing</p>
+              <span className="text-gray-500 text-xs">{signedUpPlayers.length} signed up</span>
+            </div>
+
+            {signedUpPlayers.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {signedUpPlayers.map(p => (
+                  <span key={p.id} className="flex items-center gap-1.5 bg-gray-800 rounded-full px-3 py-1.5 text-sm text-white">
+                    {p.name}
+                    <button onClick={() => removeSignup(p.id)} className="text-gray-500 hover:text-red-400 transition-colors text-xs ml-0.5">✕</button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="relative">
+              <input
+                className="w-full bg-gray-800 rounded-lg px-4 py-2.5 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Add a player..."
+                value={signupSearch}
+                onChange={e => setSignupSearch(e.target.value)}
+              />
+              {query && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-gray-800 rounded-lg overflow-hidden z-10 shadow-lg border border-gray-700">
+                  {filteredPlayers.slice(0, 6).map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => addSignup(p)}
+                      className="w-full text-left px-4 py-2.5 text-sm text-white hover:bg-gray-700 transition-colors"
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                  {!exactMatch && query.length >= 2 && (
+                    <button
+                      onClick={addNewPlayerAndSignup}
+                      className="w-full text-left px-4 py-2.5 text-sm text-green-400 hover:bg-gray-700 transition-colors border-t border-gray-700"
+                    >
+                      + Add "{signupSearch.trim()}" as new player
+                    </button>
+                  )}
+                  {filteredPlayers.length === 0 && (exactMatch || query.length < 2) && (
+                    <p className="px-4 py-2.5 text-sm text-gray-500">No more players to add</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Invite players */}
       {!session?.ended && (
