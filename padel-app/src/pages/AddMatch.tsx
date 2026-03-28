@@ -167,16 +167,6 @@ function PlayerPicker({
 
         {/* Player list — above the search so keyboard doesn't cover results */}
         <div className="overflow-y-auto flex flex-col px-4 pb-4 gap-1.5">
-          {filtered.length === 0 && search.trim() && (
-            <button
-              onClick={handleQuickAdd}
-              disabled={adding}
-              className="w-full text-left px-4 py-3.5 rounded-xl font-medium text-base transition-colors flex items-center gap-3 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-gray-900"
-            >
-              <span className="text-xl">＋</span>
-              <span>{adding ? 'Adding...' : `Add "${search.trim()}" as new player`}</span>
-            </button>
-          )}
           {filtered.length === 0 && !search.trim() && (
             <p className="text-gray-500 text-sm text-center py-6">No players found</p>
           )}
@@ -208,17 +198,32 @@ function PlayerPicker({
 
         {/* Search + Done — pinned at bottom so keyboard pushes list up, not results down */}
         <div className="px-4 pb-4 pt-2 shrink-0 border-t border-gray-800 flex flex-col gap-2">
-          <input
-            ref={searchRef}
-            type="text"
-            className="w-full bg-gray-800 rounded-xl px-4 py-3 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="Search player..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+          <div className="flex items-center gap-2">
+            <input
+              ref={searchRef}
+              type="text"
+              className="flex-1 bg-gray-800 rounded-xl px-4 py-3 text-base text-white placeholder-yellow-600 outline-none border border-yellow-500 focus:ring-2 focus:ring-yellow-400"
+              placeholder="Search player..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search.trim() && filtered.length === 0 && (
+              <button
+                onClick={handleQuickAdd}
+                disabled={adding}
+                className="shrink-0 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-gray-900 font-semibold text-sm px-3 py-3 rounded-xl transition-colors"
+              >
+                {adding ? '...' : 'Add +'}
+              </button>
+            )}
+          </div>
           <button
             onClick={onClose}
-            className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-xl py-3 transition-colors"
+            className={`w-full font-semibold rounded-xl py-3 transition-colors ${
+              slots.every(Boolean)
+                ? 'bg-green-600 hover:bg-green-500 text-white'
+                : 'bg-gray-700 hover:bg-gray-600 text-white'
+            }`}
           >
             Done
           </button>
@@ -381,10 +386,9 @@ export default function AddMatch() {
 
       {/* Add new player */}
       <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-2">
-        <p className="text-xs text-gray-400 font-medium">New player not in the list?</p>
         <input
           type="text"
-          className="w-full bg-gray-700 rounded-lg px-3 py-2.5 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-gray-500"
+          className="w-full bg-gray-700 rounded-lg px-3 py-2.5 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-yellow-500"
           placeholder="Player name"
           value={newPlayerName}
           onChange={e => setNewPlayerName(e.target.value)}
@@ -393,10 +397,10 @@ export default function AddMatch() {
         <button
           onClick={handleAddPlayer}
           disabled={addingPlayer || !newPlayerName.trim()}
-          className={`w-full disabled:opacity-40 text-sm font-semibold py-2.5 rounded-lg transition-colors ${
+          className={`w-full disabled:opacity-40 text-sm font-semibold py-2.5 rounded-lg transition-colors border ${
             newPlayerName.trim()
-              ? 'bg-yellow-400 hover:bg-yellow-300 text-gray-900'
-              : 'bg-gray-700 hover:bg-gray-600 text-white'
+              ? 'bg-yellow-400 hover:bg-yellow-300 border-yellow-400 text-gray-900'
+              : 'bg-transparent border-yellow-500 text-yellow-500'
           }`}
         >
           {addingPlayer ? 'Adding...' : 'Add new player'}
