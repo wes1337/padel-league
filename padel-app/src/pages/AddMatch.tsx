@@ -23,6 +23,7 @@ function PlayerPicker({
   players,
   onSlotsChange,
   onClose,
+  onAddPlayer,
 }: {
   open: boolean
   activeSlot: number
@@ -30,9 +31,11 @@ function PlayerPicker({
   players: Player[]
   onSlotsChange: (s: (Player | null)[]) => void
   onClose: () => void
+  onAddPlayer: (name: string, assignToSlot: number) => Promise<Player | null>
 }) {
   const [currentSlot, setCurrentSlot] = useState(activeSlot)
   const [search, setSearch] = useState('')
+  const [adding, setAdding] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
   // Reset when opened
@@ -76,6 +79,22 @@ function PlayerPicker({
       const allFull = next.every(Boolean)
       if (!allFull) setCurrentSlot(nextEmpty(next, currentSlot))
     }
+  }
+
+  async function handleQuickAdd() {
+    const name = search.trim()
+    if (!name || adding) return
+    setAdding(true)
+    const player = await onAddPlayer(name, currentSlot)
+    if (player) {
+      const next = [...slots]
+      next[currentSlot] = player
+      onSlotsChange(next)
+      setSearch('')
+      const allFull = next.every(Boolean)
+      if (!allFull) setCurrentSlot(nextEmpty(next, currentSlot))
+    }
+    setAdding(false)
   }
 
   const slotLabels = ['Team 1 · P1', 'Team 1 · P2', 'Team 2 · P1', 'Team 2 · P2']
@@ -148,7 +167,17 @@ function PlayerPicker({
 
         {/* Player list — above the search so keyboard doesn't cover results */}
         <div className="overflow-y-auto flex flex-col px-4 pb-4 gap-1.5">
-          {filtered.length === 0 && (
+          {filtered.length === 0 && search.trim() && (
+            <button
+              onClick={handleQuickAdd}
+              disabled={adding}
+              className="w-full text-left px-4 py-3.5 rounded-xl font-medium text-base transition-colors flex items-center gap-3 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-gray-900"
+            >
+              <span className="text-xl">＋</span>
+              <span>{adding ? 'Adding...' : `Add "${search.trim()}" as new player`}</span>
+            </button>
+          )}
+          {filtered.length === 0 && !search.trim() && (
             <p className="text-gray-500 text-sm text-center py-6">No players found</p>
           )}
           {filtered.map(p => {
@@ -269,6 +298,20 @@ export default function AddMatch() {
     setAddingPlayer(false)
   }
 
+  async function createPlayer(raw: string): Promise<Player | null> {
+    const name = raw.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+    const existing = allPlayers.find(p => p.name.toLowerCase() === name.toLowerCase())
+    if (existing) return existing
+    const { data, error } = await supabase.from('players').insert({ league_id: leagueId, name }).select().single()
+    if (data && !error) {
+      queryClient.setQueryData(qk.players(leagueId!), (old: Player[] = []) =>
+        [...old, data as Player].sort((a, b) => a.name.localeCompare(b.name))
+      )
+      return data as Player
+    }
+    return null
+  }
+
   async function handleSave() {
     if (!league) { setError('League data not loaded yet.'); return }
     if (slots.some(p => !p)) { setError('Please select all 4 players.'); return }
@@ -382,6 +425,7 @@ export default function AddMatch() {
         players={allPlayers}
         onSlotsChange={setSlots}
         onClose={() => setPickerOpen(false)}
+        onAddPlayer={createPlayer}
       />
     </div>
   )
