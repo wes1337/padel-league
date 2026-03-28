@@ -184,7 +184,7 @@ function PlayerPicker({
             })}
           </div>
           {/* Fade hint — always visible, signals more content below */}
-          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-gray-900 to-transparent" />
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-14 bg-gradient-to-t from-yellow-500/30 via-yellow-500/10 to-transparent" />
         </div>
 
         {/* Search + Done — pinned at bottom so keyboard pushes list up, not results down */}
