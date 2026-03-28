@@ -28,6 +28,7 @@ export function computeStats(
   for (const match of matches) {
     const team1 = [match.team1_p1, match.team1_p2]
     const team2 = [match.team2_p1, match.team2_p2]
+    const isDraw = match.team1_score === match.team2_score
     const team1Won = match.team1_score > match.team2_score
     const diff1 = match.team1_score - match.team2_score
     const diff2 = match.team2_score - match.team1_score
@@ -39,7 +40,7 @@ export function computeStats(
       s.totalPointsScored += match.team1_score
       s.pointDiff += diff1
       s.sessionsAttended.add(match.session_id)
-      if (team1Won) s.wins++; else s.losses++
+      if (!isDraw) { if (team1Won) s.wins++; else s.losses++ }
     }
     for (const pid of team2) {
       const s = statMap.get(pid)
@@ -48,7 +49,7 @@ export function computeStats(
       s.totalPointsScored += match.team2_score
       s.pointDiff += diff2
       s.sessionsAttended.add(match.session_id)
-      if (!team1Won) s.wins++; else s.losses++
+      if (!isDraw) { if (!team1Won) s.wins++; else s.losses++ }
     }
   }
 
@@ -65,6 +66,8 @@ export function computeStats(
     let streak = 0
     for (let i = playerMatches.length - 1; i >= 0; i--) {
       const m = playerMatches[i]
+      const draw = m.team1_score === m.team2_score
+      if (draw) break
       const onTeam1 = m.team1_p1 === player.id || m.team1_p2 === player.id
       const won = onTeam1 ? m.team1_score > m.team2_score : m.team2_score > m.team1_score
       if (streak === 0) {
@@ -84,7 +87,8 @@ export function computeStats(
     .filter(p => statMap.has(p.id))
     .map(player => {
       const s = statMap.get(player.id)!
-      const winRate = s.matchesPlayed > 0 ? s.wins / s.matchesPlayed : 0
+      const decisive = s.wins + s.losses
+      const winRate = decisive > 0 ? s.wins / decisive : 0
       const avgPointDiff = s.matchesPlayed > 0 ? s.pointDiff / s.matchesPlayed : 0
       const attendancePct = seasonMode && totalSessions > 0
         ? s.sessionsAttended.size / totalSessions

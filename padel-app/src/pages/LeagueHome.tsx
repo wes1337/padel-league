@@ -111,11 +111,7 @@ export default function LeagueHome() {
 
   const movements: Record<string, number> | undefined = useMemo(() => {
     if (sessionIdsWithMatches.length < 2) return undefined
-    const mostRecentEnded = sessions.find((s: Session) =>
-      s.confirmed && s.ended && sessionIdsWithMatches.includes(s.id)
-    )
-    if (!mostRecentEnded) return undefined
-    const prevIds = sessionIdsWithMatches.filter((id: string) => id !== mostRecentEnded.id)
+    const prevIds = sessionIdsWithMatches.slice(1)
     const prevMatches = (seasonMatches as Match[]).filter(m => prevIds.includes(m.session_id))
     const prevStats = computeStats(players as Player[], prevMatches, prevIds.length, true)
     const prevRanks: Record<string, number> = {}
@@ -126,7 +122,7 @@ export default function LeagueHome() {
       mvmt[s.player.id] = prev === undefined ? Infinity : prev - i
     })
     return mvmt
-  }, [sessions, sessionIdsWithMatches, seasonMatches, players, seasonStats])
+  }, [sessionIdsWithMatches, seasonMatches, players, seasonStats])
 
   const { recentTopId, recentBottomId } = useMemo(() => {
     if (sessionIdsWithMatches.length === 0) return {}

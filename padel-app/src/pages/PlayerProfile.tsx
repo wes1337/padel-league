@@ -13,6 +13,7 @@ interface MatchDetail extends Match {
   myScore: number
   oppScore: number
   won: boolean
+  draw: boolean
   partner: string
   partnerId: string
   opp1Id: string
@@ -204,6 +205,7 @@ export default function PlayerProfile() {
         teamSide: side,
         myScore, oppScore,
         won: myScore > oppScore,
+        draw: myScore === oppScore,
         partnerId,
         partner: pMap.get(partnerId)?.name ?? '?',
         opp1Id, opp2Id,
@@ -302,15 +304,16 @@ export default function PlayerProfile() {
         for (const pid of [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2]) {
           if (!sessionStatMap.has(pid)) sessionStatMap.set(pid, { wins: 0, pointDiff: 0 })
         }
+        const isDraw = m.team1_score === m.team2_score
         const team1Won = m.team1_score > m.team2_score
         for (const pid of [m.team1_p1, m.team1_p2]) {
           const s = sessionStatMap.get(pid)!
-          if (team1Won) s.wins++
+          if (!isDraw && team1Won) s.wins++
           s.pointDiff += m.team1_score - m.team2_score
         }
         for (const pid of [m.team2_p1, m.team2_p2]) {
           const s = sessionStatMap.get(pid)!
-          if (!team1Won) s.wins++
+          if (!isDraw && !team1Won) s.wins++
           s.pointDiff += m.team2_score - m.team1_score
         }
       }
@@ -328,9 +331,10 @@ export default function PlayerProfile() {
 
   // ── Core stats ──────────────────────────────────────────────────────────────
   const wins = matchDetails.filter(m => m.won).length
-  const losses = matchDetails.filter(m => !m.won).length
+  const losses = matchDetails.filter(m => !m.won && !m.draw).length
   const totalPlayed = matchDetails.length
-  const winRate = totalPlayed > 0 ? Math.round((wins / totalPlayed) * 100) : 0
+  const decisive = wins + losses
+  const winRate = decisive > 0 ? Math.round((wins / decisive) * 100) : 0
   const pointDiff = matchDetails.reduce((acc, m) => acc + (m.myScore - m.oppScore), 0)
   const sessionsAttended = new Set(matchDetails.map(m => m.session_id)).size
   const attendancePct = totalSessions > 0 ? Math.round((sessionsAttended / totalSessions) * 100) : 0
@@ -342,7 +346,7 @@ export default function PlayerProfile() {
   const avgScored = totalPlayed > 0 ? (totalScored / totalPlayed).toFixed(1) : '–'
   const avgConceded = totalPlayed > 0 ? (totalConceded / totalPlayed).toFixed(1) : '–'
   const biggestWin = matchDetails.filter(m => m.won).sort((a, b) => (b.myScore - b.oppScore) - (a.myScore - a.oppScore))[0]
-  const heaviestLoss = matchDetails.filter(m => !m.won).sort((a, b) => (b.oppScore - b.myScore) - (a.oppScore - a.myScore))[0]
+  const heaviestLoss = matchDetails.filter(m => !m.won && !m.draw).sort((a, b) => (b.oppScore - b.myScore) - (a.oppScore - a.myScore))[0]
 
 
   // ── Partner chemistry ───────────────────────────────────────────────────────
@@ -350,7 +354,7 @@ export default function PlayerProfile() {
   for (const m of matchDetails) {
     if (!partnerMap.has(m.partnerId)) partnerMap.set(m.partnerId, { name: m.partner, wins: 0, losses: 0, diff: 0 })
     const p = partnerMap.get(m.partnerId)!
-    m.won ? p.wins++ : p.losses++
+    if (!m.draw) { m.won ? p.wins++ : p.losses++ }
     p.diff += m.myScore - m.oppScore
   }
   const partners = [...partnerMap.entries()]
@@ -370,7 +374,7 @@ export default function PlayerProfile() {
     for (const [id, name] of [[m.opp1Id, m.opp1Name], [m.opp2Id, m.opp2Name]] as [string, string][]) {
       if (!rivalMap.has(id)) rivalMap.set(id, { name, wins: 0, losses: 0, diff: 0 })
       const r = rivalMap.get(id)!
-      m.won ? r.wins++ : r.losses++
+      if (!m.draw) { m.won ? r.wins++ : r.losses++ }
       r.diff += m.myScore - m.oppScore
     }
   }
@@ -397,9 +401,10 @@ export default function PlayerProfile() {
     if (m.won) { currentRun++; longestWinStreak = Math.max(longestWinStreak, currentRun) }
     else currentRun = 0
   }
-  // Current streak (from most recent)
+  // Current streak (from most recent) — draws break the streak
   let currentStreak = 0, currentStreakType: 'W' | 'L' | null = null
   for (const m of matchDetails) {
+    if (m.draw) break
     if (currentStreakType === null) currentStreakType = m.won ? 'W' : 'L'
     if ((m.won && currentStreakType === 'W') || (!m.won && currentStreakType === 'L')) currentStreak++
     else break
@@ -412,7 +417,7 @@ export default function PlayerProfile() {
       sessionStatsMap.set(m.session_id, { id: m.session_id, label: m.sessionLabel, date: m.sessionDate, wins: 0, losses: 0, diff: 0 })
     }
     const ss = sessionStatsMap.get(m.session_id)!
-    m.won ? ss.wins++ : ss.losses++
+    if (!m.draw) { m.won ? ss.wins++ : ss.losses++ }
     ss.diff += m.myScore - m.oppScore
   }
   const sessionHistory = [...sessionStatsMap.values()].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -706,8 +711,8 @@ export default function PlayerProfile() {
               <div key={m.id} className="bg-gray-800 rounded-xl px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${m.won ? 'bg-green-700 text-green-100' : 'bg-red-800 text-red-100'}`}>
-                      {m.won ? 'W' : 'L'}
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${m.draw ? 'bg-gray-600 text-gray-200' : m.won ? 'bg-green-700 text-green-100' : 'bg-red-800 text-red-100'}`}>
+                      {m.draw ? 'D' : m.won ? 'W' : 'L'}
                     </span>
                     <div>
                       <span className="text-white font-bold">{m.myScore} – {m.oppScore}</span>

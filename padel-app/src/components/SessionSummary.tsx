@@ -298,18 +298,19 @@ export default function SessionSummary({ matches, players, stats, sessionLabel, 
   // ── Individual stats ────────────────────────────────────────────────────────
   const statMap = new Map<string, { wins: number; losses: number; scored: number; conceded: number }>()
   for (const m of matches) {
+    const isDraw = m.team1_score === m.team2_score
     const team1Won = m.team1_score > m.team2_score
     for (const pid of [m.team1_p1, m.team1_p2]) {
       if (!statMap.has(pid)) statMap.set(pid, { wins: 0, losses: 0, scored: 0, conceded: 0 })
       const s = statMap.get(pid)!
       s.scored += m.team1_score; s.conceded += m.team2_score
-      if (team1Won) s.wins++; else s.losses++
+      if (!isDraw) { if (team1Won) s.wins++; else s.losses++ }
     }
     for (const pid of [m.team2_p1, m.team2_p2]) {
       if (!statMap.has(pid)) statMap.set(pid, { wins: 0, losses: 0, scored: 0, conceded: 0 })
       const s = statMap.get(pid)!
       s.scored += m.team2_score; s.conceded += m.team1_score
-      if (!team1Won) s.wins++; else s.losses++
+      if (!isDraw) { if (!team1Won) s.wins++; else s.losses++ }
     }
   }
 

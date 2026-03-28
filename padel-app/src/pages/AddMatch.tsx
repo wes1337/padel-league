@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
@@ -14,114 +14,43 @@ export default function AddMatch() {
   const { data: league } = useLeague(leagueId)
   const scoringType = league?.scoring_type ?? 'americano'
 
-  const [selected, setSelected] = useState<(Player | null)[]>([null, null, null, null])
+  const [p1, setP1] = useState('')
+  const [p2, setP2] = useState('')
+  const [p3, setP3] = useState('')
+  const [p4, setP4] = useState('')
   const [team1Score, setTeam1Score] = useState('')
   const [team2Score, setTeam2Score] = useState('')
-  const [activeTeam, setActiveTeam] = useState<number | null>(null)
-  const [pickingPlayer, setPickingPlayer] = useState(0)
-  const [scoringTeam, setScoringTeam] = useState<number | null>(null)
-  const [search, setSearch] = useState('')
+  const [newPlayerName, setNewPlayerName] = useState('')
+  const [addingPlayer, setAddingPlayer] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const searchRef = useRef<HTMLInputElement>(null)
-  const scoreRef = useRef<HTMLInputElement>(null)
 
-  // Scroll to top on navigation
   useEffect(() => { window.scrollTo(0, 0) }, [sessionId])
 
-  // Lock body scroll and focus search when picker opens
-  useEffect(() => {
-    if (activeTeam !== null) {
-      document.body.style.overflow = 'hidden'
-      setTimeout(() => searchRef.current?.focus(), 100)
-      return () => { document.body.style.overflow = '' }
-    }
-  }, [activeTeam])
-
-  // Lock body scroll and focus score input when score modal opens
-  useEffect(() => {
-    if (scoringTeam !== null) {
-      document.body.style.overflow = 'hidden'
-      setTimeout(() => scoreRef.current?.focus(), 150)
-      return () => { document.body.style.overflow = '' }
-    }
-  }, [scoringTeam])
-
-  function openTeam(team: number) {
-    const base = team * 2
-    // Start at first empty slot, or P1 if both filled
-    const start = !selected[base] ? 0 : !selected[base + 1] ? 1 : 0
-    setActiveTeam(team)
-    setPickingPlayer(start)
-  }
-
-  const selectedIds = selected.filter(Boolean).map(p => p!.id)
-
-  const filteredPlayers = players.filter(p =>
-    !selectedIds.includes(p.id) &&
-    p.name.toLowerCase().includes(search.toLowerCase())
-  )
-
-  async function addNewPlayer() {
-    const raw = search.trim()
+  async function handleAddPlayer() {
+    const raw = newPlayerName.trim()
     if (!raw) return
     const name = raw.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
     const existing = players.find(p => p.name.toLowerCase() === name.toLowerCase())
     if (existing) {
-      setError(`"${existing.name}" already exists — selected them.`)
+      setError(`"${existing.name}" already exists.`)
       setTimeout(() => setError(''), 2000)
-      selectPlayer(existing)
+      setNewPlayerName('')
       return
     }
-    const { data, error } = await supabase
-      .from('players')
-      .insert({ league_id: leagueId, name })
-      .select()
-      .single()
+    setAddingPlayer(true)
+    const { data, error } = await supabase.from('players').insert({ league_id: leagueId, name }).select().single()
     if (data && !error) {
       queryClient.invalidateQueries({ queryKey: qk.players(leagueId!) })
-      selectPlayer(data as Player)
+      setNewPlayerName('')
     }
-  }
-
-  function selectPlayer(player: Player) {
-    if (activeTeam === null) return
-    const slot = activeTeam * 2 + pickingPlayer
-    const next = [...selected]
-    next[slot] = player
-    setSelected(next)
-    if (pickingPlayer === 0) {
-      // Advance to P2
-      setPickingPlayer(1)
-      setSearch('')
-    } else {
-      // Both picked — show score modal for this team
-      const team = activeTeam
-      setActiveTeam(null)
-      setSearch('')
-      setScoringTeam(team)
-    }
-  }
-
-  function dismissScore() {
-    const team = scoringTeam
-    setScoringTeam(null)
-    // After entering Team 1 score, auto-open Team 2 picker if Team 2 is empty
-    if (team === 0 && !selected[2] && !selected[3]) {
-      setTimeout(() => openTeam(1), 150)
-    }
-  }
-
-  function clearSlot(idx: number, e: React.MouseEvent) {
-    e.stopPropagation()
-    const next = [...selected]
-    next[idx] = null
-    setSelected(next)
+    setAddingPlayer(false)
   }
 
   async function handleSave() {
     if (!league) { setError('League data not loaded yet.'); return }
-    if (selected.some(p => !p)) { setError('Please fill all 4 player slots.'); return }
+    if (!p1 || !p2 || !p3 || !p4) { setError('Please select all 4 players.'); return }
+    if (new Set([p1, p2, p3, p4]).size < 4) { setError('All 4 players must be different.'); return }
     const s1 = parseInt(team1Score)
     const s2 = parseInt(team2Score)
     if (isNaN(s1) || isNaN(s2) || s1 < 0 || s2 < 0) { setError('Enter valid scores.'); return }
@@ -130,22 +59,16 @@ export default function AddMatch() {
     const { error } = await supabase.from('matches').insert({
       session_id: sessionId,
       scoring_type: scoringType,
-      team1_p1: selected[0]!.id,
-      team1_p2: selected[1]!.id,
-      team2_p1: selected[2]!.id,
-      team2_p2: selected[3]!.id,
-      team1_score: s1,
-      team2_score: s2,
+      team1_p1: p1, team1_p2: p2,
+      team2_p1: p3, team2_p2: p4,
+      team1_score: s1, team2_score: s2,
     })
     if (error) { setError('Failed to save match.'); setSaving(false); return }
     queryClient.invalidateQueries({ queryKey: qk.sessionMatches(sessionId!) })
     navigate(-1)
   }
 
-  const teamConfig = [
-    { label: 'Team 1', color: 'blue', base: 0, ring: 'ring-blue-400', border: 'border-blue-800', bg: 'bg-blue-900/20', textColor: 'text-blue-400' },
-    { label: 'Team 2', color: 'purple', base: 2, ring: 'ring-purple-400', border: 'border-purple-800', bg: 'bg-purple-900/20', textColor: 'text-purple-400' },
-  ]
+  const allPlayers: Player[] = players as Player[]
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-5">
@@ -154,170 +77,80 @@ export default function AddMatch() {
         <h1 className="text-xl font-bold text-white">Add Match</h1>
       </div>
 
-      {/* Player Slots */}
-      <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-4">
-        <h2 className="font-semibold text-white">Players</h2>
+      {/* Players + Scores */}
+      <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
+
+        {/* Team headers + player dropdowns */}
         <div className="grid grid-cols-2 gap-3">
-          {teamConfig.map((team, t) => (
-            <div
-              key={t}
-              onClick={() => openTeam(t)}
-              className={`${team.bg} border ${team.border} rounded-xl p-3 flex flex-col gap-2 cursor-pointer transition-all hover:opacity-90 ${activeTeam === t ? `ring-2 ${team.ring}` : ''}`}
-            >
-              <span className={`text-xs font-semibold uppercase tracking-wide ${team.textColor}`}>{team.label}</span>
-              {[0, 1].map(p => {
-                const idx = team.base + p
-                return selected[idx] ? (
-                  <div key={p} className="flex items-center justify-between bg-black/20 rounded-lg px-2 py-1.5">
-                    <span className="text-white font-semibold text-sm truncate">{selected[idx]!.name}</span>
-                    <button onClick={e => clearSlot(idx, e)} className="text-gray-500 hover:text-red-400 text-xs ml-1 shrink-0">✕</button>
-                  </div>
-                ) : (
-                  <div key={p} className="flex items-center bg-black/10 rounded-lg px-2 py-1.5">
-                    <span className="text-gray-500 text-sm">Player {p + 1}</span>
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-blue-400 uppercase tracking-wide">Team 1</span>
+            <select value={p1} onChange={e => setP1(e.target.value)} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-2 outline-none">
+              <option value="">Player 1</option>
+              {allPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <select value={p2} onChange={e => setP2(e.target.value)} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-2 outline-none">
+              <option value="">Player 2</option>
+              {allPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-purple-400 uppercase tracking-wide">Team 2</span>
+            <select value={p3} onChange={e => setP3(e.target.value)} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-2 outline-none">
+              <option value="">Player 3</option>
+              {allPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <select value={p4} onChange={e => setP4(e.target.value)} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-2 outline-none">
+              <option value="">Player 4</option>
+              {allPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
         </div>
+
+        {/* Score row — aligned under each team */}
+        <div className="grid grid-cols-2 gap-3 items-center">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-blue-400">Team 1 score</span>
+            <input
+              type="text" inputMode="numeric" pattern="[0-9]*"
+              className="w-full bg-gray-700 rounded-lg px-2 py-3 text-white text-2xl font-bold text-center outline-none focus:ring-2 focus:ring-blue-500"
+              value={team1Score} onChange={e => setTeam1Score(e.target.value)} placeholder="0"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-purple-400">Team 2 score</span>
+            <input
+              type="text" inputMode="numeric" pattern="[0-9]*"
+              className="w-full bg-gray-700 rounded-lg px-2 py-3 text-white text-2xl font-bold text-center outline-none focus:ring-2 focus:ring-purple-500"
+              value={team2Score} onChange={e => setTeam2Score(e.target.value)} placeholder="0"
+            />
+          </div>
+        </div>
+
+        <p className="text-gray-500 text-xs text-center">
+          {scoringType === 'americano' ? '🎯 Americano · points scored by each team' : '🎾 Traditional · games won by each team'}
+        </p>
       </div>
 
-      {/* Player Picker Modal */}
-      {activeTeam !== null && (() => {
-        const tc = teamConfig[activeTeam]
-        return (
-          <div className="fixed inset-0 bg-black/80 flex flex-col z-50" onClick={() => setActiveTeam(null)}>
-            <div className="flex-1" />
-            <div className="w-full bg-gray-900 rounded-t-3xl p-5 flex flex-col gap-4 h-[100dvh]" style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top))' }} onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className={`font-semibold ${tc.textColor}`}>{tc.label}</h3>
-                  {pickingPlayer === 1 && selected[activeTeam * 2] ? (
-                    <p className="text-sm text-gray-400">
-                      <span className={`font-semibold ${tc.textColor}`}>{selected[activeTeam * 2]!.name}</span> & <span className="italic">picking partner…</span>
-                    </p>
-                  ) : (
-                    <p className="text-xs text-gray-400">Pick first player</p>
-                  )}
-                </div>
-                <button onClick={() => setActiveTeam(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
-              </div>
-
-              {/* Combined search / add input */}
-              <input
-                ref={searchRef}
-                className="bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Search or type new name..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && search.trim() && filteredPlayers.length === 0) addNewPlayer()
-                }}
-              />
-
-              {/* Player list */}
-              <div className="overflow-y-auto flex flex-col gap-2">
-                {/* Add new option — shown when typed name doesn't match any existing player */}
-                {search.trim() && !players.some(p => p.name.toLowerCase() === search.trim().toLowerCase()) && (
-                  <button
-                    onClick={addNewPlayer}
-                    className="w-full text-left bg-blue-900/30 hover:bg-blue-900/50 border border-blue-800 rounded-xl px-4 py-3 text-blue-300 font-medium transition-colors"
-                  >
-                    + Add "{search.trim()}"
-                  </button>
-                )}
-                {filteredPlayers.length === 0 && !search.trim() && (
-                  <p className="text-gray-500 text-sm text-center py-2">No players yet — type a name to add one.</p>
-                )}
-                {filteredPlayers.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => selectPlayer(p)}
-                    className={`w-full text-left bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 font-medium transition-colors ${tc.textColor}`}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* Score Entry Modal */}
-      {scoringTeam !== null && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4" onClick={() => dismissScore()}>
-          <div className="w-full max-w-sm bg-gray-900 rounded-2xl p-5 flex flex-col gap-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-white">{teamConfig[scoringTeam].label} Score</h3>
-                <p className={`text-xs font-medium ${teamConfig[scoringTeam].textColor}`}>
-                  {selected[scoringTeam * 2]?.name} & {selected[scoringTeam * 2 + 1]?.name}
-                </p>
-              </div>
-              <button onClick={() => dismissScore()} className="text-gray-400 hover:text-white text-xl">✕</button>
-            </div>
-            <p className="text-gray-500 text-xs">
-              {scoringType === 'americano' ? 'Points scored (e.g. 17)' : 'Games won (e.g. 6)'}
-            </p>
-            <input
-              ref={scoreRef}
-              autoFocus
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              className={`w-full bg-gray-800 rounded-lg px-2 py-4 text-white text-3xl font-bold text-center outline-none focus:ring-2 ${scoringTeam === 0 ? 'focus:ring-blue-500' : 'focus:ring-purple-500'}`}
-              value={scoringTeam === 0 ? team1Score : team2Score}
-              onChange={e => scoringTeam === 0 ? setTeam1Score(e.target.value) : setTeam2Score(e.target.value)}
-              placeholder="0"
-              onKeyDown={e => { if (e.key === 'Enter') dismissScore() }}
-            />
-            <button
-              onClick={() => dismissScore()}
-              className={`w-full font-semibold rounded-lg py-3 text-white transition-colors ${scoringTeam === 0 ? 'bg-blue-600 hover:bg-blue-500' : 'bg-purple-600 hover:bg-purple-500'}`}
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Score */}
-      <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-white">Score</h2>
-          <span className="text-xs text-gray-500">{scoringType === 'americano' ? '🎯 Americano' : '🎾 Traditional'}</span>
-        </div>
-        <p className="text-gray-500 text-xs -mt-1">
-          {scoringType === 'americano' ? 'Points scored by each team (e.g. 17 – 15)' : 'Games won by each team (e.g. 6 – 4)'}
-        </p>
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0 flex flex-col gap-1">
-            <label className="text-xs text-blue-400">Team 1</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              className="w-full bg-gray-800 rounded-lg px-2 py-3 text-white text-xl font-bold text-center outline-none focus:ring-2 focus:ring-blue-500"
-              value={team1Score}
-              onChange={e => setTeam1Score(e.target.value)}
-              placeholder="0"
-            />
-          </div>
-          <span className="text-gray-500 text-2xl font-bold mt-4 shrink-0">–</span>
-          <div className="flex-1 min-w-0 flex flex-col gap-1">
-            <label className="text-xs text-purple-400">Team 2</label>
-            <input
-              type="number"
-              min="0"
-              inputMode="numeric"
-              className="w-full bg-gray-800 rounded-lg px-2 py-3 text-white text-xl font-bold text-center outline-none focus:ring-2 focus:ring-purple-500"
-              value={team2Score}
-              onChange={e => setTeam2Score(e.target.value)}
-              placeholder="0"
-            />
-          </div>
+      {/* Add new player */}
+      <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-2">
+        <p className="text-xs text-gray-400 font-medium">New player not in the list?</p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            className="flex-1 bg-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
+            placeholder="Type full name..."
+            value={newPlayerName}
+            onChange={e => setNewPlayerName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleAddPlayer() }}
+          />
+          <button
+            onClick={handleAddPlayer}
+            disabled={addingPlayer || !newPlayerName.trim()}
+            className="bg-green-700 hover:bg-green-600 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shrink-0"
+          >
+            {addingPlayer ? '...' : '+ Add'}
+          </button>
         </div>
       </div>
 
@@ -331,7 +164,6 @@ export default function AddMatch() {
         {saving ? 'Saving...' : 'Save Match'}
       </button>
 
-      {/* Footer */}
       <div className="text-center py-2">
         <p className="text-gray-500 text-sm">🎾 Powered by <Link to="/" className="text-green-400 hover:text-green-300 font-semibold transition-colors">Padello</Link></p>
         <Link to="/" className="text-gray-500 hover:text-white text-xs transition-colors">Start your own league →</Link>
