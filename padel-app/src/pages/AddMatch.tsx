@@ -145,8 +145,8 @@ export default function AddMatch() {
         <div className="flex gap-2">
           <input
             type="text"
-            className="flex-1 bg-gray-700 rounded-lg px-3 py-2 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="Type full name..."
+            className="flex-1 bg-gray-700 rounded-lg px-3 py-2 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-gray-500"
+            placeholder="Player name"
             value={newPlayerName}
             onChange={e => setNewPlayerName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleAddPlayer() }}
@@ -154,9 +154,9 @@ export default function AddMatch() {
           <button
             onClick={handleAddPlayer}
             disabled={addingPlayer || !newPlayerName.trim()}
-            className="bg-green-700 hover:bg-green-600 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shrink-0"
+            className="bg-gray-600 hover:bg-gray-500 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shrink-0"
           >
-            {addingPlayer ? '...' : '+ Add'}
+            {addingPlayer ? '...' : 'Add new player'}
           </button>
         </div>
       </div>
