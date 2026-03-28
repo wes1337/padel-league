@@ -94,46 +94,59 @@ function PlayerPicker({
           <div className="w-10 h-1 bg-gray-700 rounded-full" />
         </div>
 
-        {/* Slot tabs — shows which slot is active and what's filled */}
+        {/* Slot tabs — Team 1 left column, Team 2 right column */}
         <div className="px-4 pt-2 pb-3 shrink-0">
           <div className="grid grid-cols-2 gap-2">
-            {[0, 1, 2, 3].map(i => {
-              const t = teamOf(i)
-              const isActive = i === currentSlot
-              const filled = slots[i]
-              return (
-                <button
-                  key={i}
-                  onClick={() => setCurrentSlot(i)}
-                  className={`rounded-xl px-3 py-2 text-left transition-all border ${
-                    isActive
-                      ? `${TEAM_COLORS.bgDim[t]} ${TEAM_COLORS.border[t]} border`
-                      : 'bg-gray-800 border-transparent'
-                  }`}
-                >
-                  <p className={`text-xs font-semibold ${TEAM_COLORS.label[t]}`}>{slotLabels[i]}</p>
-                  <p className={`text-sm font-medium truncate ${filled ? 'text-white' : 'text-gray-500'}`}>
-                    {filled ? filled.name : 'Not set'}
-                  </p>
-                </button>
-              )
-            })}
+            {/* Team 1 column */}
+            <div className="flex flex-col gap-2">
+              {[0, 1].map(i => {
+                const isActive = i === currentSlot
+                const filled = slots[i]
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentSlot(i)}
+                    className={`rounded-xl px-3 py-2 text-left transition-all border ${
+                      isActive
+                        ? `${TEAM_COLORS.bgDim[0]} ${TEAM_COLORS.border[0]} border`
+                        : 'bg-gray-800 border-transparent'
+                    }`}
+                  >
+                    <p className={`text-xs font-semibold ${TEAM_COLORS.label[0]}`}>{slotLabels[i]}</p>
+                    <p className={`text-sm font-medium truncate ${filled ? 'text-white' : 'text-gray-500'}`}>
+                      {filled ? filled.name : 'Not set'}
+                    </p>
+                  </button>
+                )
+              })}
+            </div>
+            {/* Team 2 column */}
+            <div className="flex flex-col gap-2">
+              {[2, 3].map(i => {
+                const isActive = i === currentSlot
+                const filled = slots[i]
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentSlot(i)}
+                    className={`rounded-xl px-3 py-2 text-left transition-all border ${
+                      isActive
+                        ? `${TEAM_COLORS.bgDim[1]} ${TEAM_COLORS.border[1]} border`
+                        : 'bg-gray-800 border-transparent'
+                    }`}
+                  >
+                    <p className={`text-xs font-semibold ${TEAM_COLORS.label[1]}`}>{slotLabels[i]}</p>
+                    <p className={`text-sm font-medium truncate ${filled ? 'text-white' : 'text-gray-500'}`}>
+                      {filled ? filled.name : 'Not set'}
+                    </p>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Search */}
-        <div className="px-4 pb-3 shrink-0">
-          <input
-            ref={searchRef}
-            type="text"
-            className="w-full bg-gray-800 rounded-xl px-4 py-3 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
-            placeholder="Search player..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-
-        {/* Player list */}
+        {/* Player list — above the search so keyboard doesn't cover results */}
         <div className="overflow-y-auto flex flex-col px-4 pb-4 gap-1.5">
           {filtered.length === 0 && (
             <p className="text-gray-500 text-sm text-center py-6">No players found</p>
@@ -164,8 +177,16 @@ function PlayerPicker({
           })}
         </div>
 
-        {/* Done button */}
-        <div className="px-4 pb-4 pt-2 shrink-0 border-t border-gray-800">
+        {/* Search + Done — pinned at bottom so keyboard pushes list up, not results down */}
+        <div className="px-4 pb-4 pt-2 shrink-0 border-t border-gray-800 flex flex-col gap-2">
+          <input
+            ref={searchRef}
+            type="text"
+            className="w-full bg-gray-800 rounded-xl px-4 py-3 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
+            placeholder="Search player..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
           <button
             onClick={onClose}
             className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-xl py-3 transition-colors"
@@ -329,7 +350,11 @@ export default function AddMatch() {
         <button
           onClick={handleAddPlayer}
           disabled={addingPlayer || !newPlayerName.trim()}
-          className="w-full bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
+          className={`w-full disabled:opacity-40 text-sm font-semibold py-2.5 rounded-lg transition-colors ${
+            newPlayerName.trim()
+              ? 'bg-yellow-400 hover:bg-yellow-300 text-gray-900'
+              : 'bg-gray-700 hover:bg-gray-600 text-white'
+          }`}
         >
           {addingPlayer ? 'Adding...' : 'Add new player'}
         </button>
