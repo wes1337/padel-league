@@ -37,6 +37,7 @@ function PlayerPicker({
   const [search, setSearch] = useState('')
   const [adding, setAdding] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+  const dragStartY = useRef<number | null>(null)
 
   // Reset when opened
   useEffect(() => {
@@ -105,11 +106,22 @@ function PlayerPicker({
       <div className="absolute inset-0 bg-black/60" />
       <div
         className="relative bg-gray-900 rounded-t-3xl flex flex-col"
-        style={{ maxHeight: '94dvh', paddingBottom: 'env(safe-area-inset-bottom)' }}
+        style={{ maxHeight: '88dvh', paddingBottom: 'env(safe-area-inset-bottom)' }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Handle */}
-        <div className="flex justify-center pt-2 pb-1 shrink-0">
+        {/* Handle — drag down to close */}
+        <div
+          className="flex justify-center pt-3 pb-2 shrink-0 cursor-grab active:cursor-grabbing"
+          onTouchStart={e => { dragStartY.current = e.touches[0].clientY }}
+          onTouchEnd={e => {
+            if (dragStartY.current !== null) {
+              const delta = e.changedTouches[0].clientY - dragStartY.current
+              if (delta > 60) onClose()
+              dragStartY.current = null
+            }
+          }}
+          onClick={onClose}
+        >
           <div className="w-10 h-1 bg-gray-500 rounded-full" />
         </div>
 
@@ -124,10 +136,10 @@ function PlayerPicker({
                 <button
                   key={i}
                   onClick={() => setCurrentSlot(i)}
-                  className={`rounded-lg px-2 py-2 text-left transition-all border ${
+                  className={`rounded-lg px-2 py-2 text-left transition-all ${
                     isActive
-                      ? `${filled ? TEAM_COLORS.bgDim[t] : 'bg-gray-800'} ${TEAM_COLORS.border[t]}`
-                      : `${filled ? TEAM_COLORS.bgDim[t] : 'bg-gray-800'} border-transparent`
+                      ? `border-2 ${filled ? TEAM_COLORS.bgDim[t] : 'bg-gray-800'} ${TEAM_COLORS.border[t]}`
+                      : `border border-transparent ${filled ? TEAM_COLORS.bgDim[t] : 'bg-gray-800'}`
                   }`}
                 >
                   <p className={`text-[10px] font-semibold leading-tight ${TEAM_COLORS.label[t]}`}>{slotLabels[i]}</p>
