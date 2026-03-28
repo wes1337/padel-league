@@ -105,70 +105,45 @@ function PlayerPicker({
       <div className="absolute inset-0 bg-black/60" />
       <div
         className="relative bg-gray-900 rounded-t-3xl flex flex-col"
-        style={{ maxHeight: '85dvh', paddingBottom: 'env(safe-area-inset-bottom)' }}
+        style={{ maxHeight: '94dvh', paddingBottom: 'env(safe-area-inset-bottom)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1 shrink-0">
+        <div className="flex justify-center pt-2 pb-1 shrink-0">
           <div className="w-10 h-1 bg-gray-700 rounded-full" />
         </div>
 
-        {/* Slot tabs — Team 1 left column, Team 2 right column */}
-        <div className="px-4 pt-2 pb-3 shrink-0">
-          <div className="grid grid-cols-2 gap-2">
-            {/* Team 1 column */}
-            <div className="flex flex-col gap-2">
-              {[0, 1].map(i => {
-                const isActive = i === currentSlot
-                const filled = slots[i]
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentSlot(i)}
-                    className={`rounded-xl px-3 py-2 text-left transition-all border ${
-                      isActive
-                        ? `${filled ? TEAM_COLORS.bgDim[0] : 'bg-gray-800'} ${TEAM_COLORS.border[0]}`
-                        : `${filled ? TEAM_COLORS.bgDim[0] : 'bg-gray-800'} border-transparent`
-                    }`}
-                  >
-                    <p className={`text-xs font-semibold ${TEAM_COLORS.label[0]}`}>{slotLabels[i]}</p>
-                    <p className={`text-sm font-medium truncate ${filled ? 'text-white' : 'text-gray-500'}`}>
-                      {filled ? filled.name : 'Not set'}
-                    </p>
-                  </button>
-                )
-              })}
-            </div>
-            {/* Team 2 column */}
-            <div className="flex flex-col gap-2">
-              {[2, 3].map(i => {
-                const isActive = i === currentSlot
-                const filled = slots[i]
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentSlot(i)}
-                    className={`rounded-xl px-3 py-2 text-left transition-all border ${
-                      isActive
-                        ? `${filled ? TEAM_COLORS.bgDim[1] : 'bg-gray-800'} ${TEAM_COLORS.border[1]}`
-                        : `${filled ? TEAM_COLORS.bgDim[1] : 'bg-gray-800'} border-transparent`
-                    }`}
-                  >
-                    <p className={`text-xs font-semibold ${TEAM_COLORS.label[1]}`}>{slotLabels[i]}</p>
-                    <p className={`text-sm font-medium truncate ${filled ? 'text-white' : 'text-gray-500'}`}>
-                      {filled ? filled.name : 'Not set'}
-                    </p>
-                  </button>
-                )
-              })}
-            </div>
+        {/* Slot tabs — 4 columns, single line each */}
+        <div className="px-3 pt-1.5 pb-2 shrink-0">
+          <div className="grid grid-cols-4 gap-1.5">
+            {[0, 1, 2, 3].map(i => {
+              const isActive = i === currentSlot
+              const filled = slots[i]
+              const t = teamOf(i)
+              return (
+                <button
+                  key={i}
+                  onClick={() => setCurrentSlot(i)}
+                  className={`rounded-lg px-2 py-1.5 text-left transition-all border ${
+                    isActive
+                      ? `${filled ? TEAM_COLORS.bgDim[t] : 'bg-gray-800'} ${TEAM_COLORS.border[t]}`
+                      : `${filled ? TEAM_COLORS.bgDim[t] : 'bg-gray-800'} border-transparent`
+                  }`}
+                >
+                  <p className={`text-[10px] font-semibold leading-tight ${TEAM_COLORS.label[t]}`}>{slotLabels[i]}</p>
+                  <p className={`text-xs font-medium truncate leading-tight mt-0.5 ${filled ? 'text-white' : 'text-gray-500'}`}>
+                    {filled ? filled.name : '—'}
+                  </p>
+                </button>
+              )
+            })}
           </div>
         </div>
 
         {/* Player list — above the search so keyboard doesn't cover results */}
-        <div className="overflow-y-auto flex flex-col px-4 pb-4 gap-1.5">
+        <div className="overflow-y-auto flex flex-col px-3 pb-2 gap-1">
           {filtered.length === 0 && !search.trim() && (
-            <p className="text-gray-500 text-sm text-center py-6">No players found</p>
+            <p className="text-gray-500 text-sm text-center py-4">No players found</p>
           )}
           {filtered.map(p => {
             const assignedSlot = slots.findIndex(s => s?.id === p.id)
@@ -179,7 +154,7 @@ function PlayerPicker({
               <button
                 key={p.id}
                 onClick={() => handleTap(p)}
-                className={`w-full text-left px-4 py-3.5 rounded-xl font-medium text-base transition-colors flex items-center justify-between ${
+                className={`w-full text-left px-3 py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-between ${
                   isAssigned
                     ? `${TEAM_COLORS.bg[assignedTeam!]} text-white`
                     : 'bg-gray-800 hover:bg-gray-700 text-white'
@@ -197,12 +172,12 @@ function PlayerPicker({
         </div>
 
         {/* Search + Done — pinned at bottom so keyboard pushes list up, not results down */}
-        <div className="px-4 pb-4 pt-2 shrink-0 border-t border-gray-800 flex flex-col gap-2">
+        <div className="px-3 pb-3 pt-2 shrink-0 border-t border-gray-800 flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <input
               ref={searchRef}
               type="text"
-              className="flex-1 bg-gray-800 rounded-xl px-4 py-3 text-base text-white placeholder-yellow-700 outline-none border border-yellow-500/40 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+              className="flex-1 bg-gray-800 rounded-xl px-3 py-2.5 text-sm text-white placeholder-yellow-700 outline-none border border-yellow-500/40 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
               placeholder="Search / Add New Player"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -211,7 +186,7 @@ function PlayerPicker({
               <button
                 onClick={handleQuickAdd}
                 disabled={adding}
-                className="shrink-0 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-gray-900 font-semibold text-sm px-3 py-3 rounded-xl transition-colors"
+                className="shrink-0 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-gray-900 font-semibold text-sm px-3 py-2.5 rounded-xl transition-colors"
               >
                 {adding ? '...' : 'Add +'}
               </button>
@@ -219,7 +194,7 @@ function PlayerPicker({
           </div>
           <button
             onClick={onClose}
-            className={`w-full font-semibold rounded-xl py-3 transition-colors ${
+            className={`w-full font-semibold rounded-xl py-2.5 text-sm transition-colors ${
               slots.every(Boolean)
                 ? 'bg-green-600 hover:bg-green-500 text-white'
                 : 'bg-gray-700 hover:bg-gray-600 text-white'
