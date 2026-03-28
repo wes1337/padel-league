@@ -110,7 +110,7 @@ function PlayerPicker({
       >
         {/* Handle */}
         <div className="flex justify-center pt-2 pb-1 shrink-0">
-          <div className="w-10 h-1 bg-gray-700 rounded-full" />
+          <div className="w-10 h-1 bg-gray-600/50 rounded-full" />
         </div>
 
         {/* Slot tabs — 4 columns, single line each */}
@@ -172,12 +172,13 @@ function PlayerPicker({
         </div>
 
         {/* Search + Done — pinned at bottom so keyboard pushes list up, not results down */}
-        <div className="px-3 pb-3 pt-2 shrink-0 border-t border-gray-800 flex flex-col gap-2">
+        <div className="px-3 pb-3 pt-2 shrink-0 border-t border-gray-700 bg-gray-950 flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <input
               ref={searchRef}
               type="text"
-              className="flex-1 bg-gray-800 rounded-xl px-3 py-2.5 text-sm text-white placeholder-yellow-700 outline-none border border-yellow-500/40 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+              className="flex-1 bg-gray-800 rounded-xl px-3 py-2.5 text-white placeholder-yellow-700 outline-none border border-yellow-500/40 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+              style={{ fontSize: '16px' }}
               placeholder="Search / Add New Player"
               value={search}
               onChange={e => setSearch(e.target.value)}
