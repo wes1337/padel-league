@@ -7,8 +7,8 @@ import App from './App.tsx'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60 * 1000,       // data fresh for 1 min — refetches in background after that
-      gcTime: 5 * 60 * 1000,      // keep unused cache for 5 min
+      staleTime: 3 * 60 * 1000,   // data fresh for 3 min — each query overrides this as needed
+      gcTime: 15 * 60 * 1000,     // keep unused cache 15 min — means navigating back is instant
       retry: 1,
     },
   },

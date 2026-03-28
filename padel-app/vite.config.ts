@@ -25,4 +25,18 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split heavy vendor libs into separately cached files.
+          // Browser only re-downloads a chunk when IT changes, not when app code changes.
+          'vendor-react':    ['react', 'react-dom', 'react-router-dom'],
+          'vendor-query':    ['@tanstack/react-query'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-charts':   ['recharts'],
+        },
+      },
+    },
+  },
 })

@@ -34,7 +34,7 @@ export function useSessions(leagueId: string | undefined) {
       return (data ?? []) as Session[]
     },
     enabled: !!leagueId,
-    staleTime: 30 * 1000,
+    staleTime: 3 * 60 * 1000,   // 3 min — mutations invalidate manually anyway
   })
 }
 
@@ -46,7 +46,7 @@ export function useSession(sessionId: string | undefined) {
       return data as Session | null
     },
     enabled: !!sessionId,
-    staleTime: 30 * 1000,
+    staleTime: 3 * 60 * 1000,
   })
 }
 
@@ -70,7 +70,7 @@ export function useSessionMatches(sessionId: string | undefined) {
       return (data ?? []) as Match[]
     },
     enabled: !!sessionId,
-    staleTime: 30 * 1000,
+    staleTime: 3 * 60 * 1000,
   })
 }
 
@@ -82,7 +82,7 @@ export function useSessionSignups(sessionId: string | undefined) {
       return (data ?? []) as SessionSignup[]
     },
     enabled: !!sessionId,
-    staleTime: 30 * 1000,
+    staleTime: 3 * 60 * 1000,
   })
 }
 
@@ -98,7 +98,7 @@ export function useSignupCounts(sessionIds: string[]) {
       return counts
     },
     enabled: sessionIds.length > 0,
-    staleTime: 30 * 1000,
+    staleTime: 3 * 60 * 1000,
   })
 }
 
@@ -112,6 +112,6 @@ export function useMultiSessionMatches(sessionIds: string[], cacheScope: string)
       return (data ?? []) as Match[]
     },
     enabled: sessionIds.length > 0,
-    staleTime: 30 * 1000,
+    staleTime: 3 * 60 * 1000,
   })
 }
