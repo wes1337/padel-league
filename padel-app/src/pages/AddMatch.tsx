@@ -80,7 +80,6 @@ function PlayerPicker({
 
   const slotLabels = ['Team 1 · P1', 'Team 1 · P2', 'Team 2 · P1', 'Team 2 · P2']
   const filtered = players.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-  const team = teamOf(currentSlot)
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
