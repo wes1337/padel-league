@@ -111,7 +111,7 @@ function PlayerPicker({
       >
         {/* Handle — drag down to close */}
         <div
-          className="flex justify-center pt-3 pb-2 shrink-0 cursor-grab active:cursor-grabbing"
+          className="flex justify-center pt-3 pb-4 shrink-0 cursor-grab active:cursor-grabbing"
           onTouchStart={e => { dragStartY.current = e.touches[0].clientY }}
           onTouchEnd={e => {
             if (dragStartY.current !== null) {
@@ -153,7 +153,7 @@ function PlayerPicker({
         </div>
 
         {/* Player list — above the search so keyboard doesn't cover results */}
-        <div className="overflow-y-auto flex flex-col px-3 pb-2 gap-1">
+        <div className="overflow-y-auto flex flex-col px-3 pb-2 gap-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-yellow-500 [&::-webkit-scrollbar-thumb]:rounded-full">
           {filtered.length === 0 && !search.trim() && (
             <p className="text-gray-500 text-sm text-center py-4">No players found</p>
           )}
@@ -189,7 +189,7 @@ function PlayerPicker({
             <input
               ref={searchRef}
               type="text"
-              className="flex-1 bg-gray-800 rounded-xl px-3 py-2.5 text-white placeholder-yellow-700 outline-none border border-yellow-500/40 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+              className="flex-1 bg-gray-800 rounded-xl px-3 py-2.5 text-white placeholder-yellow-700 outline-none border border-yellow-500/70 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
               style={{ fontSize: '16px' }}
               placeholder="Search / Add New Player"
               value={search}
