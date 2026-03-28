@@ -153,34 +153,38 @@ function PlayerPicker({
         </div>
 
         {/* Player list — above the search so keyboard doesn't cover results */}
-        <div className="overflow-y-auto flex flex-col px-3 pb-2 gap-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-yellow-500 [&::-webkit-scrollbar-thumb]:rounded-full">
-          {filtered.length === 0 && !search.trim() && (
-            <p className="text-gray-500 text-sm text-center py-4">No players found</p>
-          )}
-          {filtered.map(p => {
-            const assignedSlot = slots.findIndex(s => s?.id === p.id)
-            const isAssigned = assignedSlot !== -1
-            const assignedTeam = isAssigned ? teamOf(assignedSlot) : null
+        <div className="relative flex flex-col min-h-0 flex-1">
+          <div className="overflow-y-auto flex flex-col px-3 pb-2 gap-1 h-full">
+            {filtered.length === 0 && !search.trim() && (
+              <p className="text-gray-500 text-sm text-center py-4">No players found</p>
+            )}
+            {filtered.map(p => {
+              const assignedSlot = slots.findIndex(s => s?.id === p.id)
+              const isAssigned = assignedSlot !== -1
+              const assignedTeam = isAssigned ? teamOf(assignedSlot) : null
 
-            return (
-              <button
-                key={p.id}
-                onClick={() => handleTap(p)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-between ${
-                  isAssigned
-                    ? `${TEAM_COLORS.bg[assignedTeam!]} text-white`
-                    : 'bg-gray-800 hover:bg-gray-700 text-white'
-                }`}
-              >
-                <span>{p.name}</span>
-                {isAssigned && (
-                  <span className="text-xs opacity-80 shrink-0 ml-2">
-                    {slotLabels[assignedSlot]} ✓
-                  </span>
-                )}
-              </button>
-            )
-          })}
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => handleTap(p)}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-between ${
+                    isAssigned
+                      ? `${TEAM_COLORS.bg[assignedTeam!]} text-white`
+                      : 'bg-gray-800 hover:bg-gray-700 text-white'
+                  }`}
+                >
+                  <span>{p.name}</span>
+                  {isAssigned && (
+                    <span className="text-xs opacity-80 shrink-0 ml-2">
+                      {slotLabels[assignedSlot]} ✓
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+          {/* Fade hint — always visible, signals more content below */}
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-gray-900 to-transparent" />
         </div>
 
         {/* Search + Done — pinned at bottom so keyboard pushes list up, not results down */}
@@ -189,7 +193,7 @@ function PlayerPicker({
             <input
               ref={searchRef}
               type="text"
-              className="flex-1 bg-gray-800 rounded-xl px-3 py-2.5 text-white placeholder-yellow-700 outline-none border border-yellow-500/70 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+              className="flex-1 bg-gray-800 rounded-xl px-3 py-2.5 text-white placeholder-yellow-700 outline-none border border-yellow-500/50 focus:border-yellow-400"
               style={{ fontSize: '16px' }}
               placeholder="Search / Add New Player"
               value={search}
