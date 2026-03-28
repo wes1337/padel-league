@@ -329,7 +329,9 @@ export default function AddMatch() {
       team1_score: s1, team2_score: s2,
     })
     if (error) { setError('Failed to save match.'); setSaving(false); return }
-    queryClient.invalidateQueries({ queryKey: qk.sessionMatches(sessionId!) })
+    // Invalidate all match caches — covers both the session view and the
+    // season leaderboard (useMultiSessionMatches) so both update instantly.
+    queryClient.invalidateQueries({ queryKey: ['matches'] })
     navigate(-1)
   }
 

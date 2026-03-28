@@ -137,13 +137,13 @@ export default function SessionPage() {
     }).eq('id', matchId)
     setEditingMatchId(null)
     setEditState(null)
-    queryClient.invalidateQueries({ queryKey: qk.sessionMatches(sessionId!) })
+    queryClient.invalidateQueries({ queryKey: ['matches'] })
   }
 
   async function deleteMatch(matchId: string) {
     if (!window.confirm('Delete this match? This cannot be undone.')) return
     await supabase.from('matches').delete().eq('id', matchId)
-    queryClient.invalidateQueries({ queryKey: qk.sessionMatches(sessionId!) })
+    queryClient.invalidateQueries({ queryKey: ['matches'] })
   }
 
   function revealAwards() {
