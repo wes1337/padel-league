@@ -202,8 +202,8 @@ function PlayerPicker({
             <input
               ref={searchRef}
               type="text"
-              className="flex-1 bg-gray-800 rounded-xl px-4 py-3 text-base text-white placeholder-yellow-600 outline-none border border-yellow-500 focus:ring-2 focus:ring-yellow-400"
-              placeholder="Search player..."
+              className="flex-1 bg-gray-800 rounded-xl px-4 py-3 text-base text-white placeholder-yellow-700 outline-none border border-yellow-500/40 focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400"
+              placeholder="Search / Add New Player"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
@@ -268,9 +268,11 @@ export default function AddMatch() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [activeSlot, setActiveSlot] = useState(0)
   const [newPlayerName, setNewPlayerName] = useState('')
+  const [showAddInput, setShowAddInput] = useState(false)
   const [addingPlayer, setAddingPlayer] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const addInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { window.scrollTo(0, 0) }, [sessionId])
 
@@ -299,6 +301,7 @@ export default function AddMatch() {
         [...old, data as Player].sort((a, b) => a.name.localeCompare(b.name))
       )
       setNewPlayerName('')
+      setShowAddInput(false)
     }
     setAddingPlayer(false)
   }
@@ -385,27 +388,43 @@ export default function AddMatch() {
       </div>
 
       {/* Add new player */}
-      <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-2">
-        <input
-          type="text"
-          className="w-full bg-gray-700 rounded-lg px-3 py-2.5 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-yellow-500"
-          placeholder="Player name"
-          value={newPlayerName}
-          onChange={e => setNewPlayerName(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleAddPlayer() }}
-        />
+      {showAddInput ? (
+        <div className="bg-gray-900 rounded-2xl px-4 py-3 flex items-center gap-2">
+          <input
+            ref={addInputRef}
+            type="text"
+            autoFocus
+            className="flex-1 bg-gray-700 rounded-lg px-3 py-2.5 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-yellow-500"
+            placeholder="Player name"
+            value={newPlayerName}
+            onChange={e => setNewPlayerName(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleAddPlayer()
+              if (e.key === 'Escape') { setShowAddInput(false); setNewPlayerName('') }
+            }}
+            onBlur={() => { if (!newPlayerName.trim()) { setShowAddInput(false) } }}
+          />
+          <button
+            onMouseDown={e => e.preventDefault()}
+            onClick={handleAddPlayer}
+            disabled={addingPlayer || !newPlayerName.trim()}
+            className={`shrink-0 disabled:opacity-40 text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors ${
+              newPlayerName.trim()
+                ? 'bg-yellow-400 hover:bg-yellow-300 text-gray-900'
+                : 'bg-gray-700 text-gray-400'
+            }`}
+          >
+            {addingPlayer ? '...' : 'Add'}
+          </button>
+        </div>
+      ) : (
         <button
-          onClick={handleAddPlayer}
-          disabled={addingPlayer || !newPlayerName.trim()}
-          className={`w-full disabled:opacity-40 text-sm font-semibold py-2.5 rounded-lg transition-colors border ${
-            newPlayerName.trim()
-              ? 'bg-yellow-400 hover:bg-yellow-300 border-yellow-400 text-gray-900'
-              : 'bg-transparent border-yellow-500 text-yellow-500'
-          }`}
+          onClick={() => setShowAddInput(true)}
+          className="w-full bg-transparent border border-yellow-500 text-yellow-500 text-sm font-semibold py-3 rounded-2xl transition-colors hover:bg-yellow-500/10"
         >
-          {addingPlayer ? 'Adding...' : 'Add new player'}
+          + Add new player
         </button>
-      </div>
+      )}
 
       {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 
