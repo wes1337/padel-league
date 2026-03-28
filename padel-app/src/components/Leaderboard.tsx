@@ -13,9 +13,22 @@ interface Props {
 const medals = ['🥇', '🥈', '🥉']
 
 export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId, poopPlayerId, movements }: Props) {
+  // Compute true ranks accounting for ties (same winRate + pointDiff = same rank)
+  const ranks: number[] = []
+  stats.forEach((s, i) => {
+    if (i === 0) { ranks.push(1); return }
+    const prev = stats[i - 1]
+    if (s.winRate === prev.winRate && s.pointDiff === prev.pointDiff) {
+      ranks.push(ranks[i - 1])
+    } else {
+      ranks.push(i + 1)
+    }
+  })
+
   return (
     <div className="flex flex-col gap-2">
       {stats.map((s, i) => {
+        const rank = ranks[i]
         const diff = s.pointDiff
         const winPct = Math.round(s.winRate * 100)
         const isCrown = crownPlayerId && s.player.id === crownPlayerId
@@ -31,7 +44,7 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
             {/* Rank + movement */}
             <div className="flex flex-col items-center shrink-0 w-7">
               <span className="text-lg text-center">
-                {i < 3 ? medals[i] : <span className="text-gray-400 text-sm font-semibold">{i + 1}</span>}
+                {rank <= 3 ? medals[rank - 1] : <span className="text-gray-400 text-sm font-semibold">{rank}</span>}
               </span>
               {movements && (
                 <span className={`text-xs font-bold leading-none ${isNew ? 'text-blue-400' : !movement || movement === 0 ? 'text-gray-600' : movement > 0 ? 'text-green-400' : 'text-red-400'}`}>

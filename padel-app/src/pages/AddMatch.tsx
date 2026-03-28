@@ -31,7 +31,7 @@ export default function AddMatch() {
     const raw = newPlayerName.trim()
     if (!raw) return
     const name = raw.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
-    const existing = players.find(p => p.name.toLowerCase() === name.toLowerCase())
+    const existing = (players as Player[]).find(p => p.name.toLowerCase() === name.toLowerCase())
     if (existing) {
       setError(`"${existing.name}" already exists.`)
       setTimeout(() => setError(''), 2000)
@@ -41,7 +41,10 @@ export default function AddMatch() {
     setAddingPlayer(true)
     const { data, error } = await supabase.from('players').insert({ league_id: leagueId, name }).select().single()
     if (data && !error) {
-      queryClient.invalidateQueries({ queryKey: qk.players(leagueId!) })
+      // Optimistically update cache so player appears immediately without waiting for refetch
+      queryClient.setQueryData(qk.players(leagueId!), (old: Player[] = []) =>
+        [...old, data as Player].sort((a, b) => a.name.localeCompare(b.name))
+      )
       setNewPlayerName('')
     }
     setAddingPlayer(false)
@@ -70,6 +73,10 @@ export default function AddMatch() {
 
   const allPlayers: Player[] = players as Player[]
 
+  // Select class — red text when no player chosen (makes placeholder obvious), white when chosen
+  const selectCls = (val: string) =>
+    `w-full bg-gray-700 rounded-lg px-3 py-3 text-base outline-none ${val ? 'text-white' : 'text-red-400'}`
+
   return (
     <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-5">
       <div className="flex items-center gap-3">
@@ -82,25 +89,25 @@ export default function AddMatch() {
 
         {/* Team headers + player dropdowns */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2">
             <span className="text-xs font-semibold text-blue-400 uppercase tracking-wide">Team 1</span>
-            <select value={p1} onChange={e => setP1(e.target.value)} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-2 outline-none">
+            <select value={p1} onChange={e => setP1(e.target.value)} className={selectCls(p1)}>
               <option value="">Player 1</option>
               {allPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-            <select value={p2} onChange={e => setP2(e.target.value)} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-2 outline-none">
+            <select value={p2} onChange={e => setP2(e.target.value)} className={selectCls(p2)}>
               <option value="">Player 2</option>
               {allPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2">
             <span className="text-xs font-semibold text-purple-400 uppercase tracking-wide">Team 2</span>
-            <select value={p3} onChange={e => setP3(e.target.value)} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-2 outline-none">
+            <select value={p3} onChange={e => setP3(e.target.value)} className={selectCls(p3)}>
               <option value="">Player 3</option>
               {allPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-            <select value={p4} onChange={e => setP4(e.target.value)} className="w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-2 outline-none">
+            <select value={p4} onChange={e => setP4(e.target.value)} className={selectCls(p4)}>
               <option value="">Player 4</option>
               {allPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
@@ -108,7 +115,7 @@ export default function AddMatch() {
         </div>
 
         {/* Score row — aligned under each team */}
-        <div className="grid grid-cols-2 gap-3 items-center">
+        <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
             <span className="text-xs text-blue-400">Team 1 score</span>
             <input
@@ -132,13 +139,13 @@ export default function AddMatch() {
         </p>
       </div>
 
-      {/* Add new player */}
+      {/* Add new player — text-base (16px) prevents iOS zoom */}
       <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-2">
         <p className="text-xs text-gray-400 font-medium">New player not in the list?</p>
         <div className="flex gap-2">
           <input
             type="text"
-            className="flex-1 bg-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
+            className="flex-1 bg-gray-700 rounded-lg px-3 py-2 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
             placeholder="Type full name..."
             value={newPlayerName}
             onChange={e => setNewPlayerName(e.target.value)}
