@@ -127,8 +127,8 @@ function PlayerPicker({
                     onClick={() => setCurrentSlot(i)}
                     className={`rounded-xl px-3 py-2 text-left transition-all border ${
                       isActive
-                        ? `${TEAM_COLORS.bgDim[0]} ${TEAM_COLORS.border[0]} border`
-                        : 'bg-gray-800 border-transparent'
+                        ? `${filled ? TEAM_COLORS.bgDim[0] : 'bg-gray-800'} ${TEAM_COLORS.border[0]}`
+                        : `${filled ? TEAM_COLORS.bgDim[0] : 'bg-gray-800'} border-transparent`
                     }`}
                   >
                     <p className={`text-xs font-semibold ${TEAM_COLORS.label[0]}`}>{slotLabels[i]}</p>
@@ -150,8 +150,8 @@ function PlayerPicker({
                     onClick={() => setCurrentSlot(i)}
                     className={`rounded-xl px-3 py-2 text-left transition-all border ${
                       isActive
-                        ? `${TEAM_COLORS.bgDim[1]} ${TEAM_COLORS.border[1]} border`
-                        : 'bg-gray-800 border-transparent'
+                        ? `${filled ? TEAM_COLORS.bgDim[1] : 'bg-gray-800'} ${TEAM_COLORS.border[1]}`
+                        : `${filled ? TEAM_COLORS.bgDim[1] : 'bg-gray-800'} border-transparent`
                     }`}
                   >
                     <p className={`text-xs font-semibold ${TEAM_COLORS.label[1]}`}>{slotLabels[i]}</p>
