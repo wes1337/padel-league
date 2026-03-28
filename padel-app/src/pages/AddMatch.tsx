@@ -110,7 +110,7 @@ function PlayerPicker({
       >
         {/* Handle */}
         <div className="flex justify-center pt-2 pb-1 shrink-0">
-          <div className="w-10 h-1 bg-gray-600/50 rounded-full" />
+          <div className="w-10 h-1 bg-gray-500 rounded-full" />
         </div>
 
         {/* Slot tabs — 4 columns, single line each */}
@@ -124,14 +124,14 @@ function PlayerPicker({
                 <button
                   key={i}
                   onClick={() => setCurrentSlot(i)}
-                  className={`rounded-lg px-2 py-1.5 text-left transition-all border ${
+                  className={`rounded-lg px-2 py-2 text-left transition-all border ${
                     isActive
                       ? `${filled ? TEAM_COLORS.bgDim[t] : 'bg-gray-800'} ${TEAM_COLORS.border[t]}`
                       : `${filled ? TEAM_COLORS.bgDim[t] : 'bg-gray-800'} border-transparent`
                   }`}
                 >
                   <p className={`text-[10px] font-semibold leading-tight ${TEAM_COLORS.label[t]}`}>{slotLabels[i]}</p>
-                  <p className={`text-xs font-medium truncate leading-tight mt-0.5 ${filled ? 'text-white' : 'text-gray-500'}`}>
+                  <p className={`text-sm font-semibold truncate leading-tight mt-0.5 ${filled ? 'text-white' : 'text-gray-500'}`}>
                     {filled ? filled.name : '—'}
                   </p>
                 </button>
