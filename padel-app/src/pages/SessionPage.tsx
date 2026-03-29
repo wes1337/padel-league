@@ -465,16 +465,21 @@ export default function SessionPage() {
                 const leagueName = league?.name || 'Padello'
                 const text = `🎾 ${leagueName} — ${datePart}\n\nJoin the session, log your scores, and see who takes the crown.\n\n${shareUrl}`
                 if (typeof navigator.share === 'function') {
-                  const file = await drawInviteCard(leagueName, datePart)
-                  if (file) {
-                    const withFile: ShareData = { text, files: [file] }
-                    if (navigator.canShare?.(withFile)) {
-                      await navigator.share(withFile)
-                      setInviting(false)
-                      return
+                  let shared = false
+                  try {
+                    const file = await drawInviteCard(leagueName, datePart)
+                    if (file) {
+                      const withFile: ShareData = { text, files: [file] }
+                      if (navigator.canShare?.(withFile)) {
+                        await navigator.share(withFile)
+                        shared = true
+                      }
                     }
+                  } catch (e) {
+                    if (e instanceof Error && e.name === 'AbortError') throw e
+                    // file share failed — fall through to text share
                   }
-                  await navigator.share({ title: session?.label || 'Padello', text })
+                  if (!shared) await navigator.share({ title: session?.label || 'Padello', text })
                 } else {
                   navigator.clipboard.writeText(shareUrl)
                   setLinkCopied(true)

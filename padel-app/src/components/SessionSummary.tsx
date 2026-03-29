@@ -146,7 +146,7 @@ function drawChampionCard(player: PlayerStats, label: string): Promise<File | nu
     // "COURT CHAMPION"
     ctx.textAlign = 'center'
     ctx.font = '700 18px system-ui, sans-serif'
-    ctx.fillStyle = '#fbbf24'
+    ctx.fillStyle = '#34d399'
     ctx.letterSpacing = '6px'
     ctx.fillText('COURT CHAMPION', W / 2, 160)
     ctx.letterSpacing = '0px'
@@ -159,9 +159,9 @@ function drawChampionCard(player: PlayerStats, label: string): Promise<File | nu
     // Decorative line
     const lineY = 200
     const lineGrad = ctx.createLinearGradient(pad + 60, lineY, W - pad - 60, lineY)
-    lineGrad.addColorStop(0, 'rgba(251,191,36,0)')
-    lineGrad.addColorStop(0.5, 'rgba(251,191,36,0.3)')
-    lineGrad.addColorStop(1, 'rgba(251,191,36,0)')
+    lineGrad.addColorStop(0, 'rgba(52,211,153,0)')
+    lineGrad.addColorStop(0.5, 'rgba(52,211,153,0.3)')
+    lineGrad.addColorStop(1, 'rgba(52,211,153,0)')
     ctx.fillStyle = lineGrad
     ctx.fillRect(pad + 60, lineY, W - 2 * pad - 120, 1)
 
