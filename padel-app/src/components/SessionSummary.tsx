@@ -18,30 +18,30 @@ function Award({ emoji, title, first, second }: {
   second?: AwardEntry[]
 }) {
   return (
-    <div className="bg-gray-800 rounded-xl p-3 flex flex-col gap-1.5">
-      <p className="text-gray-400 text-xs">{emoji} {title}</p>
+    <div className="bg-gray-100 rounded-xl p-3 flex flex-col gap-1.5">
+      <p className="text-gray-500 text-xs">{emoji} {title}</p>
       <div>
         {first.map((e, i) => (
           <div key={i}>
-            <p className="text-white font-bold text-sm truncate">{e.name}</p>
+            <p className="text-gray-900 font-bold text-sm truncate">{e.name}</p>
             {(e.nameStat || e.stat) && (
               <p className="text-xs flex gap-2">
-                {e.nameStat && <span className="text-gray-400">{e.nameStat}</span>}
-                {e.stat && <span className={e.statColor ?? 'text-gray-400'}>{e.stat}</span>}
+                {e.nameStat && <span className="text-gray-500">{e.nameStat}</span>}
+                {e.stat && <span className={e.statColor ?? 'text-gray-500'}>{e.stat}</span>}
               </p>
             )}
           </div>
         ))}
       </div>
       {second && second.length > 0 && (
-        <div className="border-t border-gray-700 pt-1.5 flex flex-col gap-1">
+        <div className="border-t border-gray-300 pt-1.5 flex flex-col gap-1">
           {second.map((e, i) => (
             <div key={i}>
-              <p className="text-white text-xs font-semibold truncate">{e.name}</p>
+              <p className="text-gray-900 text-xs font-semibold truncate">{e.name}</p>
               {(e.nameStat || e.stat) && (
                 <p className="text-xs flex gap-2">
-                  {e.nameStat && <span className="text-gray-400">{e.nameStat}</span>}
-                  {e.stat && <span className={e.statColor ?? 'text-gray-400'}>{e.stat}</span>}
+                  {e.nameStat && <span className="text-gray-500">{e.nameStat}</span>}
+                  {e.stat && <span className={e.statColor ?? 'text-gray-500'}>{e.stat}</span>}
                 </p>
               )}
             </div>
@@ -364,9 +364,9 @@ export default function SessionSummary({ matches, players, stats, sessionLabel, 
   const topPlayer = stats[0] ?? null
 
   return (
-    <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-4">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-white text-lg">🏆 Session Awards</h2>
+        <h2 className="font-semibold text-gray-900 text-lg">🏆 Session Awards</h2>
         <button
           onClick={handleShare}
           disabled={sharing}
@@ -389,14 +389,14 @@ export default function SessionSummary({ matches, players, stats, sessionLabel, 
         <div className="grid grid-cols-2 gap-2">
           {spoons1.length > 0 && (
             <Award emoji="💀" title="Wooden Spoon"
-              first={spoons1.map(p => ({ name: p.name, nameStat: `${p.wins}W ${p.losses}L`, stat: String(p.scored - p.conceded), statColor: 'text-red-400' }))}
-              second={spoons2.map(p => ({ name: p.name, nameStat: `${p.wins}W ${p.losses}L`, stat: String(p.scored - p.conceded), statColor: 'text-red-400' }))}
+              first={spoons1.map(p => ({ name: p.name, nameStat: `${p.wins}W ${p.losses}L`, stat: String(p.scored - p.conceded), statColor: 'text-red-600' }))}
+              second={spoons2.map(p => ({ name: p.name, nameStat: `${p.wins}W ${p.losses}L`, stat: String(p.scored - p.conceded), statColor: 'text-red-600' }))}
             />
           )}
           {topScorers1.length > 0 && (
             <Award emoji="⚡" title="Top Scorer"
-              first={topScorers1.map(p => ({ name: p.name, nameStat: `${p.wins}W ${p.losses}L`, stat: String(p.scored), statColor: 'text-green-400' }))}
-              second={topScorers2.map(p => ({ name: p.name, nameStat: `${p.wins}W ${p.losses}L`, stat: String(scorer2!.scored), statColor: 'text-green-400' }))}
+              first={topScorers1.map(p => ({ name: p.name, nameStat: `${p.wins}W ${p.losses}L`, stat: String(p.scored), statColor: 'text-green-600' }))}
+              second={topScorers2.map(p => ({ name: p.name, nameStat: `${p.wins}W ${p.losses}L`, stat: String(scorer2!.scored), statColor: 'text-green-600' }))}
             />
           )}
           {bestDefenders1.length > 0 && (

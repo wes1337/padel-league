@@ -34,23 +34,23 @@ function Section({ title, tooltip, children, defaultOpen = true, collapsible = t
   const [open, setOpen] = useState(defaultOpen)
   const [showTip, setShowTip] = useState(false)
   return (
-    <div className="bg-gray-900 rounded-2xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
         <button
           onClick={() => { setShowTip(v => !v); }}
-          className="flex items-center gap-2 text-white font-semibold text-left"
+          className="flex items-center gap-2 text-gray-900 font-semibold text-left"
         >
           {title}
-          <span className="text-gray-500 text-xs bg-gray-800 rounded-full w-4 h-4 flex items-center justify-center shrink-0">i</span>
+          <span className="text-gray-500 text-xs bg-gray-100 rounded-full w-4 h-4 flex items-center justify-center shrink-0">i</span>
         </button>
         {collapsible && (
-          <button onClick={() => setOpen(v => !v)} className="text-gray-400 text-sm px-2">
+          <button onClick={() => setOpen(v => !v)} className="text-gray-500 text-sm px-2">
             {open ? '▲' : '▼'}
           </button>
         )}
       </div>
       {showTip && (
-        <div className="px-4 py-2 bg-gray-800/50 text-gray-400 text-xs border-b border-gray-800">
+        <div className="px-4 py-2 bg-gray-100/50 text-gray-500 text-xs border-b border-gray-200">
           {tooltip}
         </div>
       )}
@@ -62,10 +62,10 @@ function Section({ title, tooltip, children, defaultOpen = true, collapsible = t
 // ── Small stat row ────────────────────────────────────────────────────────────
 function StatRow({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="flex items-start justify-between py-2 border-b border-gray-800 last:border-0 gap-4">
-      <span className="text-gray-400 text-sm shrink-0">{label}</span>
+    <div className="flex items-start justify-between py-2 border-b border-gray-200 last:border-0 gap-4">
+      <span className="text-gray-500 text-sm shrink-0">{label}</span>
       <div className="text-right">
-        <span className="text-white font-semibold text-sm">{value}</span>
+        <span className="text-gray-900 font-semibold text-sm">{value}</span>
         {sub && <p className="text-gray-500 text-xs mt-0.5">{sub}</p>}
       </div>
     </div>
@@ -78,25 +78,25 @@ function PlayerStatRow({ name, wins, losses, diff, highlight, context }: { name:
   const pct = total > 0 ? Math.round((wins / total) * 100) : 0
   const label = context === 'together' ? `${total} ${total === 1 ? 'game' : 'games'} together` : context === 'against' ? `${total} ${total === 1 ? 'game' : 'games'} against` : `${wins}W ${losses}L`
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-gray-800 last:border-0">
+    <div className="flex items-center gap-3 py-2 border-b border-gray-200 last:border-0">
       <div className="flex-1 min-w-0">
-        <span className={`text-sm font-medium ${highlight === 'green' ? 'text-green-400' : highlight === 'red' ? 'text-red-400' : 'text-white'}`}>{name}</span>
-        <p className="text-gray-600 text-xs">{label}</p>
+        <span className={`text-sm font-medium ${highlight === 'green' ? 'text-green-600' : highlight === 'red' ? 'text-red-600' : 'text-gray-900'}`}>{name}</span>
+        <p className="text-gray-500 text-xs">{label}</p>
       </div>
       <span className="text-gray-500 text-xs">
         {context === 'together'
-          ? <><span className="text-green-400">{wins} won</span> · <span className="text-red-400">{losses} lost</span></>
+          ? <><span className="text-green-600">{wins} won</span> · <span className="text-red-600">{losses} lost</span></>
           : context === 'against'
-          ? <><span className="text-green-400">{wins} won</span> · <span className="text-red-400">{losses} lost</span></>
+          ? <><span className="text-green-600">{wins} won</span> · <span className="text-red-600">{losses} lost</span></>
           : <>{wins}W {losses}L</>
         }
       </span>
       {diff !== undefined && (
-        <span className={`text-xs w-10 text-right ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+        <span className={`text-xs w-10 text-right ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-500'}`}>
           {diff > 0 ? `+${diff}` : diff}
         </span>
       )}
-      <span className={`text-sm font-bold w-12 text-right ${pct >= 50 ? 'text-green-400' : 'text-red-400'}`}>{pct}%</span>
+      <span className={`text-sm font-bold w-12 text-right ${pct >= 50 ? 'text-green-600' : 'text-red-600'}`}>{pct}%</span>
     </div>
   )
 }
@@ -326,8 +326,8 @@ export default function PlayerProfile() {
     setKingStats({ sessionsTopped, sessionsAttended: sessionsAttendedSet.size })
   }, [player, allPlayersList, sessions, allMatches, sessionsLoading, matchesLoading, playerId, sessionId])
 
-  if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-400">Loading...</div>
-  if (!player) return <div className="flex justify-center items-center min-h-screen text-red-400">Player not found.</div>
+  if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-500">Loading...</div>
+  if (!player) return <div className="flex justify-center items-center min-h-screen text-red-600">Player not found.</div>
 
   // ── Core stats ──────────────────────────────────────────────────────────────
   const wins = matchDetails.filter(m => m.won).length
@@ -431,13 +431,13 @@ export default function PlayerProfile() {
     <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link to={sessionId ? `/l/${leagueId}/session/${sessionId}` : `/l/${leagueId}`} className="text-gray-400 hover:text-white text-xl">←</Link>
+        <Link to={sessionId ? `/l/${leagueId}/session/${sessionId}` : `/l/${leagueId}`} className="text-gray-500 hover:text-gray-700 text-xl">←</Link>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white">{player.name}</h1>
-            {!sessionId && lowAttendance && <span className="text-yellow-500 text-lg" title="Low attendance">⚠</span>}
+            <h1 className="text-2xl font-bold text-gray-900">{player.name}</h1>
+            {!sessionId && lowAttendance && <span className="text-yellow-600 text-lg" title="Low attendance">⚠</span>}
           </div>
-          <p className="text-gray-400 text-sm">{sessionId ? 'Session stats' : `${new Date().getFullYear()} Season · all stats below are season totals`}</p>
+          <p className="text-gray-500 text-sm">{sessionId ? 'Session stats' : `${new Date().getFullYear()} Season · all stats below are season totals`}</p>
         </div>
       </div>
 
@@ -447,28 +447,28 @@ export default function PlayerProfile() {
           { label: 'Matches', value: totalPlayed },
           { label: 'Win Rate', value: `${winRate}%` },
           { label: 'Pt Diff', value: pointDiff > 0 ? `+${pointDiff}` : String(pointDiff) },
-          { label: 'Wins', value: wins, color: wins > 0 ? 'text-green-400' : 'text-white' },
-          { label: 'Losses', value: losses, color: losses > 0 ? 'text-red-400' : 'text-white' },
+          { label: 'Wins', value: wins, color: wins > 0 ? 'text-green-600' : 'text-gray-900' },
+          { label: 'Losses', value: losses, color: losses > 0 ? 'text-red-600' : 'text-gray-900' },
           ...(sessionId && sessionRank ? [{ label: 'Session Rank', value: `${sessionRank.rank} / ${sessionRank.total}` }] : []),
           ...(!sessionId ? [{ label: 'Attendance', value: `${attendancePct}%` }] : []),
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-gray-900 rounded-xl p-3 flex flex-col gap-0.5">
-            <span className="text-gray-400 text-xs uppercase tracking-wide">{label}</span>
-            <span className={`${color ?? 'text-white'} text-xl font-bold`}>{value}</span>
+          <div key={label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex flex-col gap-0.5">
+            <span className="text-gray-500 text-xs uppercase tracking-wide">{label}</span>
+            <span className={`${color ?? 'text-gray-900'} text-xl font-bold`}>{value}</span>
           </div>
         ))}
       </div>
 
       {/* King of the Court */}
       {!sessionId && kingStats && (
-        <div className="bg-yellow-900/20 border border-yellow-700 rounded-2xl p-4 flex items-center gap-4">
+        <div className="bg-yellow-50 border border-yellow-300 rounded-2xl p-4 flex items-center gap-4">
           <span className="text-4xl">👑</span>
           <div className="flex-1">
-            <p className="text-yellow-400 font-bold text-sm uppercase tracking-wide">Court Champion</p>
-            <p className="text-white text-2xl font-bold mt-0.5">
+            <p className="text-yellow-600 font-bold text-sm uppercase tracking-wide">Court Champion</p>
+            <p className="text-gray-900 text-2xl font-bold mt-0.5">
               {kingStats.sessionsTopped} session{kingStats.sessionsTopped !== 1 ? 's' : ''} topped
             </p>
-            <p className="text-gray-400 text-xs mt-0.5">
+            <p className="text-gray-500 text-xs mt-0.5">
               {kingStats.sessionsAttended > 0
                 ? `${Math.round((kingStats.sessionsTopped / kingStats.sessionsAttended) * 100)}% of sessions attended`
                 : 'No sessions yet'}
@@ -495,15 +495,15 @@ export default function PlayerProfile() {
           })
         }
         return (
-          <div className="bg-gray-900 rounded-2xl p-4">
-            <h2 className="font-semibold text-white mb-1">Season Rank Trend</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <h2 className="font-semibold text-gray-900 mb-1">Season Rank Trend</h2>
             <p className="text-gray-500 text-xs mb-3">Tap a line to compare</p>
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={rankHistory} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
                 <XAxis dataKey="label" tick={false} tickLine={false} axisLine={false} />
                 <YAxis reversed domain={[1, 'dataMax']} tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12, color: '#111827' }}
                   labelStyle={{ color: '#9ca3af' }}
                   formatter={(val, key) => {
                     const name = allPlayerNames.find(p => p.id === String(key))?.name ?? String(key)
@@ -527,7 +527,7 @@ export default function PlayerProfile() {
               </LineChart>
             </ResponsiveContainer>
             {/* Player chips — tap to compare */}
-            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-800">
+            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-200">
               {allPlayerNames.filter(p => p.id !== playerId).map(p => {
                 const color = highlightedIds.get(p.id)
                 const active = !!color
@@ -535,7 +535,7 @@ export default function PlayerProfile() {
                   <button
                     key={p.id}
                     onClick={() => togglePlayer(p.id)}
-                    className={`flex items-center gap-1.5 text-xs rounded-full px-3 py-1 transition-colors ${active ? 'bg-gray-700 text-white' : 'bg-gray-800 text-gray-500'}`}
+                    className={`flex items-center gap-1.5 text-xs rounded-full px-3 py-1 transition-colors ${active ? 'bg-gray-200 text-gray-900' : 'bg-gray-100 text-gray-500'}`}
                   >
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: active ? color : '#4b5563' }} />
                     {p.name}
@@ -556,15 +556,15 @@ export default function PlayerProfile() {
           return { game: `G${i + 1}`, diff: running, won: m.won }
         })
         return (
-          <div className="bg-gray-900 rounded-2xl p-4">
-            <h2 className="font-semibold text-white mb-1">Session Momentum</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+            <h2 className="font-semibold text-gray-900 mb-1">Session Momentum</h2>
             <p className="text-gray-500 text-xs mb-3">Cumulative point diff after each game</p>
             <ResponsiveContainer width="100%" height={160}>
               <LineChart data={momentumData} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
                 <XAxis dataKey="game" tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{ background: '#1f2937', border: 'none', borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12, color: '#111827' }}
                   labelStyle={{ color: '#9ca3af' }}
                   formatter={(val) => [`${Number(val) > 0 ? '+' : ''}${val}`, 'Pt diff']}
                 />
@@ -577,7 +577,7 @@ export default function PlayerProfile() {
                 />
               </LineChart>
             </ResponsiveContainer>
-            <p className="text-gray-600 text-xs mt-2">● green = win · ● red = loss</p>
+            <p className="text-gray-500 text-xs mt-2">● green = win · ● red = loss</p>
           </div>
         )
       })()}
@@ -602,15 +602,15 @@ export default function PlayerProfile() {
           <>
             {bestPartner && bestPartner !== worstPartner && (
               <div className="flex gap-3 mb-3">
-                <div className="flex-1 bg-green-900/30 border border-green-800 rounded-xl p-3 text-center">
-                  <p className="text-green-400 text-xs mb-1">Best partner</p>
-                  <p className="text-white font-bold">{bestPartner.name}</p>
-                  <p className="text-gray-400 text-xs">Won {bestPartner.wins} of {bestPartner.wins + bestPartner.losses} ({Math.round(bestPartner.wins / (bestPartner.wins + bestPartner.losses) * 100)}%)</p>
+                <div className="flex-1 bg-green-50 border border-green-300 rounded-xl p-3 text-center">
+                  <p className="text-green-600 text-xs mb-1">Best partner</p>
+                  <p className="text-gray-900 font-bold">{bestPartner.name}</p>
+                  <p className="text-gray-500 text-xs">Won {bestPartner.wins} of {bestPartner.wins + bestPartner.losses} ({Math.round(bestPartner.wins / (bestPartner.wins + bestPartner.losses) * 100)}%)</p>
                 </div>
-                <div className="flex-1 bg-red-900/30 border border-red-800 rounded-xl p-3 text-center">
-                  <p className="text-red-400 text-xs mb-1">Worst partner</p>
-                  <p className="text-white font-bold">{worstPartner.name}</p>
-                  <p className="text-gray-400 text-xs">Won {worstPartner.wins} of {worstPartner.wins + worstPartner.losses} ({Math.round(worstPartner.wins / (worstPartner.wins + worstPartner.losses) * 100)}%)</p>
+                <div className="flex-1 bg-red-50 border border-red-300 rounded-xl p-3 text-center">
+                  <p className="text-red-600 text-xs mb-1">Worst partner</p>
+                  <p className="text-gray-900 font-bold">{worstPartner.name}</p>
+                  <p className="text-gray-500 text-xs">Won {worstPartner.wins} of {worstPartner.wins + worstPartner.losses} ({Math.round(worstPartner.wins / (worstPartner.wins + worstPartner.losses) * 100)}%)</p>
                 </div>
               </div>
             )}
@@ -631,17 +631,17 @@ export default function PlayerProfile() {
             {(nemesis || favVictim) && (
               <div className="flex gap-3 mb-3">
                 {favVictim && (
-                  <div className="flex-1 bg-green-900/30 border border-green-800 rounded-xl p-3 text-center">
-                    <p className="text-green-400 text-xs mb-1">Favourite victim</p>
-                    <p className="text-white font-bold">{favVictim.name}</p>
-                    <p className="text-gray-400 text-xs">You won {favVictim.wins} of {favVictim.wins + favVictim.losses} ({Math.round(favVictim.wins / (favVictim.wins + favVictim.losses) * 100)}%)</p>
+                  <div className="flex-1 bg-green-50 border border-green-300 rounded-xl p-3 text-center">
+                    <p className="text-green-600 text-xs mb-1">Favourite victim</p>
+                    <p className="text-gray-900 font-bold">{favVictim.name}</p>
+                    <p className="text-gray-500 text-xs">You won {favVictim.wins} of {favVictim.wins + favVictim.losses} ({Math.round(favVictim.wins / (favVictim.wins + favVictim.losses) * 100)}%)</p>
                   </div>
                 )}
                 {nemesis && (
-                  <div className="flex-1 bg-red-900/30 border border-red-800 rounded-xl p-3 text-center">
-                    <p className="text-red-400 text-xs mb-1">Nemesis</p>
-                    <p className="text-white font-bold">{nemesis.name}</p>
-                    <p className="text-gray-400 text-xs">You lost {nemesis.losses} of {nemesis.wins + nemesis.losses} ({Math.round(nemesis.losses / (nemesis.wins + nemesis.losses) * 100)}%)</p>
+                  <div className="flex-1 bg-red-50 border border-red-300 rounded-xl p-3 text-center">
+                    <p className="text-red-600 text-xs mb-1">Nemesis</p>
+                    <p className="text-gray-900 font-bold">{nemesis.name}</p>
+                    <p className="text-gray-500 text-xs">You lost {nemesis.losses} of {nemesis.wins + nemesis.losses} ({Math.round(nemesis.losses / (nemesis.wins + nemesis.losses) * 100)}%)</p>
                   </div>
                 )}
               </div>
@@ -674,25 +674,25 @@ export default function PlayerProfile() {
         {sessionHistory.length === 0 ? <p className="text-gray-500 text-sm">No sessions yet.</p> : (
           <>
             {bestSession && (
-              <div className="bg-yellow-900/20 border border-yellow-800 rounded-xl p-3 mb-3 text-center">
-                <p className="text-yellow-400 text-xs mb-1">Best session</p>
-                <p className="text-white font-bold">{bestSession.label}</p>
-                <p className="text-gray-400 text-xs">{bestSession.wins}W {bestSession.losses}L · {Math.round(bestSession.wins / (bestSession.wins + bestSession.losses) * 100)}% win rate</p>
+              <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-3 mb-3 text-center">
+                <p className="text-yellow-600 text-xs mb-1">Best session</p>
+                <p className="text-gray-900 font-bold">{bestSession.label}</p>
+                <p className="text-gray-500 text-xs">{bestSession.wins}W {bestSession.losses}L · {Math.round(bestSession.wins / (bestSession.wins + bestSession.losses) * 100)}% win rate</p>
               </div>
             )}
             {sessionHistory.map(s => {
               const pct = Math.round(s.wins / (s.wins + s.losses) * 100)
               const diff = s.diff
               return (
-                <Link key={s.id} to={`/l/${leagueId}/session/${s.id}`} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0 hover:bg-gray-800/50 -mx-1 px-1 rounded transition-colors">
-                  <span className="text-gray-400 text-sm">{s.label}</span>
+                <Link key={s.id} to={`/l/${leagueId}/session/${s.id}`} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 hover:bg-gray-100/50 -mx-1 px-1 rounded transition-colors">
+                  <span className="text-gray-500 text-sm">{s.label}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500 text-xs">{s.wins}W {s.losses}L</span>
-                    <span className={`text-sm font-bold w-10 text-right ${pct >= 50 ? 'text-green-400' : 'text-red-400'}`}>{pct}%</span>
-                    <span className={`text-xs w-10 text-right ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                    <span className={`text-sm font-bold w-10 text-right ${pct >= 50 ? 'text-green-600' : 'text-red-600'}`}>{pct}%</span>
+                    <span className={`text-xs w-10 text-right ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                       {diff > 0 ? `+${diff}` : diff}
                     </span>
-                    <span className="text-gray-600 text-xs">→</span>
+                    <span className="text-gray-400 text-xs">→</span>
                   </div>
                 </Link>
               )
@@ -708,22 +708,22 @@ export default function PlayerProfile() {
             {matchDetails.map(m => {
               const diff = m.myScore - m.oppScore
               return (
-              <div key={m.id} className="bg-gray-800 rounded-xl px-4 py-3">
+              <div key={m.id} className="bg-gray-100 rounded-xl px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${m.draw ? 'bg-gray-600 text-gray-200' : m.won ? 'bg-green-700 text-green-100' : 'bg-red-800 text-red-100'}`}>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${m.draw ? 'bg-gray-300 text-gray-700' : m.won ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {m.draw ? 'D' : m.won ? 'W' : 'L'}
                     </span>
                     <div>
-                      <span className="text-white font-bold">{m.myScore} – {m.oppScore}</span>
-                      <span className={`ml-1.5 text-xs ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                      <span className="text-gray-900 font-bold">{m.myScore} – {m.oppScore}</span>
+                      <span className={`ml-1.5 text-xs ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                         {diff > 0 ? `+${diff}` : diff}
                       </span>
                     </div>
                   </div>
                   <span className="text-gray-500 text-xs">{m.sessionLabel}</span>
                 </div>
-                <div className="mt-1 text-gray-400 text-xs">
+                <div className="mt-1 text-gray-500 text-xs">
                   With {m.partner} · vs {m.opponents}
                 </div>
               </div>
@@ -734,8 +734,8 @@ export default function PlayerProfile() {
 
       {/* Footer */}
       <div className="text-center py-2">
-        <p className="text-gray-500 text-sm">🎾 Powered by <Link to="/" className="text-green-400 hover:text-green-300 font-semibold transition-colors">Padello</Link></p>
-        <Link to="/" className="text-gray-500 hover:text-white text-xs transition-colors">Start your own league →</Link>
+        <p className="text-gray-500 text-sm">🎾 Powered by <Link to="/" className="text-green-600 hover:text-green-700 font-semibold transition-colors">Padello</Link></p>
+        <Link to="/" className="text-gray-500 hover:text-gray-700 text-xs transition-colors">Start your own league →</Link>
       </div>
     </div>
   )

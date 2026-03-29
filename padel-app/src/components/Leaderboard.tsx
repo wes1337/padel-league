@@ -39,15 +39,15 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
           <Link
             key={s.player.id}
             to={sessionId ? `/l/${leagueId}/session/${sessionId}/player/${s.player.id}` : `/l/${leagueId}/player/${s.player.id}`}
-            className="flex items-center gap-3 bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
+            className="flex items-center gap-3 bg-gray-100 hover:bg-gray-200 rounded-xl px-4 py-3 transition-colors"
           >
             {/* Rank + movement */}
             <div className="flex flex-col items-center shrink-0 w-7">
               <span className="text-lg text-center">
-                {rank <= 3 ? medals[rank - 1] : <span className="text-gray-400 text-sm font-semibold">{rank}</span>}
+                {rank <= 3 ? medals[rank - 1] : <span className="text-gray-500 text-sm font-semibold">{rank}</span>}
               </span>
               {movements && (
-                <span className={`text-xs font-bold leading-none ${isNew ? 'text-blue-400' : !movement || movement === 0 ? 'text-gray-600' : movement > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <span className={`text-xs font-bold leading-none ${isNew ? 'text-blue-600' : !movement || movement === 0 ? 'text-gray-400' : movement > 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {isNew ? 'NEW' : !movement || movement === 0 ? '–' : movement > 0 ? `↑${movement}` : `↓${Math.abs(movement)}`}
                 </span>
               )}
@@ -56,21 +56,21 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
             {/* Name + badge */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-white font-semibold truncate">{s.player.name}</span>
+                <span className="text-gray-900 font-semibold truncate">{s.player.name}</span>
                 {isCrown && <span className="shrink-0">👑</span>}
                 {isPoop && <span className="shrink-0">💩</span>}
                 {s.lowAttendance && (
-                  <span className="text-yellow-500 text-sm shrink-0" title={`Low attendance (${Math.round(s.attendancePct * 100)}%)`}>⚠</span>
+                  <span className="text-yellow-600 text-sm shrink-0" title={`Low attendance (${Math.round(s.attendancePct * 100)}%)`}>⚠</span>
                 )}
               </div>
-              <div className="text-gray-400 text-xs mt-0.5">
+              <div className="text-gray-500 text-xs mt-0.5">
                 {s.wins}W – {s.losses}L · {winPct}% win rate
               </div>
             </div>
 
             {/* Point diff */}
             <div className="shrink-0">
-              <div className={`text-sm font-semibold ${diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+              <div className={`text-sm font-semibold ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                 {diff > 0 ? `+${diff}` : diff}
               </div>
             </div>

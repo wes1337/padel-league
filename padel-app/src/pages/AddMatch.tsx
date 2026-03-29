@@ -6,10 +6,10 @@ import { usePlayers, useLeague, qk } from '../lib/queries'
 import type { Player } from '../types'
 
 const TEAM_COLORS = {
-  label:  ['text-blue-400',   'text-purple-400'],
+  label:  ['text-blue-600',   'text-purple-600'],
   ring:   ['focus:ring-blue-500', 'focus:ring-purple-500'],
   bg:     ['bg-blue-600',     'bg-purple-600'],
-  bgDim:  ['bg-blue-900/50',  'bg-purple-900/50'],
+  bgDim:  ['bg-blue-50',  'bg-purple-50'],
   border: ['border-blue-500', 'border-purple-500'],
 }
 
@@ -103,9 +103,9 @@ function PlayerPicker({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/60" />
+      <div className="absolute inset-0 bg-black/30" />
       <div
-        className="relative bg-gray-900 rounded-t-3xl flex flex-col"
+        className="relative bg-white rounded-t-3xl flex flex-col"
         style={{ maxHeight: '88dvh', paddingBottom: 'env(safe-area-inset-bottom)' }}
         onClick={e => e.stopPropagation()}
       >
@@ -122,7 +122,7 @@ function PlayerPicker({
           }}
           onClick={onClose}
         >
-          <div className="w-10 h-1 bg-gray-500 rounded-full" />
+          <div className="w-10 h-1 bg-gray-300 rounded-full" />
         </div>
 
         {/* Slot tabs — 4 columns, single line each */}
@@ -138,12 +138,12 @@ function PlayerPicker({
                   onClick={() => setCurrentSlot(i)}
                   className={`rounded-lg px-2 py-2 text-left transition-all ${
                     isActive
-                      ? `border-2 ${filled ? TEAM_COLORS.bgDim[t] : 'bg-gray-800'} ${TEAM_COLORS.border[t]}`
-                      : `border border-transparent ${filled ? TEAM_COLORS.bgDim[t] : 'bg-gray-800'}`
+                      ? `border-2 ${filled ? TEAM_COLORS.bgDim[t] : 'bg-gray-100'} ${TEAM_COLORS.border[t]}`
+                      : `border border-transparent ${filled ? TEAM_COLORS.bgDim[t] : 'bg-gray-100'}`
                   }`}
                 >
                   <p className={`text-[10px] font-semibold leading-tight ${TEAM_COLORS.label[t]}`}>{slotLabels[i]}</p>
-                  <p className={`text-sm font-semibold truncate leading-tight mt-0.5 ${filled ? 'text-white' : 'text-gray-500'}`}>
+                  <p className={`text-sm font-semibold truncate leading-tight mt-0.5 ${filled ? 'text-gray-900' : 'text-gray-500'}`}>
                     {filled ? filled.name : '—'}
                   </p>
                 </button>
@@ -170,7 +170,7 @@ function PlayerPicker({
                   className={`w-full text-left px-3 py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-between ${
                     isAssigned
                       ? `${TEAM_COLORS.bg[assignedTeam!]} text-white`
-                      : 'bg-gray-800 hover:bg-gray-700 text-white'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
                   }`}
                 >
                   <span>{p.name}</span>
@@ -184,16 +184,16 @@ function PlayerPicker({
             })}
           </div>
           {/* Fade hint — always visible, signals more content below */}
-          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-14 bg-gradient-to-t from-yellow-500/30 via-yellow-500/10 to-transparent" />
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-14 bg-gradient-to-t from-white via-white/60 to-transparent" />
         </div>
 
         {/* Search + Done — pinned at bottom so keyboard pushes list up, not results down */}
-        <div className="px-3 pb-3 pt-2 shrink-0 border-t border-gray-700 bg-gray-950 flex flex-col gap-2">
+        <div className="px-3 pb-3 pt-2 shrink-0 border-t border-gray-300 bg-gray-50 flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <input
               ref={searchRef}
               type="text"
-              className="flex-1 bg-gray-800 rounded-xl px-3 py-2.5 text-white placeholder-yellow-700 outline-none border border-yellow-500/50 focus:border-yellow-400"
+              className="flex-1 bg-white rounded-xl px-3 py-2.5 text-gray-900 placeholder-gray-400 outline-none border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-500"
               style={{ fontSize: '16px' }}
               placeholder="Search / Add New Player"
               value={search}
@@ -214,7 +214,7 @@ function PlayerPicker({
             className={`w-full font-semibold rounded-xl py-2.5 text-sm transition-colors ${
               slots.every(Boolean)
                 ? 'bg-green-600 hover:bg-green-500 text-white'
-                : 'bg-gray-700 hover:bg-gray-600 text-white'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
             }`}
           >
             Done
@@ -236,7 +236,7 @@ function SlotButton({ player, label, teamIdx, onClick }: {
       className={`w-full text-left rounded-xl px-3 py-3 text-base font-medium transition-colors active:opacity-70 ${
         player
           ? `${TEAM_COLORS.bgDim[teamIdx]} ${TEAM_COLORS.label[teamIdx]} border ${TEAM_COLORS.border[teamIdx]}`
-          : 'bg-gray-700 text-red-400 border border-transparent'
+          : 'bg-gray-200 text-red-600 border border-transparent'
       }`}
     >
       {player ? player.name : label}
@@ -338,20 +338,20 @@ export default function AddMatch() {
   return (
     <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-5">
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-white text-xl">←</button>
-        <h1 className="text-xl font-bold text-white">Add Match</h1>
+        <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-gray-700 text-xl">←</button>
+        <h1 className="text-xl font-bold text-gray-900">Add Match</h1>
       </div>
 
       {/* Players + Scores */}
-      <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold text-blue-400 uppercase tracking-wide">Team 1</span>
+            <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Team 1</span>
             <SlotButton player={slots[0]} label="Player 1" teamIdx={0} onClick={() => openPicker(0)} />
             <SlotButton player={slots[1]} label="Player 2" teamIdx={0} onClick={() => openPicker(1)} />
           </div>
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold text-purple-400 uppercase tracking-wide">Team 2</span>
+            <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Team 2</span>
             <SlotButton player={slots[2]} label="Player 3" teamIdx={1} onClick={() => openPicker(2)} />
             <SlotButton player={slots[3]} label="Player 4" teamIdx={1} onClick={() => openPicker(3)} />
           </div>
@@ -359,18 +359,18 @@ export default function AddMatch() {
 
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-blue-400">Team 1 score</span>
+            <span className="text-xs text-blue-600">Team 1 score</span>
             <input
               type="text" inputMode="numeric" pattern="[0-9]*"
-              className="w-full bg-gray-700 rounded-lg px-2 py-3 text-white text-2xl font-bold text-center outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-gray-50 border border-gray-300 rounded-lg px-2 py-3 text-gray-900 text-2xl font-bold text-center outline-none focus:ring-2 focus:ring-blue-500"
               value={team1Score} onChange={e => setTeam1Score(e.target.value)} placeholder="0"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-purple-400">Team 2 score</span>
+            <span className="text-xs text-purple-600">Team 2 score</span>
             <input
               type="text" inputMode="numeric" pattern="[0-9]*"
-              className="w-full bg-gray-700 rounded-lg px-2 py-3 text-white text-2xl font-bold text-center outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full bg-gray-50 border border-gray-300 rounded-lg px-2 py-3 text-gray-900 text-2xl font-bold text-center outline-none focus:ring-2 focus:ring-purple-500"
               value={team2Score} onChange={e => setTeam2Score(e.target.value)} placeholder="0"
             />
           </div>
@@ -383,12 +383,12 @@ export default function AddMatch() {
 
       {/* Add new player */}
       {showAddInput ? (
-        <div className="bg-gray-900 rounded-2xl px-4 py-3 flex items-center gap-2">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-3 flex items-center gap-2">
           <input
             ref={addInputRef}
             type="text"
             autoFocus
-            className="flex-1 bg-gray-700 rounded-lg px-3 py-2.5 text-base text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-yellow-500"
+            className="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-base text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-yellow-500"
             placeholder="Player name"
             value={newPlayerName}
             onChange={e => setNewPlayerName(e.target.value)}
@@ -405,7 +405,7 @@ export default function AddMatch() {
             className={`shrink-0 disabled:opacity-40 text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors ${
               newPlayerName.trim()
                 ? 'bg-yellow-400 hover:bg-yellow-300 text-gray-900'
-                : 'bg-gray-700 text-gray-400'
+                : 'bg-gray-200 text-gray-500'
             }`}
           >
             {addingPlayer ? '...' : 'Add'}
@@ -414,13 +414,13 @@ export default function AddMatch() {
       ) : (
         <button
           onClick={() => setShowAddInput(true)}
-          className="w-full bg-transparent border border-yellow-500 text-yellow-500 text-sm font-semibold py-3 rounded-2xl transition-colors hover:bg-yellow-500/10"
+          className="w-full bg-yellow-50 border border-yellow-400 text-yellow-700 text-sm font-semibold py-3 rounded-2xl transition-colors hover:bg-yellow-100"
         >
           + Add new player
         </button>
       )}
 
-      {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+      {error && <p className="text-red-600 text-sm text-center">{error}</p>}
 
       <button
         onClick={handleSave}
@@ -431,8 +431,8 @@ export default function AddMatch() {
       </button>
 
       <div className="text-center py-2">
-        <p className="text-gray-500 text-sm">🎾 Powered by <Link to="/" className="text-green-400 hover:text-green-300 font-semibold transition-colors">Padello</Link></p>
-        <Link to="/" className="text-gray-500 hover:text-white text-xs transition-colors">Start your own league →</Link>
+        <p className="text-gray-500 text-sm">🎾 Powered by <Link to="/" className="text-green-600 hover:text-green-700 font-semibold transition-colors">Padello</Link></p>
+        <Link to="/" className="text-gray-500 hover:text-gray-700 text-xs transition-colors">Start your own league →</Link>
       </div>
 
       <PlayerPicker

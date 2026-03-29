@@ -12,8 +12,8 @@ const CardPreview = lazy(() => import('./pages/CardPreview'))
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-950 text-white">
-        <Suspense fallback={<div className="flex justify-center items-center min-h-screen text-gray-400">Loading...</div>}>
+      <div className="min-h-screen bg-gray-50 text-gray-900">
+        <Suspense fallback={<div className="flex justify-center items-center min-h-screen text-gray-500">Loading...</div>}>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/card-preview" element={<CardPreview />} />

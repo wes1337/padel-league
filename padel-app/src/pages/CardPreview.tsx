@@ -385,19 +385,19 @@ export default function CardPreview() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 flex flex-col gap-4">
-      <h1 className="text-xl font-bold text-white">Invite Card Styles</h1>
+      <h1 className="text-xl font-bold text-gray-900">Invite Card Styles</h1>
       <div className="flex flex-wrap gap-2">
         {styles.map((s, i) => (
           <button
             key={i}
             onClick={() => setSelected(i)}
-            className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${selected === i ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+            className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${selected === i ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
           >
             {s.name}
           </button>
         ))}
       </div>
-      <canvas ref={canvasRef} className="w-full rounded-xl border border-gray-800" style={{ maxWidth: 680 }} />
+      <canvas ref={canvasRef} className="w-full rounded-xl border border-gray-200" style={{ maxWidth: 680 }} />
     </div>
   )
 }

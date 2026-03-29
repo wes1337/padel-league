@@ -13,8 +13,8 @@ export default defineConfig({
         name: 'Padello',
         short_name: 'Padello',
         description: 'Track scores. Crown champions.',
-        theme_color: '#030712',
-        background_color: '#030712',
+        theme_color: '#f9fafb',
+        background_color: '#f9fafb',
         display: 'standalone',
         start_url: '/',
         icons: [

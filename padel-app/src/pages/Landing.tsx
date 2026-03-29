@@ -87,19 +87,19 @@ export default function Landing() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 gap-10">
       <div className="text-center">
         <div className="text-5xl mb-2">🎾</div>
-        <h1 className="text-3xl font-bold text-white">Padello</h1>
-        <p className="text-gray-400 mt-1">Track scores. Crown champions.</p>
+        <h1 className="text-3xl font-bold text-gray-900">Padello</h1>
+        <p className="text-gray-500 mt-1">Track scores. Crown champions.</p>
       </div>
 
       <div className="w-full max-w-sm flex flex-col gap-6">
         {/* Install app banner */}
         {!installDismissed && installPrompt && (
-          <div className="bg-green-900/40 border border-green-700 rounded-2xl p-4 flex flex-col gap-2">
+          <div className="bg-green-50 border border-green-300 rounded-2xl p-4 flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-white text-sm">Install as App</h2>
-              <button onClick={dismissInstallBanner} className="text-gray-500 hover:text-gray-300 text-xs">dismiss</button>
+              <h2 className="font-semibold text-gray-900 text-sm">Install as App</h2>
+              <button onClick={dismissInstallBanner} className="text-gray-500 hover:text-gray-700 text-xs">dismiss</button>
             </div>
-            <p className="text-white text-xs">Add <span className="text-green-400 font-medium">Padello</span> to your home screen for quick access — works like a native app.</p>
+            <p className="text-gray-900 text-xs">Add <span className="text-green-600 font-medium">Padello</span> to your home screen for quick access — works like a native app.</p>
             <button
               onClick={handleInstall}
               className="bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg py-2 text-sm transition-colors"
@@ -110,46 +110,46 @@ export default function Landing() {
         )}
 
         {!installDismissed && showIOSInstall && (
-          <div className="bg-green-900/40 border border-green-700 rounded-2xl p-4 flex flex-col gap-2">
+          <div className="bg-green-50 border border-green-300 rounded-2xl p-4 flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-white text-sm">Install as App</h2>
-              <button onClick={dismissInstallBanner} className="text-gray-500 hover:text-gray-300 text-xs">dismiss</button>
+              <h2 className="font-semibold text-gray-900 text-sm">Install as App</h2>
+              <button onClick={dismissInstallBanner} className="text-gray-500 hover:text-gray-700 text-xs">dismiss</button>
             </div>
-            <p className="text-white text-xs">
-              Tap the <span className="text-green-400 font-medium">share button</span>, then <span className="text-green-400 font-medium">"Add to Home Screen"</span> to install.
+            <p className="text-gray-900 text-xs">
+              Tap the <span className="text-green-600 font-medium">share button</span>, then <span className="text-green-600 font-medium">"Add to Home Screen"</span> to install.
             </p>
           </div>
         )}
 
         {/* Recent leagues */}
         {recentLeagues.length > 0 && (
-          <div className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
-            <h2 className="font-semibold text-white text-lg">Recent Leagues</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col gap-3">
+            <h2 className="font-semibold text-gray-900 text-lg">Recent Leagues</h2>
             {recentLeagues.map(l => (
               <button
                 key={l.id}
                 onClick={() => navigate(`/l/${l.id}`)}
-                className="flex items-center justify-between bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
+                className="flex items-center justify-between bg-gray-100 hover:bg-gray-200 rounded-xl px-4 py-3 transition-colors"
               >
-                <span className="text-white font-medium">{l.name}</span>
-                <span className="text-gray-400 text-sm">→</span>
+                <span className="text-gray-900 font-medium">{l.name}</span>
+                <span className="text-gray-500 text-sm">→</span>
               </button>
             ))}
           </div>
         )}
 
         {/* Create league */}
-        <form onSubmit={handleCreate} className="bg-gray-900 rounded-2xl p-5 flex flex-col gap-3">
-          <h2 className="font-semibold text-white text-lg">Create a League</h2>
+        <form onSubmit={handleCreate} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col gap-3">
+          <h2 className="font-semibold text-gray-900 text-lg">Create a League</h2>
           <input
-            className="bg-gray-800 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
+            className="bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-green-500"
             placeholder="League name (e.g. Friday Padel)"
             value={leagueName}
             maxLength={50}
             onChange={e => setLeagueName(e.target.value)}
           />
           <div className="flex flex-col gap-1.5">
-            <p className="text-gray-400 text-xs">Scoring format</p>
+            <p className="text-gray-500 text-xs">Scoring format</p>
             <div className="flex gap-2">
               {(['americano', 'traditional'] as ScoringType[]).map(type => (
                 <button
@@ -157,7 +157,7 @@ export default function Landing() {
                   type="button"
                   onClick={() => setScoringType(type)}
                   className={`flex-1 py-2 rounded-xl font-semibold text-sm transition-colors capitalize ${
-                    scoringType === type ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    scoringType === type ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                   }`}
                 >
                   {type === 'americano' ? '🎯 Americano' : '🎾 Traditional'}
@@ -174,7 +174,7 @@ export default function Landing() {
           </button>
         </form>
 
-        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+        {error && <p className="text-red-600 text-sm text-center">{error}</p>}
       </div>
     </div>
   )

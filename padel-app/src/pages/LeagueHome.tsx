@@ -175,24 +175,24 @@ export default function LeagueHome() {
     queryClient.invalidateQueries({ queryKey: ['matches'] })
   }
 
-  if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-400">Loading...</div>
-  if (!league) return <div className="flex justify-center items-center min-h-screen text-red-400">League not found.</div>
+  if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-500">Loading...</div>
+  if (!league) return <div className="flex justify-center items-center min-h-screen text-red-600">League not found.</div>
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">{league.name}</h1>
-          <p className="text-gray-400 text-sm">{year} Season</p>
+          <h1 className="text-2xl font-bold text-gray-900">{league.name}</h1>
+          <p className="text-gray-500 text-sm">{year} Season</p>
         </div>
-        <Link to="/" className="text-gray-500 hover:text-white text-sm transition-colors pt-1 shrink-0 whitespace-nowrap">← Home</Link>
+        <Link to="/" className="text-gray-500 hover:text-gray-700 text-sm transition-colors pt-1 shrink-0 whitespace-nowrap">← Home</Link>
       </div>
 
       {/* Share League */}
-      <div className="bg-gray-900 rounded-2xl p-4 flex items-center justify-between">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center justify-between">
         <div className="min-w-0 mr-3">
-          <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Invite to League</p>
+          <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Invite to League</p>
           <p className="text-gray-500 text-xs">Share the link so others can join and track scores</p>
         </div>
         <button
@@ -219,22 +219,22 @@ export default function LeagueHome() {
 
       {/* New Session */}
       {showCreateSession ? (
-        <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
-          <h2 className="font-semibold text-white">New Session</h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
+          <h2 className="font-semibold text-gray-900">New Session</h2>
           <div className="flex flex-col gap-1">
-            <label className="text-gray-400 text-xs">Session date</label>
+            <label className="text-gray-500 text-xs">Session date</label>
             <input
               type="date"
               value={newSessionDate}
               onChange={e => setNewSessionDate(e.target.value)}
-              className="bg-gray-800 rounded-lg px-4 py-2.5 text-white text-base outline-none focus:ring-2 focus:ring-green-500"
+              className="bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 text-base outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
           <div className="flex gap-2">
             <button onClick={createSession} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg py-2.5 transition-colors">
               Create
             </button>
-            <button onClick={() => { setShowCreateSession(false); setNewSessionDate(new Date().toISOString().split('T')[0]) }} className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg py-2.5 transition-colors">
+            <button onClick={() => { setShowCreateSession(false); setNewSessionDate(new Date().toISOString().split('T')[0]) }} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg py-2.5 transition-colors">
               Cancel
             </button>
           </div>
@@ -249,22 +249,22 @@ export default function LeagueHome() {
       )}
 
       {/* Season Leaderboard */}
-      <div className="bg-gray-900 rounded-2xl p-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-white">Season Standings</h2>
+          <h2 className="font-semibold text-gray-900">Season Standings</h2>
           <button
             onClick={() => setShowRankingInfo(v => !v)}
-            className="text-gray-500 hover:text-gray-300 text-sm w-5 h-5 rounded-full border border-gray-700 flex items-center justify-center transition-colors"
+            className="text-gray-500 hover:text-gray-700 text-sm w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center transition-colors"
             title="How rankings work"
           >
             i
           </button>
         </div>
         {showRankingInfo && (
-          <div className="bg-gray-800 rounded-xl px-3 py-2.5 mb-3 flex flex-col gap-1.5 text-xs text-gray-400">
-            <p><span className="text-white font-medium">Ranking</span> — primary: matches won. Tiebreaker: point differential.</p>
-            <p><span className="text-white font-medium">⚠ badge</span> — player attended between 30–50% of sessions. They appear in the standings but are ranked below all players with 50%+ attendance, regardless of their record.</p>
-            <p><span className="text-white font-medium">Not listed</span> — players who attended fewer than 30% of sessions are excluded from the standings entirely.</p>
+          <div className="bg-gray-100 rounded-xl px-3 py-2.5 mb-3 flex flex-col gap-1.5 text-xs text-gray-500">
+            <p><span className="text-gray-900 font-medium">Ranking</span> — primary: matches won. Tiebreaker: point differential.</p>
+            <p><span className="text-gray-900 font-medium">⚠ badge</span> — player attended between 30–50% of sessions. They appear in the standings but are ranked below all players with 50%+ attendance, regardless of their record.</p>
+            <p><span className="text-gray-900 font-medium">Not listed</span> — players who attended fewer than 30% of sessions are excluded from the standings entirely.</p>
           </div>
         )}
         {seasonStats.length === 0 ? (
@@ -276,20 +276,20 @@ export default function LeagueHome() {
 
       {/* Upcoming Sessions */}
       {upcomingSessions.length > 0 && (
-        <div className="bg-gray-900 rounded-2xl p-4">
-          <h2 className="font-semibold text-white mb-3">Upcoming</h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <h2 className="font-semibold text-gray-900 mb-3">Upcoming</h2>
           <div className="flex flex-col gap-2">
             {upcomingSessions.map((s: Session) => (
               <div key={s.id} className="flex items-center gap-2">
                 <Link
                   to={`/l/${leagueId}/session/${s.id}`}
-                  className="flex-1 flex items-center justify-between bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
+                  className="flex-1 flex items-center justify-between bg-gray-100 hover:bg-gray-200 rounded-xl px-4 py-3 transition-colors"
                 >
-                  <span className="text-sm text-white">{s.label || s.date}</span>
-                  <span className="text-gray-400 text-sm">→</span>
+                  <span className="text-sm text-gray-900">{s.label || s.date}</span>
+                  <span className="text-gray-500 text-sm">→</span>
                 </Link>
                 {isAdmin && (
-                  <button onClick={() => deleteSession(s.id)} className="text-gray-600 hover:text-red-400 bg-gray-800 rounded-xl px-3 py-3 transition-colors text-sm" title="Delete session">🗑</button>
+                  <button onClick={() => deleteSession(s.id)} className="text-gray-400 hover:text-red-600 bg-gray-100 rounded-xl px-3 py-3 transition-colors text-sm" title="Delete session">🗑</button>
                 )}
               </div>
             ))}
@@ -298,8 +298,8 @@ export default function LeagueHome() {
       )}
 
       {/* Sessions */}
-      <div className="bg-gray-900 rounded-2xl p-4">
-        <h2 className="font-semibold text-white mb-3">{upcomingSessions.length > 0 ? 'Past Sessions' : 'Sessions'}</h2>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+        <h2 className="font-semibold text-gray-900 mb-3">{upcomingSessions.length > 0 ? 'Past Sessions' : 'Sessions'}</h2>
         {pastSessions.length === 0 ? (
           <p className="text-gray-500 text-sm">No sessions yet.</p>
         ) : (
@@ -308,16 +308,16 @@ export default function LeagueHome() {
               <div key={s.id} className="flex items-center gap-2">
                 <Link
                   to={`/l/${leagueId}/session/${s.id}`}
-                  className="flex-1 flex items-center justify-between bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-3 transition-colors"
+                  className="flex-1 flex items-center justify-between bg-gray-100 hover:bg-gray-200 rounded-xl px-4 py-3 transition-colors"
                 >
-                  <span className={`text-sm ${s.excluded ? 'text-gray-500' : !s.confirmed ? 'text-gray-500' : 'text-white'}`}>{s.label || s.date}</span>
+                  <span className={`text-sm ${s.excluded ? 'text-gray-500' : !s.confirmed ? 'text-gray-500' : 'text-gray-900'}`}>{s.label || s.date}</span>
                   <div className="flex items-center gap-2">
                     {s.excluded && <span className="text-xs text-yellow-600">excluded</span>}
-                    <span className="text-gray-400 text-sm">→</span>
+                    <span className="text-gray-500 text-sm">→</span>
                   </div>
                 </Link>
                 {isAdmin && (
-                  <button onClick={() => deleteSession(s.id)} className="text-gray-600 hover:text-red-400 bg-gray-800 rounded-xl px-3 py-3 transition-colors text-sm" title="Delete session">🗑</button>
+                  <button onClick={() => deleteSession(s.id)} className="text-gray-400 hover:text-red-600 bg-gray-100 rounded-xl px-3 py-3 transition-colors text-sm" title="Delete session">🗑</button>
                 )}
               </div>
             ))}
@@ -327,31 +327,31 @@ export default function LeagueHome() {
 
       {/* Admin Section */}
       {isAdmin ? (
-        <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-white">Admin</h2>
-            <span className="text-xs bg-green-900/50 text-green-400 border border-green-700 rounded-full px-2 py-0.5">Admin</span>
+            <h2 className="font-semibold text-gray-900">Admin</h2>
+            <span className="text-xs bg-green-50 text-green-600 border border-green-300 rounded-full px-2 py-0.5">Admin</span>
           </div>
-          <p className="text-gray-400 text-xs">Share this code with trusted players to give them admin access. Admins can create and delete sessions, end sessions, and exclude sessions from the season rankings.</p>
+          <p className="text-gray-500 text-xs">Share this code with trusted players to give them admin access. Admins can create and delete sessions, end sessions, and exclude sessions from the season rankings.</p>
           <button
             onClick={() => setShowAdminCode(!showAdminCode)}
-            className="text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg px-3 py-2 transition-colors text-left"
+            className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg px-3 py-2 transition-colors text-left"
           >
             {showAdminCode ? `Admin code: ${league.admin_token ?? '—'}` : 'Reveal admin code'}
           </button>
         </div>
       ) : (
-        <div className="bg-gray-900 rounded-2xl p-4 flex flex-col gap-3">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
           {!showClaimAdmin ? (
-            <button onClick={() => setShowClaimAdmin(true)} className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-center">
+            <button onClick={() => setShowClaimAdmin(true)} className="text-sm text-gray-500 hover:text-gray-700 transition-colors text-center">
               Admin login
             </button>
           ) : (
             <>
-              <h2 className="font-semibold text-white text-sm">Enter admin code</h2>
+              <h2 className="font-semibold text-gray-900 text-sm">Enter admin code</h2>
               <div className="flex gap-2">
                 <input
-                  className="flex-1 bg-gray-800 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 outline-none focus:ring-2 focus:ring-green-500"
+                  className="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm placeholder-gray-400 outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Admin code"
                   value={claimToken}
                   onChange={e => { setClaimToken(e.target.value); setClaimError('') }}
@@ -364,8 +364,8 @@ export default function LeagueHome() {
                   Claim
                 </button>
               </div>
-              {claimError && <p className="text-red-400 text-xs">{claimError}</p>}
-              <button onClick={() => { setShowClaimAdmin(false); setClaimToken(''); setClaimError('') }} className="text-gray-600 hover:text-gray-400 text-xs transition-colors">
+              {claimError && <p className="text-red-600 text-xs">{claimError}</p>}
+              <button onClick={() => { setShowClaimAdmin(false); setClaimToken(''); setClaimError('') }} className="text-gray-500 hover:text-gray-700 text-xs transition-colors">
                 Cancel
               </button>
             </>
@@ -375,8 +375,8 @@ export default function LeagueHome() {
 
       {/* Footer */}
       <div className="text-center py-2">
-        <p className="text-gray-500 text-sm">🎾 Powered by <Link to="/" className="text-green-400 hover:text-green-300 font-semibold transition-colors">Padello</Link></p>
-        <Link to="/" className="text-gray-500 hover:text-white text-xs transition-colors">Start your own league →</Link>
+        <p className="text-gray-500 text-sm">🎾 Powered by <Link to="/" className="text-green-600 hover:text-green-700 font-semibold transition-colors">Padello</Link></p>
+        <Link to="/" className="text-gray-500 hover:text-gray-700 text-xs transition-colors">Start your own league →</Link>
       </div>
     </div>
   )
