@@ -10,63 +10,6 @@ import type { Match } from '../types'
 import Leaderboard from '../components/Leaderboard'
 import SessionSummary from '../components/SessionSummary'
 
-function drawInviteCard(leagueName: string, sessionDate: string): Promise<File | null> {
-  return new Promise(resolve => {
-    const W = 680, H = 480
-    const canvas = document.createElement('canvas')
-    canvas.width = W; canvas.height = H
-    const ctx = canvas.getContext('2d')
-    if (!ctx) { resolve(null); return }
-
-    // White background
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, W, H)
-
-    // Accent bar at top
-    ctx.fillStyle = '#22c55e'
-    ctx.fillRect(0, 0, W, 8)
-
-    // Big tagline
-    ctx.textAlign = 'center'
-    ctx.font = '900 90px system-ui, sans-serif'
-    ctx.fillStyle = '#0a0a0a'
-    ctx.fillText('PADEL UP!', W / 2, H * 0.38)
-
-    // Underline
-    ctx.fillStyle = '#22c55e'
-    ctx.fillRect(W / 2 - 100, H * 0.42, 200, 6)
-
-    // League name + date
-    ctx.font = '600 22px system-ui, sans-serif'
-    ctx.fillStyle = '#0a0a0a'
-    ctx.fillText(leagueName, W / 2, H * 0.52)
-    ctx.font = '400 16px system-ui, sans-serif'
-    ctx.fillStyle = '#9ca3af'
-    ctx.fillText(sessionDate, W / 2, H * 0.58)
-
-    // Tennis ball emoji
-    ctx.font = '60px serif'
-    ctx.fillText('🎾', W / 2, H * 0.73)
-
-    // Subtitle
-    ctx.font = '600 16px system-ui, sans-serif'
-    ctx.fillStyle = '#4b5563'
-    ctx.fillText('Track Scores · Earn Awards · Crown the Champ', W / 2, H - 50)
-
-    // Footer bar
-    ctx.fillStyle = '#f3f4f6'
-    ctx.fillRect(0, H - 35, W, 35)
-    ctx.font = '500 13px system-ui, sans-serif'
-    ctx.fillStyle = '#6b7280'
-    ctx.fillText('🎾 Padello', W / 2, H - 12)
-
-    canvas.toBlob(blob => {
-      if (!blob) { resolve(null); return }
-      resolve(new File([blob], 'padello-invite.png', { type: 'image/png' }))
-    }, 'image/png')
-  })
-}
-
 type EditState = {
   s1: string; s2: string
   p1: string; p2: string; p3: string; p4: string
@@ -79,8 +22,6 @@ export default function SessionPage() {
 
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
   const [editState, setEditState] = useState<EditState | null>(null)
-  const [linkCopied, setLinkCopied] = useState(false)
-  const [inviting, setInviting] = useState(false)
   const [rankHighlightedIds, setRankHighlightedIds] = useState<Map<string, string>>(new Map())
 
   const { data: session, isLoading: sessionLoading } = useSession(sessionId)
@@ -213,57 +154,6 @@ export default function SessionPage() {
         </div>
         <Link to={`/l/${leagueId}`} className="text-gray-500 hover:text-gray-700 text-sm transition-colors pt-1 shrink-0">← View Season</Link>
       </div>
-
-      {/* Invite players */}
-      {!session?.ended && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0 mr-3">
-              <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Invite Players</p>
-              <p className="text-gray-500 text-xs">Everyone can add scores and track standings</p>
-            </div>
-            <button
-              onClick={async () => {
-                setInviting(true)
-                try {
-                  const shareUrl = session?.short_id
-                    ? `${window.location.origin}/s/${session.short_id}`
-                    : window.location.href
-                  const datePart = session?.label?.replace(/^.+ – /, '') || session?.date || ''
-                  const leagueName = league?.name || 'Padello'
-                  const text = `🎾 ${leagueName} — ${datePart}\n\nIt's game time! Join the session, log your scores, and see who takes the crown.\n\n${shareUrl}`
-                  const file = await drawInviteCard(leagueName, datePart)
-
-                  if (typeof navigator.share === 'function') {
-                    if (file) {
-                      const withFile: ShareData = { text, files: [file] }
-                      if (navigator.canShare?.(withFile)) {
-                        await navigator.share(withFile)
-                        setInviting(false)
-                        return
-                      }
-                    }
-                    await navigator.share({ title: session?.label || 'Padello', text })
-                  } else {
-                    navigator.clipboard.writeText(shareUrl)
-                    setLinkCopied(true)
-                    setTimeout(() => setLinkCopied(false), 1500)
-                  }
-                } catch (err) {
-                  if (err instanceof Error && err.name !== 'AbortError') {
-                    console.error('Share failed:', err)
-                  }
-                }
-                setInviting(false)
-              }}
-              disabled={inviting}
-              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shrink-0"
-            >
-              {linkCopied ? 'Copied!' : inviting ? '...' : 'Invite'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Add Match */}
       {!session?.ended && (
