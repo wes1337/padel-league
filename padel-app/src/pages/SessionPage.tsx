@@ -164,7 +164,7 @@ export default function SessionPage() {
     return players.find(p => p.id === id)?.name ?? id
   }
 
-  function getUnevenWarning(): { lines: string[] } | null {
+  function getUnevenWarning(): { outliers: { name: string; diff: number }[] } | null {
     if (matches.length === 0) return null
     const counts = new Map<string, number>()
     for (const m of matches) {
@@ -172,16 +172,17 @@ export default function SessionPage() {
         counts.set(pid, (counts.get(pid) || 0) + 1)
       }
     }
-    const values = Array.from(counts.values())
-    const mode = [...counts.values()].sort((a, b) =>
-      values.filter(v => v === b).length - values.filter(v => v === a).length
-    )[0]
-    const outliers = [...counts.entries()].filter(([, n]) => n !== mode)
+    // Mode = the most common game count
+    const freq = new Map<number, number>()
+    for (const n of counts.values()) freq.set(n, (freq.get(n) || 0) + 1)
+    let mode = 0, modeCnt = 0
+    for (const [val, cnt] of freq) { if (cnt > modeCnt || (cnt === modeCnt && val > mode)) { mode = val; modeCnt = cnt } }
+    const outliers = [...counts.entries()]
+      .filter(([, n]) => n !== mode)
+      .map(([id, n]) => ({ name: getPlayerName(id), diff: n - mode }))
+      .sort((a, b) => a.diff - b.diff)
     if (outliers.length === 0) return null
-    const lines = outliers.map(([id, n]) =>
-      `${getPlayerName(id)}: ${n} game${n !== 1 ? 's' : ''} (expected ${mode})`
-    )
-    return { lines }
+    return { outliers }
   }
 
   if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-500">Loading...</div>
@@ -218,11 +219,18 @@ export default function SessionPage() {
 
       {/* Uneven games warning */}
       {unevenWarning && (
-        <div className="bg-yellow-50 border border-yellow-300 rounded-xl px-4 py-3 flex flex-col gap-1">
-          <p className="text-yellow-700 text-sm font-semibold">⚠ Uneven games played</p>
-          {unevenWarning.lines.map((line, i) => (
-            <p key={i} className="text-yellow-600 text-xs">{line}</p>
-          ))}
+        <div className="bg-yellow-50 border border-yellow-300 rounded-xl px-4 py-3">
+          <p className="text-yellow-700 text-sm font-semibold mb-2">⚠ Uneven games</p>
+          <div className="flex flex-wrap gap-2">
+            {unevenWarning.outliers.map((o, i) => (
+              <span key={i} className="inline-flex items-center gap-1.5 bg-white border border-yellow-300 rounded-lg px-2.5 py-1">
+                <span className="text-gray-700 text-xs font-medium">{o.name}</span>
+                <span className={`text-xs font-bold ${o.diff > 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                  {o.diff > 0 ? '+' : ''}{o.diff}
+                </span>
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
