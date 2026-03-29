@@ -10,6 +10,55 @@ import type { Match } from '../types'
 import Leaderboard from '../components/Leaderboard'
 import SessionSummary from '../components/SessionSummary'
 
+function drawInviteCard(leagueName: string, sessionDate: string): Promise<File | null> {
+  return new Promise(resolve => {
+    const W = 680, H = 480
+    const canvas = document.createElement('canvas')
+    canvas.width = W; canvas.height = H
+    const ctx = canvas.getContext('2d')
+    if (!ctx) { resolve(null); return }
+
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, W, H)
+
+    ctx.fillStyle = '#22c55e'
+    ctx.fillRect(0, 0, W, 8)
+
+    ctx.textAlign = 'center'
+    ctx.font = '900 90px system-ui, sans-serif'
+    ctx.fillStyle = '#0a0a0a'
+    ctx.fillText('PADEL UP!', W / 2, H * 0.38)
+
+    ctx.fillStyle = '#22c55e'
+    ctx.fillRect(W / 2 - 100, H * 0.42, 200, 6)
+
+    ctx.font = '600 22px system-ui, sans-serif'
+    ctx.fillStyle = '#0a0a0a'
+    ctx.fillText(leagueName, W / 2, H * 0.52)
+    ctx.font = '400 16px system-ui, sans-serif'
+    ctx.fillStyle = '#9ca3af'
+    ctx.fillText(sessionDate, W / 2, H * 0.58)
+
+    ctx.font = '60px serif'
+    ctx.fillText('🎾', W / 2, H * 0.73)
+
+    ctx.font = '600 16px system-ui, sans-serif'
+    ctx.fillStyle = '#4b5563'
+    ctx.fillText('Track Scores · Earn Awards · Crown the Champ', W / 2, H - 50)
+
+    ctx.fillStyle = '#f3f4f6'
+    ctx.fillRect(0, H - 35, W, 35)
+    ctx.font = '500 13px system-ui, sans-serif'
+    ctx.fillStyle = '#6b7280'
+    ctx.fillText('🎾 Padello', W / 2, H - 12)
+
+    canvas.toBlob(blob => {
+      if (!blob) { resolve(null); return }
+      resolve(new File([blob], 'padello-invite.png', { type: 'image/png' }))
+    }, 'image/png')
+  })
+}
+
 type EditState = {
   s1: string; s2: string
   p1: string; p2: string; p3: string; p4: string
@@ -408,6 +457,15 @@ export default function SessionPage() {
                 const leagueName = league?.name || 'Padello'
                 const text = `🎾 ${leagueName} — ${datePart}\n\nJoin the session, log your scores, and see who takes the crown.\n\n${shareUrl}`
                 if (typeof navigator.share === 'function') {
+                  const file = await drawInviteCard(leagueName, datePart)
+                  if (file) {
+                    const withFile: ShareData = { text, files: [file] }
+                    if (navigator.canShare?.(withFile)) {
+                      await navigator.share(withFile)
+                      setInviting(false)
+                      return
+                    }
+                  }
                   await navigator.share({ title: session?.label || 'Padello', text })
                 } else {
                   navigator.clipboard.writeText(shareUrl)
