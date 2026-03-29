@@ -262,7 +262,7 @@ export default function LeagueHome() {
         </div>
         {showRankingInfo && (
           <div className="bg-gray-100 rounded-xl px-3 py-2.5 mb-3 flex flex-col gap-1.5 text-xs text-gray-500">
-            <p><span className="text-gray-900 font-medium">Ranking</span> — primary: matches won. Tiebreaker: point differential.</p>
+            <p><span className="text-gray-900 font-medium">Ranking</span> — primary: win rate. Tiebreaker: point differential.</p>
             <p><span className="text-gray-900 font-medium">⚠ badge</span> — player attended between 30–50% of sessions. They appear in the standings but are ranked below all players with 50%+ attendance, regardless of their record.</p>
             <p><span className="text-gray-900 font-medium">Not listed</span> — players who attended fewer than 30% of sessions are excluded from the standings entirely.</p>
           </div>

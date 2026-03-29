@@ -9,7 +9,7 @@ const TEAM_COLORS = {
   label:  ['text-blue-600',   'text-purple-600'],
   ring:   ['focus:ring-blue-500', 'focus:ring-purple-500'],
   bg:     ['bg-blue-600',     'bg-purple-600'],
-  bgDim:  ['bg-blue-50',  'bg-purple-50'],
+  bgDim:  ['bg-blue-100',  'bg-purple-100'],
   border: ['border-blue-500', 'border-purple-500'],
 }
 
@@ -362,7 +362,7 @@ export default function AddMatch() {
             <span className="text-xs text-blue-600">Team 1 score</span>
             <input
               type="text" inputMode="numeric" pattern="[0-9]*"
-              className="w-full bg-gray-50 border border-gray-300 rounded-lg px-2 py-3 text-gray-900 text-2xl font-bold text-center outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-gray-50 border-2 border-blue-400 rounded-lg px-2 py-3 text-blue-600 text-2xl font-bold text-center outline-none focus:ring-2 focus:ring-blue-500"
               value={team1Score} onChange={e => setTeam1Score(e.target.value)} placeholder="0"
             />
           </div>
@@ -370,7 +370,7 @@ export default function AddMatch() {
             <span className="text-xs text-purple-600">Team 2 score</span>
             <input
               type="text" inputMode="numeric" pattern="[0-9]*"
-              className="w-full bg-gray-50 border border-gray-300 rounded-lg px-2 py-3 text-gray-900 text-2xl font-bold text-center outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full bg-gray-50 border-2 border-purple-400 rounded-lg px-2 py-3 text-purple-600 text-2xl font-bold text-center outline-none focus:ring-2 focus:ring-purple-500"
               value={team2Score} onChange={e => setTeam2Score(e.target.value)} placeholder="0"
             />
           </div>
