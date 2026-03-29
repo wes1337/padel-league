@@ -22,6 +22,8 @@ export default function SessionPage() {
 
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
   const [editState, setEditState] = useState<EditState | null>(null)
+  const [linkCopied, setLinkCopied] = useState(false)
+  const [inviting, setInviting] = useState(false)
   const [rankHighlightedIds, setRankHighlightedIds] = useState<Map<string, string>>(new Map())
 
   const { data: session, isLoading: sessionLoading } = useSession(sessionId)
@@ -386,6 +388,43 @@ export default function SessionPage() {
         >
           🏆 Reveal Awards
         </button>
+      )}
+
+      {/* Invite players */}
+      {!session?.ended && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center justify-between">
+          <div className="min-w-0 mr-3">
+            <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Invite Players</p>
+            <p className="text-gray-500 text-xs">Share the session link so others can join</p>
+          </div>
+          <button
+            onClick={async () => {
+              setInviting(true)
+              try {
+                const shareUrl = session?.short_id
+                  ? `${window.location.origin}/s/${session.short_id}`
+                  : window.location.href
+                const datePart = session?.label?.replace(/^.+ – /, '') || session?.date || ''
+                const leagueName = league?.name || 'Padello'
+                const text = `🎾 ${leagueName} — ${datePart}\n\nJoin the session, log your scores, and see who takes the crown.\n\n${shareUrl}`
+                if (typeof navigator.share === 'function') {
+                  await navigator.share({ title: session?.label || 'Padello', text })
+                } else {
+                  navigator.clipboard.writeText(shareUrl)
+                  setLinkCopied(true)
+                  setTimeout(() => setLinkCopied(false), 1500)
+                }
+              } catch (err) {
+                if (err instanceof Error && err.name !== 'AbortError') console.error(err)
+              }
+              setInviting(false)
+            }}
+            disabled={inviting}
+            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shrink-0"
+          >
+            {linkCopied ? 'Copied!' : inviting ? '...' : 'Invite'}
+          </button>
+        </div>
       )}
 
       {/* Session Settings — admin only */}
