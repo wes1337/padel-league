@@ -77,7 +77,7 @@ export default function SessionPage() {
   const [unevenExpanded, setUnevenExpanded] = useState(false)
 
   const { data: session, isLoading: sessionLoading } = useSession(sessionId)
-  const { data: matches = [], isLoading: matchesLoading } = useSessionMatches(sessionId)
+  const { data: matches = [] } = useSessionMatches(sessionId)
   const { data: players = [], isLoading: playersLoading } = usePlayers(leagueId)
   const { data: league } = useLeague(leagueId)
 
