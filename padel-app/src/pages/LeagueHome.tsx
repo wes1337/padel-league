@@ -482,41 +482,42 @@ export default function LeagueHome() {
             )}
 
             {/* Create new season */}
-            {showCreateSeason ? (
-              <div className="flex flex-col gap-2">
-                <input
-                  type="text"
-                  value={newSeasonName}
-                  onChange={e => setNewSeasonName(e.target.value)}
-                  placeholder="Season name (e.g. Spring 2026)"
-                  className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm placeholder-gray-400 outline-none focus:ring-2 focus:ring-green-500"
-                  onKeyDown={e => { if (e.key === 'Enter') createSeason() }}
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={createSeason}
-                    disabled={!newSeasonName.trim() || creatingSeason}
-                    className="flex-1 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg py-2 transition-colors"
-                  >
-                    {creatingSeason ? '...' : 'Create Season'}
-                  </button>
-                  <button
-                    onClick={() => { setShowCreateSeason(false); setNewSeasonName('') }}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm rounded-lg py-2 transition-colors"
-                  >
-                    Cancel
-                  </button>
+            {!activeSeason && (
+              showCreateSeason ? (
+                <div className="flex flex-col gap-2">
+                  <input
+                    type="text"
+                    value={newSeasonName}
+                    onChange={e => setNewSeasonName(e.target.value)}
+                    placeholder="Season name (e.g. Spring 2026)"
+                    className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm placeholder-gray-400 outline-none focus:ring-2 focus:ring-green-500"
+                    onKeyDown={e => { if (e.key === 'Enter') createSeason() }}
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={createSeason}
+                      disabled={!newSeasonName.trim() || creatingSeason}
+                      className="flex-1 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg py-2 transition-colors"
+                    >
+                      {creatingSeason ? '...' : 'Create Season'}
+                    </button>
+                    <button
+                      onClick={() => { setShowCreateSeason(false); setNewSeasonName('') }}
+                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm rounded-lg py-2 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowCreateSeason(true)}
-                disabled={!!activeSeason}
-                className="w-full bg-green-50 hover:bg-green-100 disabled:opacity-50 text-green-600 font-semibold rounded-lg py-2 text-sm transition-colors border border-green-300"
-              >
-                {activeSeason ? 'End current season first' : '+ New Season'}
-              </button>
+              ) : (
+                <button
+                  onClick={() => setShowCreateSeason(true)}
+                  className="w-full bg-green-50 hover:bg-green-100 text-green-600 font-semibold rounded-lg py-2 text-sm transition-colors border border-green-300"
+                >
+                  + New Season
+                </button>
+              )
             )}
           </div>
 
