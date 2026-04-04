@@ -27,7 +27,7 @@ export interface Season {
 export interface Session {
   id: string
   league_id: string
-  season_id: string
+  season_id: string | null
   date: string
   label: string | null
   excluded: boolean
