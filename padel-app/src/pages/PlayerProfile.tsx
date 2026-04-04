@@ -175,12 +175,10 @@ export default function PlayerProfile() {
     const pMap = new Map<string, Player>()
     for (const p of allPlayersList) pMap.set(p.id, p as Player)
 
-    setTotalSessions(sessions.length)
-
     const sessionMap = new Map<string, Session>()
     for (const s of sessions) sessionMap.set(s.id, s)
 
-    // Compute attendance for every player — sessions attended / total sessions
+    // Compute attendance for every player — sessions attended / total sessions with matches
     const playerSessionsMap = new Map<string, Set<string>>()
     for (const m of allMatches as Match[]) {
       for (const pid of [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2]) {
@@ -188,9 +186,14 @@ export default function PlayerProfile() {
         playerSessionsMap.get(pid)!.add(m.session_id)
       }
     }
+    // Only count sessions that have at least one match recorded
+    const sessionsWithMatches = new Set((allMatches as Match[]).map(m => m.session_id))
+    const totalSessionsWithMatches = sessionsWithMatches.size
+    setTotalSessions(totalSessionsWithMatches)
+
     const regularIds = new Set<string>()
     for (const [pid, sessionSet] of playerSessionsMap) {
-      if (sessionSet.size / sessions.length > 0.5) regularIds.add(pid)
+      if (totalSessionsWithMatches > 0 && sessionSet.size / totalSessionsWithMatches > 0.5) regularIds.add(pid)
     }
     setRegularPlayerIds(regularIds)
 
