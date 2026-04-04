@@ -511,7 +511,7 @@ export default function LeagueHome() {
             ) : (
               <button
                 onClick={() => setShowCreateSeason(true)}
-                className="w-full bg-green-50 hover:bg-green-100 text-green-600 font-semibold rounded-lg py-2 text-sm transition-colors border border-green-300"
+                className="w-full bg-orange-50 hover:bg-orange-100 text-orange-600 font-semibold rounded-lg py-2 text-sm transition-colors border border-orange-300"
               >
                 + New Season
               </button>
