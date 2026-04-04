@@ -77,8 +77,8 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
                 {diff > 0 ? `+${diff}` : diff}
               </div>
               <div className="flex items-center gap-0.5 text-gray-400">
-                <span className="text-xs">View stats</span>
-                <svg className={`w-4 h-4 ${sessionId ? 'text-blue-400' : 'text-green-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                <span className="text-xs">Stats</span>
+                <span className={`text-sm ${sessionId ? 'text-blue-400' : 'text-green-500'}`}>→</span>
               </div>
             </div>
           </Link>
