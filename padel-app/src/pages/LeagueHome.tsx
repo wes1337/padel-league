@@ -27,6 +27,7 @@ export default function LeagueHome() {
   const [showCreateSeason, setShowCreateSeason] = useState(false)
   const [newSeasonName, setNewSeasonName] = useState('')
   const [creatingSeason, setCreatingSeason] = useState(false)
+  const [pastSessionsExpanded, setPastSessionsExpanded] = useState(false)
 
   // Scroll to top on navigation
   useEffect(() => { window.scrollTo(0, 0) }, [leagueId])
@@ -430,31 +431,39 @@ export default function LeagueHome() {
       {/* Sessions */}
       {currentSeason && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-          <h2 className="font-semibold text-gray-900 mb-3">{upcomingSessions.length > 0 ? 'Past Sessions' : 'Sessions'}</h2>
-          {pastSessions.length === 0 ? (
-            <p className="text-gray-500 text-sm">No sessions yet.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {pastSessions.map((s: Session) => (
-                <div key={s.id} className="flex items-center gap-2">
-                  <Link
-                    to={`/l/${leagueId}/session/${s.id}`}
-                    onMouseEnter={() => prefetchSession(s.id)}
-                    onTouchStart={() => prefetchSession(s.id)}
-                    className="flex-1 flex items-center justify-between bg-gray-100 hover:bg-gray-200 rounded-xl px-4 py-3 transition-colors"
-                  >
-                    <span className={`text-sm ${s.excluded ? 'text-gray-500' : !s.confirmed ? 'text-gray-500' : 'text-gray-900'}`}>{s.label || s.date}</span>
-                    <div className="flex items-center gap-2">
-                      {s.excluded && <span className="text-xs text-yellow-600">excluded</span>}
-                      <span className="text-gray-500 text-sm">→</span>
-                    </div>
-                  </Link>
-                  {isAdmin && (
-                    <button onClick={() => deleteSession(s.id)} className="text-gray-400 hover:text-red-600 bg-gray-100 rounded-xl px-3 py-3 transition-colors text-sm" title="Delete session">🗑</button>
-                  )}
-                </div>
-              ))}
-            </div>
+          <button
+            onClick={() => setPastSessionsExpanded(v => !v)}
+            className="flex items-center justify-between w-full"
+          >
+            <h2 className="font-semibold text-gray-900">{upcomingSessions.length > 0 ? 'Past Sessions' : 'Sessions'} {pastSessions.length > 0 && <span className="text-gray-400 font-normal text-sm">({pastSessions.length})</span>}</h2>
+            <span className={`text-gray-400 text-sm transition-transform ${pastSessionsExpanded ? 'rotate-180' : ''}`}>▼</span>
+          </button>
+          {pastSessionsExpanded && (
+            pastSessions.length === 0 ? (
+              <p className="text-gray-500 text-sm mt-3">No sessions yet.</p>
+            ) : (
+              <div className="flex flex-col gap-2 mt-3">
+                {pastSessions.map((s: Session) => (
+                  <div key={s.id} className="flex items-center gap-2">
+                    <Link
+                      to={`/l/${leagueId}/session/${s.id}`}
+                      onMouseEnter={() => prefetchSession(s.id)}
+                      onTouchStart={() => prefetchSession(s.id)}
+                      className="flex-1 flex items-center justify-between bg-gray-100 hover:bg-gray-200 rounded-xl px-4 py-3 transition-colors"
+                    >
+                      <span className={`text-sm ${s.excluded ? 'text-gray-500' : !s.confirmed ? 'text-gray-500' : 'text-gray-900'}`}>{s.label || s.date}</span>
+                      <div className="flex items-center gap-2">
+                        {s.excluded && <span className="text-xs text-yellow-600">excluded</span>}
+                        <span className="text-gray-500 text-sm">→</span>
+                      </div>
+                    </Link>
+                    {isAdmin && (
+                      <button onClick={() => deleteSession(s.id)} className="text-gray-400 hover:text-red-600 bg-gray-100 rounded-xl px-3 py-3 transition-colors text-sm" title="Delete session">🗑</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </div>
       )}
@@ -471,6 +480,43 @@ export default function LeagueHome() {
           <div className="border-t border-gray-100 pt-3 flex flex-col gap-2">
             <p className="text-gray-500 text-xs uppercase tracking-wide font-semibold">Season Management</p>
 
+            {/* Create new season */}
+            {showCreateSeason ? (
+              <div className="flex flex-col gap-2">
+                <input
+                  type="text"
+                  value={newSeasonName}
+                  onChange={e => setNewSeasonName(e.target.value)}
+                  placeholder="Season name (e.g. Spring 2026)"
+                  className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm placeholder-gray-400 outline-none focus:ring-2 focus:ring-green-500"
+                  onKeyDown={e => { if (e.key === 'Enter') createSeason() }}
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={createSeason}
+                    disabled={!newSeasonName.trim() || creatingSeason || !!activeSeason}
+                    className="flex-1 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg py-2 transition-colors"
+                  >
+                    {creatingSeason ? '...' : activeSeason ? 'End current season first' : 'Create Season'}
+                  </button>
+                  <button
+                    onClick={() => { setShowCreateSeason(false); setNewSeasonName('') }}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm rounded-lg py-2 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowCreateSeason(true)}
+                className="w-full bg-green-50 hover:bg-green-100 text-green-600 font-semibold rounded-lg py-2 text-sm transition-colors border border-green-300"
+              >
+                + New Season
+              </button>
+            )}
+
             {/* End current season */}
             {activeSeason && currentSeason?.id === activeSeason.id && (
               <button
@@ -479,45 +525,6 @@ export default function LeagueHome() {
               >
                 End Season: {activeSeason.name}
               </button>
-            )}
-
-            {/* Create new season */}
-            {!activeSeason && (
-              showCreateSeason ? (
-                <div className="flex flex-col gap-2">
-                  <input
-                    type="text"
-                    value={newSeasonName}
-                    onChange={e => setNewSeasonName(e.target.value)}
-                    placeholder="Season name (e.g. Spring 2026)"
-                    className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm placeholder-gray-400 outline-none focus:ring-2 focus:ring-green-500"
-                    onKeyDown={e => { if (e.key === 'Enter') createSeason() }}
-                    autoFocus
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={createSeason}
-                      disabled={!newSeasonName.trim() || creatingSeason}
-                      className="flex-1 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg py-2 transition-colors"
-                    >
-                      {creatingSeason ? '...' : 'Create Season'}
-                    </button>
-                    <button
-                      onClick={() => { setShowCreateSeason(false); setNewSeasonName('') }}
-                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm rounded-lg py-2 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowCreateSeason(true)}
-                  className="w-full bg-green-50 hover:bg-green-100 text-green-600 font-semibold rounded-lg py-2 text-sm transition-colors border border-green-300"
-                >
-                  + New Season
-                </button>
-              )
             )}
           </div>
 
