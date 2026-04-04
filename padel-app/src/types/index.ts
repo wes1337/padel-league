@@ -15,9 +15,19 @@ export interface Player {
   created_at: string
 }
 
+export interface Season {
+  id: string
+  league_id: string
+  name: string
+  ended: boolean
+  champion_id: string | null
+  created_at: string
+}
+
 export interface Session {
   id: string
   league_id: string
+  season_id: string
   date: string
   label: string | null
   excluded: boolean

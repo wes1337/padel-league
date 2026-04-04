@@ -18,9 +18,19 @@ create table players (
   unique (league_id, name)
 );
 
+create table seasons (
+  id uuid primary key default gen_random_uuid(),
+  league_id text references leagues(id) on delete cascade not null,
+  name text not null,
+  ended boolean default false,
+  champion_id uuid references players(id),
+  created_at timestamptz default now()
+);
+
 create table sessions (
   id uuid primary key default gen_random_uuid(),
   league_id text references leagues(id) on delete cascade not null,
+  season_id uuid references seasons(id) not null,
   date date not null default current_date,
   label text,
   excluded boolean default false,
@@ -30,6 +40,39 @@ create table sessions (
 -- Migration (run this if the table already exists):
 -- alter table sessions add column excluded boolean default false;
 -- alter table sessions add column short_id text unique;
+
+-- Migration: Add seasons support (run if tables already exist)
+-- Step 1: Create the seasons table
+-- create table seasons (
+--   id uuid primary key default gen_random_uuid(),
+--   league_id text references leagues(id) on delete cascade not null,
+--   name text not null,
+--   ended boolean default false,
+--   champion_id uuid references players(id),
+--   created_at timestamptz default now()
+-- );
+-- alter table seasons enable row level security;
+-- create policy "Public access" on seasons for all using (true) with check (true);
+--
+-- Step 2: Add season_id to sessions (nullable first)
+-- alter table sessions add column season_id uuid references seasons(id);
+--
+-- Step 3: Auto-create seasons for existing data and link sessions
+-- insert into seasons (league_id, name, ended, created_at)
+-- select distinct s.league_id,
+--   extract(year from s.date)::text || ' Season',
+--   extract(year from s.date) < extract(year from current_date),
+--   min(s.created_at)
+-- from sessions s
+-- group by s.league_id, extract(year from s.date);
+--
+-- update sessions s set season_id = sea.id
+-- from seasons sea
+-- where sea.league_id = s.league_id
+--   and sea.name = extract(year from s.date)::text || ' Season';
+--
+-- Step 4: Make season_id required
+-- alter table sessions alter column season_id set not null;
 
 create table matches (
   id uuid primary key default gen_random_uuid(),
@@ -64,11 +107,13 @@ create table session_signups (
 -- Enable Row Level Security (open read/write via anon key — link = access)
 alter table leagues enable row level security;
 alter table players enable row level security;
+alter table seasons enable row level security;
 alter table sessions enable row level security;
 alter table matches enable row level security;
 
 create policy "Public access" on leagues for all using (true) with check (true);
 create policy "Public access" on players for all using (true) with check (true);
+create policy "Public access" on seasons for all using (true) with check (true);
 create policy "Public access" on sessions for all using (true) with check (true);
 create policy "Public access" on matches for all using (true) with check (true);
 alter table session_signups enable row level security;

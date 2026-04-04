@@ -9,6 +9,11 @@ const AddMatch = lazy(() => import('./pages/AddMatch'))
 const PlayerProfile = lazy(() => import('./pages/PlayerProfile'))
 const CardPreview = lazy(() => import('./pages/CardPreview'))
 
+// Preload the most-visited page chunks so they're ready before navigation
+import('./pages/LeagueHome')
+import('./pages/SessionPage')
+import('./pages/AddMatch')
+
 export default function App() {
   return (
     <BrowserRouter>

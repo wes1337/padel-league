@@ -5,8 +5,8 @@ import { nanoid } from 'nanoid'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
 import { isLeagueAdmin, saveLeagueAdmin, saveSessionCreator } from '../lib/admin'
-import { useLeague, useSessions, usePlayers, useMultiSessionMatches, qk } from '../lib/queries'
-import type { Session, Match, Player, PlayerStats } from '../types'
+import { useLeague, useSeasons, useSessions, usePlayers, useMultiSessionMatches, qk } from '../lib/queries'
+import type { Season, Session, Match, Player, PlayerStats } from '../types'
 import Leaderboard from '../components/Leaderboard'
 
 export default function LeagueHome() {
@@ -23,42 +23,63 @@ export default function LeagueHome() {
   const [showCreateSession, setShowCreateSession] = useState(false)
   const [newSessionDate, setNewSessionDate] = useState(() => new Date().toISOString().split('T')[0])
   const [linkCopied, setLinkCopied] = useState(false)
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null)
+  const [showCreateSeason, setShowCreateSeason] = useState(false)
+  const [newSeasonName, setNewSeasonName] = useState('')
+  const [creatingSeason, setCreatingSeason] = useState(false)
 
   // Scroll to top on navigation
   useEffect(() => { window.scrollTo(0, 0) }, [leagueId])
 
   // ── Queries ────────────────────────────────────────────────────────────────
   const { data: league, isLoading: leagueLoading } = useLeague(leagueId)
+  const { data: seasons = [], isLoading: seasonsLoading } = useSeasons(leagueId)
   const { data: sessions = [], isLoading: sessionsLoading } = useSessions(leagueId)
   const { data: players = [], isLoading: playersLoading } = usePlayers(leagueId)
 
-  const year = new Date().getFullYear()
-  const yearStart = `${year}-01-01`
-  const yearEnd   = `${year}-12-31`
+  // Auto-select active season or most recent
+  const activeSeason = useMemo(() => (seasons as Season[]).find(s => !s.ended), [seasons])
+  const currentSeason = useMemo(() => {
+    if (selectedSeasonId) return (seasons as Season[]).find(s => s.id === selectedSeasonId) ?? null
+    return activeSeason ?? (seasons as Season[])[0] ?? null
+  }, [seasons, selectedSeasonId, activeSeason])
+
+  // Filter sessions for the selected season
+  const seasonSessions = useMemo(() =>
+    (sessions as Session[]).filter(s => currentSeason && s.season_id === currentSeason.id),
+    [sessions, currentSeason]
+  )
 
   const filteredSessionIds = useMemo(() =>
-    sessions
-      .filter((s: Session) => s.date >= yearStart && s.date <= yearEnd && !s.excluded && s.confirmed)
-      .map((s: Session) => s.id),
-    [sessions, yearStart, yearEnd]
+    seasonSessions
+      .filter(s => !s.excluded && s.confirmed)
+      .map(s => s.id),
+    [seasonSessions]
   )
 
   const { data: seasonMatches = [], isLoading: matchesLoading } = useMultiSessionMatches(
     filteredSessionIds,
-    `${leagueId}-${year}`
+    `${leagueId}-${currentSeason?.id ?? 'none'}`
   )
 
   const today = new Date().toISOString().split('T')[0]
   const upcomingSessions = useMemo(() =>
-    (sessions as Session[]).filter(s => s.date > today && !s.ended).sort((a, b) => a.date.localeCompare(b.date)),
-    [sessions, today]
+    seasonSessions.filter(s => s.date > today && !s.ended).sort((a, b) => a.date.localeCompare(b.date)),
+    [seasonSessions, today]
   )
   const pastSessions = useMemo(() =>
-    (sessions as Session[]).filter(s => !(s.date > today && !s.ended)),
-    [sessions, today]
+    seasonSessions.filter(s => !(s.date > today && !s.ended)),
+    [seasonSessions, today]
   )
-  const loading = leagueLoading || sessionsLoading || playersLoading ||
-    (filteredSessionIds.length > 0 && matchesLoading)
+
+  // All champion IDs across all ended seasons
+  const seasonChampionIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const s of seasons as Season[]) {
+      if (s.ended && s.champion_id) ids.add(s.champion_id)
+    }
+    return ids
+  }, [seasons])
 
   // ── Side-effects ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -81,7 +102,6 @@ export default function LeagueHome() {
       now - new Date(s.created_at).getTime() >= TWENTY_FOUR_HOURS
     )
     if (oldSessions.length === 0) return
-    // Check which old sessions have zero matches
     const today = new Date().toISOString().split('T')[0]
     Promise.all(oldSessions.map(async s => {
       const { count } = await supabase.from('matches').select('id', { count: 'exact', head: true }).eq('session_id', s.id)
@@ -137,14 +157,41 @@ export default function LeagueHome() {
   }, [sessionIdsWithMatches, seasonMatches, players])
 
   // ── Actions ────────────────────────────────────────────────────────────────
+  async function createSeason() {
+    const name = newSeasonName.trim()
+    if (!name || creatingSeason) return
+    setCreatingSeason(true)
+    const { data, error } = await supabase
+      .from('seasons')
+      .insert({ league_id: leagueId, name })
+      .select()
+      .single()
+    if (data && !error) {
+      queryClient.invalidateQueries({ queryKey: qk.seasons(leagueId!) })
+      setSelectedSeasonId(data.id)
+      setShowCreateSeason(false)
+      setNewSeasonName('')
+    }
+    setCreatingSeason(false)
+  }
+
+  async function endSeason() {
+    if (!currentSeason || currentSeason.ended) return
+    if (!window.confirm(`End "${currentSeason.name}"? The current #1 player will be crowned season champion.`)) return
+    const championId = seasonStats[0]?.player.id ?? null
+    await supabase.from('seasons').update({ ended: true, champion_id: championId }).eq('id', currentSeason.id)
+    queryClient.invalidateQueries({ queryKey: qk.seasons(leagueId!) })
+  }
+
   async function createSession() {
+    if (!activeSeason) return
     const date = newSessionDate
     const dateObj = new Date(date + 'T12:00:00')
     const label = `Padello – ${dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
     const creator_token = crypto.randomUUID()
     const { data, error } = await supabase
       .from('sessions')
-      .insert({ league_id: leagueId, date, label, confirmed: true, creator_token, short_id: nanoid(8) })
+      .insert({ league_id: leagueId, season_id: activeSeason.id, date, label, confirmed: true, creator_token, short_id: nanoid(8) })
       .select()
       .single()
     if (data && !error) {
@@ -154,6 +201,23 @@ export default function LeagueHome() {
       setNewSessionDate(new Date().toISOString().split('T')[0])
       navigate(`/l/${leagueId}/session/${data.id}`)
     }
+  }
+
+  function prefetchSession(sessionId: string) {
+    queryClient.prefetchQuery({
+      queryKey: qk.session(sessionId),
+      queryFn: async () => {
+        const { data } = await supabase.from('sessions').select('*').eq('id', sessionId).single()
+        return data as Session | null
+      },
+    })
+    queryClient.prefetchQuery({
+      queryKey: qk.sessionMatches(sessionId),
+      queryFn: async () => {
+        const { data } = await supabase.from('matches').select('*').eq('session_id', sessionId).order('created_at')
+        return (data ?? []) as Match[]
+      },
+    })
   }
 
   async function claimAdmin() {
@@ -175,8 +239,19 @@ export default function LeagueHome() {
     queryClient.invalidateQueries({ queryKey: ['matches'] })
   }
 
-  if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-500">Loading...</div>
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function getPlayerName(id: string) {
+    return (players as Player[]).find(p => p.id === id)?.name ?? 'Unknown'
+  }
+
+  const coreLoading = leagueLoading || seasonsLoading || sessionsLoading || playersLoading
+  const statsLoading = filteredSessionIds.length > 0 && matchesLoading
+
+  if (coreLoading) return <div className="flex justify-center items-center min-h-screen text-gray-500">Loading...</div>
   if (!league) return <div className="flex justify-center items-center min-h-screen text-red-600">League not found.</div>
+
+  const noSeasons = seasons.length === 0
+  const viewingEndedSeason = currentSeason?.ended === true
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-6">
@@ -184,10 +259,41 @@ export default function LeagueHome() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{league.name}</h1>
-          <p className="text-gray-500 text-sm">{year} Season</p>
+          {currentSeason && <p className="text-gray-500 text-sm">{currentSeason.name}{viewingEndedSeason ? ' (Ended)' : ''}</p>}
         </div>
         <Link to="/" className="text-gray-500 hover:text-gray-700 text-sm transition-colors pt-1 shrink-0 whitespace-nowrap">← Home</Link>
       </div>
+
+      {/* Season Selector */}
+      {seasons.length > 1 && (
+        <div className="flex items-center gap-2">
+          <select
+            value={currentSeason?.id ?? ''}
+            onChange={e => setSelectedSeasonId(e.target.value)}
+            className="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none focus:ring-2 focus:ring-green-500"
+          >
+            {(seasons as Season[]).map(s => (
+              <option key={s.id} value={s.id}>
+                {s.name}{s.ended ? '' : ' (Active)'}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* No seasons prompt */}
+      {noSeasons && isAdmin && (
+        <div className="bg-yellow-50 border border-yellow-300 rounded-xl px-4 py-3 text-center">
+          <p className="text-yellow-700 text-sm font-semibold mb-2">No season yet</p>
+          <p className="text-yellow-600 text-xs mb-3">Create a season to start tracking standings</p>
+          <button
+            onClick={() => setShowCreateSeason(true)}
+            className="bg-yellow-500 hover:bg-yellow-400 text-white font-semibold rounded-lg px-4 py-2 text-sm transition-colors"
+          >
+            + Create First Season
+          </button>
+        </div>
+      )}
 
       {/* Share League */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center justify-between">
@@ -217,62 +323,84 @@ export default function LeagueHome() {
         </button>
       </div>
 
-      {/* New Session */}
-      {showCreateSession ? (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
-          <h2 className="font-semibold text-gray-900">New Session</h2>
-          <div className="flex flex-col gap-1">
-            <label className="text-gray-500 text-xs">Session date</label>
-            <input
-              type="date"
-              value={newSessionDate}
-              onChange={e => setNewSessionDate(e.target.value)}
-              className="bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 text-base outline-none focus:ring-2 focus:ring-green-500"
-            />
+      {/* New Session — only if there's an active season */}
+      {activeSeason && !viewingEndedSeason && (
+        showCreateSession ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
+            <h2 className="font-semibold text-gray-900">New Session</h2>
+            <div className="flex flex-col gap-1">
+              <label className="text-gray-500 text-xs">Session date</label>
+              <input
+                type="date"
+                value={newSessionDate}
+                onChange={e => setNewSessionDate(e.target.value)}
+                className="bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 text-base outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={createSession} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg py-2.5 transition-colors">
+                Create
+              </button>
+              <button onClick={() => { setShowCreateSession(false); setNewSessionDate(new Date().toISOString().split('T')[0]) }} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg py-2.5 transition-colors">
+                Cancel
+              </button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button onClick={createSession} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg py-2.5 transition-colors">
-              Create
-            </button>
-            <button onClick={() => { setShowCreateSession(false); setNewSessionDate(new Date().toISOString().split('T')[0]) }} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg py-2.5 transition-colors">
-              Cancel
-            </button>
+        ) : (
+          <button
+            onClick={() => setShowCreateSession(true)}
+            className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl py-3 text-lg transition-colors"
+          >
+            + New Session
+          </button>
+        )
+      )}
+
+      {/* Season Champion Banner — for ended seasons */}
+      {viewingEndedSeason && currentSeason?.champion_id && (
+        <div className="bg-yellow-50 border border-yellow-400 rounded-2xl p-4 flex items-center gap-3">
+          <span className="text-3xl">🏆</span>
+          <div>
+            <p className="text-yellow-700 text-xs uppercase tracking-wide font-semibold">Season Champion</p>
+            <p className="text-gray-900 font-bold text-lg">{getPlayerName(currentSeason.champion_id)}</p>
+            <p className="text-yellow-600 text-xs">{currentSeason.name}</p>
           </div>
         </div>
-      ) : (
-        <button
-          onClick={() => setShowCreateSession(true)}
-          className="w-full bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl py-3 text-lg transition-colors"
-        >
-          + New Session
-        </button>
       )}
 
       {/* Season Leaderboard */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900">Season Standings</h2>
-          <button
-            onClick={() => setShowRankingInfo(v => !v)}
-            className="text-gray-500 hover:text-gray-700 text-sm w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center transition-colors"
-            title="How rankings work"
-          >
-            i
-          </button>
-        </div>
-        {showRankingInfo && (
-          <div className="bg-gray-100 rounded-xl px-3 py-2.5 mb-3 flex flex-col gap-1.5 text-xs text-gray-500">
-            <p><span className="text-gray-900 font-medium">Ranking</span> — primary: win rate. Tiebreaker: point differential.</p>
-            <p><span className="text-gray-900 font-medium">⚠ badge</span> — player attended between 30–50% of sessions. They appear in the standings but are ranked below all players with 50%+ attendance, regardless of their record.</p>
-            <p><span className="text-gray-900 font-medium">Not listed</span> — players who attended fewer than 30% of sessions are excluded from the standings entirely.</p>
+      {currentSeason && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-gray-900">Season Standings</h2>
+            <button
+              onClick={() => setShowRankingInfo(v => !v)}
+              className="text-gray-500 hover:text-gray-700 text-sm w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center transition-colors"
+              title="How rankings work"
+            >
+              i
+            </button>
           </div>
-        )}
-        {seasonStats.length === 0 ? (
-          <p className="text-gray-500 text-sm">No matches played yet this season.</p>
-        ) : (
-          <Leaderboard stats={seasonStats} leagueId={leagueId!} crownPlayerId={recentTopId} poopPlayerId={recentBottomId} movements={movements} />
-        )}
-      </div>
+          {showRankingInfo && (
+            <div className="bg-gray-100 rounded-xl px-3 py-2.5 mb-3 flex flex-col gap-1.5 text-xs text-gray-500">
+              <p><span className="text-gray-900 font-medium">Ranking</span> — primary: win rate. Tiebreaker: point differential.</p>
+              <p><span className="text-gray-900 font-medium">⚠ badge</span> — player attended between 30–50% of sessions. They appear in the standings but are ranked below all players with 50%+ attendance, regardless of their record.</p>
+              <p><span className="text-gray-900 font-medium">Not listed</span> — players who attended fewer than 30% of sessions are excluded from the standings entirely.</p>
+            </div>
+          )}
+          {statsLoading ? (
+            <div className="flex flex-col gap-2 animate-pulse">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="bg-gray-100 rounded-xl h-12" />
+              ))}
+            </div>
+          ) : seasonStats.length === 0 ? (
+            <p className="text-gray-500 text-sm">No matches played yet this season.</p>
+          ) : (
+            <Leaderboard stats={seasonStats} leagueId={leagueId!} crownPlayerId={recentTopId} poopPlayerId={recentBottomId} movements={movements} seasonChampionIds={seasonChampionIds} />
+          )}
+        </div>
+      )}
 
       {/* Upcoming Sessions */}
       {upcomingSessions.length > 0 && (
@@ -283,6 +411,8 @@ export default function LeagueHome() {
               <div key={s.id} className="flex items-center gap-2">
                 <Link
                   to={`/l/${leagueId}/session/${s.id}`}
+                  onMouseEnter={() => prefetchSession(s.id)}
+                  onTouchStart={() => prefetchSession(s.id)}
                   className="flex-1 flex items-center justify-between bg-gray-100 hover:bg-gray-200 rounded-xl px-4 py-3 transition-colors"
                 >
                   <span className="text-sm text-gray-900">{s.label || s.date}</span>
@@ -298,32 +428,36 @@ export default function LeagueHome() {
       )}
 
       {/* Sessions */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-        <h2 className="font-semibold text-gray-900 mb-3">{upcomingSessions.length > 0 ? 'Past Sessions' : 'Sessions'}</h2>
-        {pastSessions.length === 0 ? (
-          <p className="text-gray-500 text-sm">No sessions yet.</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {pastSessions.map((s: Session) => (
-              <div key={s.id} className="flex items-center gap-2">
-                <Link
-                  to={`/l/${leagueId}/session/${s.id}`}
-                  className="flex-1 flex items-center justify-between bg-gray-100 hover:bg-gray-200 rounded-xl px-4 py-3 transition-colors"
-                >
-                  <span className={`text-sm ${s.excluded ? 'text-gray-500' : !s.confirmed ? 'text-gray-500' : 'text-gray-900'}`}>{s.label || s.date}</span>
-                  <div className="flex items-center gap-2">
-                    {s.excluded && <span className="text-xs text-yellow-600">excluded</span>}
-                    <span className="text-gray-500 text-sm">→</span>
-                  </div>
-                </Link>
-                {isAdmin && (
-                  <button onClick={() => deleteSession(s.id)} className="text-gray-400 hover:text-red-600 bg-gray-100 rounded-xl px-3 py-3 transition-colors text-sm" title="Delete session">🗑</button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {currentSeason && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <h2 className="font-semibold text-gray-900 mb-3">{upcomingSessions.length > 0 ? 'Past Sessions' : 'Sessions'}</h2>
+          {pastSessions.length === 0 ? (
+            <p className="text-gray-500 text-sm">No sessions yet.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {pastSessions.map((s: Session) => (
+                <div key={s.id} className="flex items-center gap-2">
+                  <Link
+                    to={`/l/${leagueId}/session/${s.id}`}
+                    onMouseEnter={() => prefetchSession(s.id)}
+                    onTouchStart={() => prefetchSession(s.id)}
+                    className="flex-1 flex items-center justify-between bg-gray-100 hover:bg-gray-200 rounded-xl px-4 py-3 transition-colors"
+                  >
+                    <span className={`text-sm ${s.excluded ? 'text-gray-500' : !s.confirmed ? 'text-gray-500' : 'text-gray-900'}`}>{s.label || s.date}</span>
+                    <div className="flex items-center gap-2">
+                      {s.excluded && <span className="text-xs text-yellow-600">excluded</span>}
+                      <span className="text-gray-500 text-sm">→</span>
+                    </div>
+                  </Link>
+                  {isAdmin && (
+                    <button onClick={() => deleteSession(s.id)} className="text-gray-400 hover:text-red-600 bg-gray-100 rounded-xl px-3 py-3 transition-colors text-sm" title="Delete session">🗑</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Admin Section */}
       {isAdmin ? (
@@ -332,13 +466,70 @@ export default function LeagueHome() {
             <h2 className="font-semibold text-gray-900">Admin</h2>
             <span className="text-xs bg-green-50 text-green-600 border border-green-300 rounded-full px-2 py-0.5">Admin</span>
           </div>
-          <p className="text-gray-500 text-xs">Share this code with trusted players to give them admin access. Admins can create and delete sessions, end sessions, and exclude sessions from the season rankings.</p>
-          <button
-            onClick={() => setShowAdminCode(!showAdminCode)}
-            className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg px-3 py-2 transition-colors text-left"
-          >
-            {showAdminCode ? `Admin code: ${league.admin_token ?? '—'}` : 'Reveal admin code'}
-          </button>
+
+          {/* Season Management */}
+          <div className="border-t border-gray-100 pt-3 flex flex-col gap-2">
+            <p className="text-gray-500 text-xs uppercase tracking-wide font-semibold">Season Management</p>
+
+            {/* End current season */}
+            {activeSeason && currentSeason?.id === activeSeason.id && (
+              <button
+                onClick={endSeason}
+                className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold rounded-lg py-2 text-sm transition-colors border border-red-300"
+              >
+                End Season: {activeSeason.name}
+              </button>
+            )}
+
+            {/* Create new season */}
+            {showCreateSeason ? (
+              <div className="flex flex-col gap-2">
+                <input
+                  type="text"
+                  value={newSeasonName}
+                  onChange={e => setNewSeasonName(e.target.value)}
+                  placeholder="Season name (e.g. Spring 2026)"
+                  className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm placeholder-gray-400 outline-none focus:ring-2 focus:ring-green-500"
+                  onKeyDown={e => { if (e.key === 'Enter') createSeason() }}
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={createSeason}
+                    disabled={!newSeasonName.trim() || creatingSeason}
+                    className="flex-1 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg py-2 transition-colors"
+                  >
+                    {creatingSeason ? '...' : 'Create Season'}
+                  </button>
+                  <button
+                    onClick={() => { setShowCreateSeason(false); setNewSeasonName('') }}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm rounded-lg py-2 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowCreateSeason(true)}
+                disabled={!!activeSeason}
+                className="w-full bg-green-50 hover:bg-green-100 disabled:opacity-50 text-green-600 font-semibold rounded-lg py-2 text-sm transition-colors border border-green-300"
+              >
+                {activeSeason ? 'End current season first' : '+ New Season'}
+              </button>
+            )}
+          </div>
+
+          {/* Admin code */}
+          <div className="border-t border-gray-100 pt-3 flex flex-col gap-2">
+            <p className="text-gray-500 text-xs">Share this code with trusted players to give them admin access.</p>
+            <button
+              onClick={() => setShowAdminCode(!showAdminCode)}
+              className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg px-3 py-2 transition-colors text-left"
+            >
+              {showAdminCode ? `Admin code: ${league.admin_token ?? '—'}` : 'Reveal admin code'}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">

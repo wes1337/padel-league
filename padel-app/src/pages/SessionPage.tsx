@@ -74,6 +74,7 @@ export default function SessionPage() {
   const [linkCopied, setLinkCopied] = useState(false)
   const [inviting, setInviting] = useState(false)
   const [rankHighlightedIds, setRankHighlightedIds] = useState<Map<string, string>>(new Map())
+  const [unevenExpanded, setUnevenExpanded] = useState(false)
 
   const { data: session, isLoading: sessionLoading } = useSession(sessionId)
   const { data: matches = [], isLoading: matchesLoading } = useSessionMatches(sessionId)
@@ -87,7 +88,7 @@ export default function SessionPage() {
   // Scroll to top when navigating to a session
   useEffect(() => { window.scrollTo(0, 0) }, [sessionId])
 
-  const loading = sessionLoading || matchesLoading || playersLoading
+  const loading = sessionLoading || playersLoading
 
   // Auto-end session after 24 hours (skip future sessions)
   useEffect(() => {
@@ -164,7 +165,7 @@ export default function SessionPage() {
     return players.find(p => p.id === id)?.name ?? id
   }
 
-  function getUnevenWarning(): { outliers: { name: string; diff: number }[] } | null {
+  function getUnevenWarning(): { allPlayers: { name: string; count: number; diff: number }[]; mode: number } | null {
     if (matches.length === 0) return null
     const counts = new Map<string, number>()
     for (const m of matches) {
@@ -177,20 +178,43 @@ export default function SessionPage() {
     for (const n of counts.values()) freq.set(n, (freq.get(n) || 0) + 1)
     let mode = 0, modeCnt = 0
     for (const [val, cnt] of freq) { if (cnt > modeCnt || (cnt === modeCnt && val > mode)) { mode = val; modeCnt = cnt } }
-    const outliers = [...counts.entries()]
-      .filter(([, n]) => n !== mode)
-      .map(([id, n]) => ({ name: getPlayerName(id), diff: n - mode }))
-      .sort((a, b) => a.diff - b.diff)
-    if (outliers.length === 0) return null
-    return { outliers }
+    const hasOutlier = [...counts.values()].some(n => n !== mode)
+    if (!hasOutlier) return null
+    const allPlayers = [...counts.entries()]
+      .map(([id, n]) => ({ name: getPlayerName(id), count: n, diff: n - mode }))
+      .sort((a, b) => a.count - b.count)
+    return { allPlayers, mode }
   }
+
+  // Detect duplicate matches (same teams + same scores)
+  function getDuplicateMatchIds(): Set<string> {
+    const dupes = new Set<string>()
+    const seen = new Map<string, string[]>()
+    for (const m of matches) {
+      const t1 = [m.team1_p1, m.team1_p2].sort().join(',')
+      const t2 = [m.team2_p1, m.team2_p2].sort().join(',')
+      // Normalize team order so A vs B == B vs A with swapped scores
+      const [teamA, teamB, sA, sB] = t1 < t2
+        ? [t1, t2, m.team1_score, m.team2_score]
+        : [t2, t1, m.team2_score, m.team1_score]
+      const key = `${teamA}|${teamB}|${sA}-${sB}`
+      const existing = seen.get(key)
+      if (existing) {
+        existing.push(m.id)
+        for (const id of existing) dupes.add(id)
+      } else {
+        seen.set(key, [m.id])
+      }
+    }
+    return dupes
+  }
+
+  const unevenWarning = matches.length > 0 ? getUnevenWarning() : null
+  const duplicateIds = useMemo(() => getDuplicateMatchIds(), [matches])
 
   if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-500">Loading...</div>
 
   const isAdmin = isLeagueAdmin(leagueId!)
-
-
-  const unevenWarning = matches.length > 0 ? getUnevenWarning() : null
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-6">
@@ -220,17 +244,32 @@ export default function SessionPage() {
       {/* Uneven games warning */}
       {unevenWarning && (
         <div className="bg-yellow-50 border border-yellow-300 rounded-xl px-4 py-3">
-          <p className="text-yellow-700 text-sm font-semibold mb-2">⚠ Uneven games</p>
-          <div className="flex flex-wrap gap-2">
-            {unevenWarning.outliers.map((o, i) => (
-              <span key={i} className="inline-flex items-center gap-1.5 bg-white border border-yellow-300 rounded-lg px-2.5 py-1">
-                <span className="text-gray-700 text-xs font-medium">{o.name}</span>
-                <span className={`text-xs font-bold ${o.diff > 0 ? 'text-red-500' : 'text-blue-500'}`}>
-                  {o.diff > 0 ? '+' : ''}{o.diff}
-                </span>
-              </span>
-            ))}
-          </div>
+          <button onClick={() => setUnevenExpanded(v => !v)} className="w-full flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <p className="text-yellow-700 text-sm font-semibold">⚠ Uneven games</p>
+              <p className="text-yellow-600 text-xs">Expected: {unevenWarning.mode} each</p>
+            </div>
+            <span className={`text-yellow-600 text-xs transition-transform ${unevenExpanded ? 'rotate-180' : ''}`}>▼</span>
+          </button>
+          {unevenExpanded && (
+            <div className="flex flex-col gap-1 mt-2">
+              {unevenWarning.allPlayers.map((o, i) => (
+                <div key={i} className={`flex items-center justify-between rounded-lg px-3 py-1.5 ${
+                  o.diff > 0 ? 'bg-red-50 border border-red-200' : o.diff < 0 ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50 border border-gray-200'
+                }`}>
+                  <span className={`text-sm font-medium ${o.diff === 0 ? 'text-gray-400' : 'text-gray-900'}`}>{o.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs ${o.diff === 0 ? 'text-gray-400' : 'text-gray-600'}`}>{o.count}</span>
+                    {o.diff !== 0 && (
+                      <span className={`text-xs font-bold ${o.diff > 0 ? 'text-red-500' : 'text-blue-500'}`}>
+                        {o.diff > 0 ? `+${o.diff}` : o.diff}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -370,12 +409,14 @@ export default function SessionPage() {
             {[...matches].reverse().map((m, i) => {
               const t1Won = m.team1_score > m.team2_score
               const isEditing = editingMatchId === m.id
+              const isDupe = duplicateIds.has(m.id)
               const es = editState
               return (
-                <div key={m.id} className="bg-gray-100 rounded-xl p-3 flex flex-col gap-2">
+                <div key={m.id} className={`rounded-xl p-3 flex flex-col gap-2 ${isDupe ? 'bg-red-50 border border-red-300' : 'bg-gray-100'}`}>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500 uppercase tracking-wide">
                       Game {matches.length - i} · {(league?.scoring_type ?? m.scoring_type) === 'americano' ? 'Americano' : 'Traditional'}
+                      {isDupe && <span className="text-red-500 ml-1 normal-case">· Possible duplicate</span>}
                     </span>
                     <div className="flex items-center gap-2">
                       {!isEditing && (

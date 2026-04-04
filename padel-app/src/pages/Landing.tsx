@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { nanoid } from 'nanoid'
 import { saveLeagueAdmin } from '../lib/admin'
+import { prefetchLeagueData } from '../lib/queries'
 import type { ScoringType } from '../types'
 
 interface BeforeInstallPromptEvent extends Event {
@@ -12,6 +14,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 export default function Landing() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [leagueName, setLeagueName] = useState('')
   const [scoringType, setScoringType] = useState<ScoringType>('americano')
   const [creating, setCreating] = useState(false)
@@ -129,6 +132,8 @@ export default function Landing() {
               <button
                 key={l.id}
                 onClick={() => navigate(`/l/${l.id}`)}
+                onMouseEnter={() => prefetchLeagueData(queryClient, l.id)}
+                onTouchStart={() => prefetchLeagueData(queryClient, l.id)}
                 className="flex items-center justify-between bg-gray-100 hover:bg-gray-200 rounded-xl px-4 py-3 transition-colors"
               >
                 <span className="text-gray-900 font-medium">{l.name}</span>

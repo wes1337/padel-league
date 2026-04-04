@@ -8,11 +8,12 @@ interface Props {
   crownPlayerId?: string
   poopPlayerId?: string
   movements?: Record<string, number>
+  seasonChampionIds?: Set<string>
 }
 
 const medals = ['🥇', '🥈', '🥉']
 
-export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId, poopPlayerId, movements }: Props) {
+export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId, poopPlayerId, movements, seasonChampionIds }: Props) {
   // Compute true ranks accounting for ties (same winRate + pointDiff = same rank)
   const ranks: number[] = []
   stats.forEach((s, i) => {
@@ -33,6 +34,7 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
         const winPct = Math.round(s.winRate * 100)
         const isCrown = crownPlayerId && s.player.id === crownPlayerId
         const isPoop = poopPlayerId && s.player.id === poopPlayerId
+        const isChampion = seasonChampionIds?.has(s.player.id)
         const movement = movements?.[s.player.id]
         const isNew = movement === Infinity
         return (
@@ -57,6 +59,7 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-900 font-semibold truncate">{s.player.name}</span>
+                {isChampion && <span className="shrink-0" title="Season Champion">🏆</span>}
                 {isCrown && <span className="shrink-0">👑</span>}
                 {isPoop && <span className="shrink-0">💩</span>}
                 {s.lowAttendance && (
@@ -68,10 +71,14 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
               </div>
             </div>
 
-            {/* Point diff */}
-            <div className="shrink-0">
+            {/* Point diff + view stats */}
+            <div className="shrink-0 flex items-center gap-2">
               <div className={`text-sm font-semibold ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                 {diff > 0 ? `+${diff}` : diff}
+              </div>
+              <div className="flex items-center gap-0.5 text-gray-400">
+                <span className="text-xs">View stats</span>
+                <svg className={`w-4 h-4 ${sessionId ? 'text-blue-400' : 'text-green-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
               </div>
             </div>
           </Link>

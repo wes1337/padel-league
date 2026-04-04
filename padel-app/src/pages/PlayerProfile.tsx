@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
 import { usePlayers, useMultiSessionMatches } from '../lib/queries'
-import type { Player, Match, Session } from '../types'
+import type { Player, Match, Session, Season } from '../types'
 
 interface MatchDetail extends Match {
   sessionLabel: string
@@ -142,6 +143,16 @@ export default function PlayerProfile() {
     sessionIds,
     `profile-${leagueId}-${sessionId ?? `season-${year}`}`
   )
+
+  // Season championships for this player
+  const { data: championships = [] } = useQuery({
+    queryKey: ['championships', playerId],
+    queryFn: async () => {
+      const { data } = await supabase.from('seasons').select('*').eq('champion_id', playerId!).order('created_at', { ascending: false })
+      return (data ?? []) as Season[]
+    },
+    enabled: !!playerId && !sessionId,
+  })
 
   const loading = sessionsLoading || (sessionIds.length > 0 && matchesLoading)
 
@@ -440,6 +451,21 @@ export default function PlayerProfile() {
           <p className="text-gray-500 text-sm">{sessionId ? 'Session stats' : `${new Date().getFullYear()} Season · all stats below are season totals`}</p>
         </div>
       </div>
+
+      {/* Season Titles */}
+      {!sessionId && championships.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-400 rounded-2xl p-4 flex items-center gap-3">
+          <span className="text-2xl">🏆</span>
+          <div>
+            <p className="text-yellow-700 text-xs uppercase tracking-wide font-semibold">
+              {championships.length}x Season Champion
+            </p>
+            <p className="text-gray-900 text-sm font-medium">
+              {championships.map(c => c.name).join(', ')}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Overview grid */}
       <div className="grid grid-cols-3 gap-3">

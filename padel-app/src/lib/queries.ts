@@ -1,10 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, type QueryClient } from '@tanstack/react-query'
 import { supabase } from './supabase'
-import type { League, Session, Match, Player, SessionSignup } from '../types'
+import type { League, Season, Session, Match, Player, SessionSignup } from '../types'
 
 // Centralised cache keys — import these when invalidating after mutations
 export const qk = {
   league:        (id: string)       => ['league', id] as const,
+  seasons:       (leagueId: string) => ['seasons', leagueId] as const,
   sessions:      (leagueId: string) => ['sessions', leagueId] as const,
   session:       (id: string)       => ['session', id] as const,
   players:       (leagueId: string) => ['players', leagueId] as const,
@@ -21,8 +22,18 @@ export function useLeague(leagueId: string | undefined) {
       return data as League | null
     },
     enabled: !!leagueId,
-    staleTime: 5 * 60 * 1000,
     retry: 2,
+  })
+}
+
+export function useSeasons(leagueId: string | undefined) {
+  return useQuery({
+    queryKey: qk.seasons(leagueId ?? ''),
+    queryFn: async () => {
+      const { data } = await supabase.from('seasons').select('*').eq('league_id', leagueId!).order('created_at', { ascending: false })
+      return (data ?? []) as Season[]
+    },
+    enabled: !!leagueId,
   })
 }
 
@@ -34,7 +45,6 @@ export function useSessions(leagueId: string | undefined) {
       return (data ?? []) as Session[]
     },
     enabled: !!leagueId,
-    staleTime: 3 * 60 * 1000,   // 3 min — mutations invalidate manually anyway
   })
 }
 
@@ -46,7 +56,6 @@ export function useSession(sessionId: string | undefined) {
       return data as Session | null
     },
     enabled: !!sessionId,
-    staleTime: 3 * 60 * 1000,
   })
 }
 
@@ -58,7 +67,6 @@ export function usePlayers(leagueId: string | undefined) {
       return (data ?? []) as Player[]
     },
     enabled: !!leagueId,
-    staleTime: 5 * 60 * 1000,
   })
 }
 
@@ -70,7 +78,6 @@ export function useSessionMatches(sessionId: string | undefined) {
       return (data ?? []) as Match[]
     },
     enabled: !!sessionId,
-    staleTime: 3 * 60 * 1000,
   })
 }
 
@@ -82,7 +89,6 @@ export function useSessionSignups(sessionId: string | undefined) {
       return (data ?? []) as SessionSignup[]
     },
     enabled: !!sessionId,
-    staleTime: 3 * 60 * 1000,
   })
 }
 
@@ -98,7 +104,39 @@ export function useSignupCounts(sessionIds: string[]) {
       return counts
     },
     enabled: sessionIds.length > 0,
-    staleTime: 3 * 60 * 1000,
+  })
+}
+
+// Prefetch all league data in parallel — call on hover/touch before navigating
+export function prefetchLeagueData(qc: QueryClient, leagueId: string) {
+  qc.prefetchQuery({
+    queryKey: qk.league(leagueId),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('leagues').select('*').eq('id', leagueId).single()
+      if (error) throw error
+      return data as League | null
+    },
+  })
+  qc.prefetchQuery({
+    queryKey: qk.seasons(leagueId),
+    queryFn: async () => {
+      const { data } = await supabase.from('seasons').select('*').eq('league_id', leagueId).order('created_at', { ascending: false })
+      return (data ?? []) as Season[]
+    },
+  })
+  qc.prefetchQuery({
+    queryKey: qk.sessions(leagueId),
+    queryFn: async () => {
+      const { data } = await supabase.from('sessions').select('*').eq('league_id', leagueId).order('date', { ascending: false })
+      return (data ?? []) as Session[]
+    },
+  })
+  qc.prefetchQuery({
+    queryKey: qk.players(leagueId),
+    queryFn: async () => {
+      const { data } = await supabase.from('players').select('*').eq('league_id', leagueId).order('name')
+      return (data ?? []) as Player[]
+    },
   })
 }
 
@@ -112,6 +150,5 @@ export function useMultiSessionMatches(sessionIds: string[], cacheScope: string)
       return (data ?? []) as Match[]
     },
     enabled: sessionIds.length > 0,
-    staleTime: 3 * 60 * 1000,
   })
 }
