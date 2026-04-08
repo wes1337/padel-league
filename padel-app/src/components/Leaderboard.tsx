@@ -31,7 +31,7 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
       {stats.map((s, i) => {
         const rank = ranks[i]
         const diff = s.pointDiff
-        const winPct = Math.round(s.winRate * 100)
+        const winPct = (s.winRate * 100).toFixed(1)
         const isCrown = crownPlayerId && s.player.id === crownPlayerId
         const isPoop = poopPlayerId && s.player.id === poopPlayerId
         const isChampion = seasonChampionIds?.has(s.player.id)
