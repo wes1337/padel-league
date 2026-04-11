@@ -387,9 +387,10 @@ export default function PlayerProfile() {
   const partners = [...partnerMap.entries()]
     .filter(([id]) => regularPlayerIds.has(id))
     .map(([, v]) => v)
+    .filter(p => p.wins + p.losses > 0)
     .sort((a, b) => {
-      const pctA = (a.wins / (a.wins + a.losses)) || 0
-      const pctB = (b.wins / (b.wins + b.losses)) || 0
+      const pctA = a.wins / (a.wins + a.losses)
+      const pctB = b.wins / (b.wins + b.losses)
       return pctB - pctA || (b.wins + b.losses) - (a.wins + a.losses) || b.diff - a.diff
     })
   const bestPartner = partners[0]
@@ -408,6 +409,7 @@ export default function PlayerProfile() {
   const rivals = [...rivalMap.entries()]
     .filter(([id]) => regularPlayerIds.has(id))
     .map(([, v]) => v)
+    .filter(r => r.wins + r.losses > 0)
     .sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses))
   const qualifiedRivals = [...rivalMap.entries()].filter(([id]) => regularPlayerIds.has(id)).map(([, v]) => v).filter(r => r.wins + r.losses >= 3)
   const favVictim = [...qualifiedRivals].sort((a, b) => {
