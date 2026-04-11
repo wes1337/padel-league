@@ -67,14 +67,14 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
                 )}
               </div>
               <div className="text-gray-500 text-xs mt-0.5">
-                {s.wins}W – {s.losses}L · {winPct}% win rate
+                {s.wins}W – {s.losses}L · <span className={diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-500'}>{diff > 0 ? `+${diff}` : diff}</span> diff
               </div>
             </div>
 
-            {/* Point diff + view stats */}
+            {/* Win rate + view stats */}
             <div className="shrink-0 flex items-center gap-2">
-              <div className={`text-sm font-semibold ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                {diff > 0 ? `+${diff}` : diff}
+              <div className="text-sm font-semibold text-gray-900">
+                {winPct}%
               </div>
               <div className="flex items-center gap-0.5 text-gray-400">
                 <span className="text-xs">Stats</span>

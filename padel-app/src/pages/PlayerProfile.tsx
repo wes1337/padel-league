@@ -276,25 +276,33 @@ export default function PlayerProfile() {
 
     // Session rank + averages
     if (sessionId) {
-      const sMap = new Map<string, { wins: number; pointDiff: number; scored: number; conceded: number }>()
+      const sMap = new Map<string, { wins: number; games: number; pointDiff: number; scored: number; conceded: number }>()
       for (const m of allMatches as Match[]) {
         const t1Won = m.team1_score > m.team2_score
+        const draw = m.team1_score === m.team2_score
         for (const pid of [m.team1_p1, m.team1_p2]) {
-          if (!sMap.has(pid)) sMap.set(pid, { wins: 0, pointDiff: 0, scored: 0, conceded: 0 })
+          if (!sMap.has(pid)) sMap.set(pid, { wins: 0, games: 0, pointDiff: 0, scored: 0, conceded: 0 })
           const s = sMap.get(pid)!
           if (t1Won) s.wins++
+          if (!draw) s.games++
           s.scored += m.team1_score; s.conceded += m.team2_score
           s.pointDiff += m.team1_score - m.team2_score
         }
         for (const pid of [m.team2_p1, m.team2_p2]) {
-          if (!sMap.has(pid)) sMap.set(pid, { wins: 0, pointDiff: 0, scored: 0, conceded: 0 })
+          if (!sMap.has(pid)) sMap.set(pid, { wins: 0, games: 0, pointDiff: 0, scored: 0, conceded: 0 })
           const s = sMap.get(pid)!
-          if (!t1Won) s.wins++
+          if (!t1Won && !draw) s.wins++
+          if (!draw) s.games++
           s.scored += m.team2_score; s.conceded += m.team1_score
           s.pointDiff += m.team2_score - m.team1_score
         }
       }
-      const ranked = [...sMap.entries()].sort((a, b) => b[1].wins - a[1].wins || b[1].pointDiff - a[1].pointDiff)
+      const ranked = [...sMap.entries()].sort((a, b) => {
+        const aRate = a[1].games > 0 ? a[1].wins / a[1].games : 0
+        const bRate = b[1].games > 0 ? b[1].wins / b[1].games : 0
+        if (bRate !== aRate) return bRate - aRate
+        return b[1].pointDiff - a[1].pointDiff
+      })
       const rank = ranked.findIndex(([id]) => id === playerId)
       if (rank !== -1) setSessionRank({ rank: rank + 1, total: ranked.length })
 
@@ -346,6 +354,7 @@ export default function PlayerProfile() {
   // ── Core stats ──────────────────────────────────────────────────────────────
   const wins = matchDetails.filter(m => m.won).length
   const losses = matchDetails.filter(m => !m.won && !m.draw).length
+  const draws = matchDetails.filter(m => m.draw).length
   const totalPlayed = matchDetails.length
   const decisive = wins + losses
   const winRate = decisive > 0 ? Math.round((wins / decisive) * 100) : 0
@@ -446,12 +455,22 @@ export default function PlayerProfile() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link to={sessionId ? `/l/${leagueId}/session/${sessionId}` : `/l/${leagueId}`} className="text-gray-500 hover:text-gray-700 text-xl">←</Link>
-        <div>
-          <div className="flex items-center gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold text-gray-900">{player.name}</h1>
             {!sessionId && lowAttendance && <span className="text-yellow-600 text-lg" title="Low attendance">⚠</span>}
+            {!sessionId && (
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${lowAttendance ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
+                {attendancePct}% attendance
+              </span>
+            )}
+            {sessionId && sessionRank && (
+              <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+                Rank {sessionRank.rank}/{sessionRank.total}
+              </span>
+            )}
           </div>
-          <p className="text-gray-500 text-sm">{sessionId ? 'Session stats' : `${new Date().getFullYear()} Season · all stats below are season totals`}</p>
+          <p className="text-gray-500 text-sm">{sessionId ? 'Session stats' : `${new Date().getFullYear()} Season`}</p>
         </div>
       </div>
 
@@ -472,18 +491,18 @@ export default function PlayerProfile() {
 
       {/* Overview grid */}
       <div className="grid grid-cols-3 gap-3">
-        {[
+        {([
           { label: 'Matches', value: totalPlayed },
           { label: 'Win Rate', value: `${winRate}%` },
           { label: 'Pt Diff', value: pointDiff > 0 ? `+${pointDiff}` : String(pointDiff) },
           { label: 'Wins', value: wins, color: wins > 0 ? 'text-green-600' : 'text-gray-900' },
           { label: 'Losses', value: losses, color: losses > 0 ? 'text-red-600' : 'text-gray-900' },
-          ...(sessionId && sessionRank ? [{ label: 'Session Rank', value: `${sessionRank.rank} / ${sessionRank.total}` }] : []),
-          ...(!sessionId ? [{ label: 'Attendance', value: `${attendancePct}%` }] : []),
-        ].map(({ label, value, color }) => (
+          { label: 'Draws', value: draws, note: 'Excluded from rank' },
+        ] as { label: string; value: string | number; color?: string; note?: string }[]).map(({ label, value, color, note }) => (
           <div key={label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex flex-col gap-0.5">
             <span className="text-gray-500 text-xs uppercase tracking-wide">{label}</span>
             <span className={`${color ?? 'text-gray-900'} text-xl font-bold`}>{value}</span>
+            {note && <span className="text-gray-400 text-[10px] leading-tight mt-0.5">{note}</span>}
           </div>
         ))}
       </div>

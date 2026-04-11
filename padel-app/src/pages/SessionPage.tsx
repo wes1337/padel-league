@@ -90,13 +90,11 @@ export default function SessionPage() {
 
   const loading = sessionLoading || playersLoading
 
-  // Auto-end session after 24 hours (skip future sessions)
+  // Auto-end session 24h after its scheduled date (so pre-created future sessions stay open)
   useEffect(() => {
     if (!session || session.ended) return
-    const today = new Date().toISOString().split('T')[0]
-    if (session.date > today) return
-    const created = new Date(session.created_at).getTime()
-    if (Date.now() - created >= 24 * 60 * 60 * 1000) {
+    const sessionDateMs = new Date(session.date).getTime()
+    if (Date.now() - sessionDateMs >= 24 * 60 * 60 * 1000) {
       supabase.from('sessions').update({ ended: true }).eq('id', session.id).then(() => {
         queryClient.invalidateQueries({ queryKey: qk.session(sessionId!) })
       })
