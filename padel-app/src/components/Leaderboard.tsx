@@ -62,6 +62,7 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
                 <span className={`font-semibold shrink-0 ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-500'}`}>
                   {diff > 0 ? `+${diff}` : diff}
                 </span>
+                <span className="text-[9px] uppercase tracking-wide text-gray-400 shrink-0">Pts diff</span>
                 {isChampion && <span className="shrink-0" title="Season Champion">🏆</span>}
                 {isCrown && <span className="shrink-0">👑</span>}
                 {isPoop && <span className="shrink-0">💩</span>}
