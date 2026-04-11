@@ -321,26 +321,30 @@ export default function PlayerProfile() {
     for (const session of sessions) {
       const sessionMatches = (allMatches as Match[]).filter(m => m.session_id === session.id)
       if (sessionMatches.length === 0 || !sessionsAttendedSet.has(session.id)) continue
-      const sessionStatMap = new Map<string, { wins: number; pointDiff: number }>()
+      const sessionStatMap = new Map<string, { wins: number; games: number; pointDiff: number }>()
       for (const m of sessionMatches) {
         for (const pid of [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2]) {
-          if (!sessionStatMap.has(pid)) sessionStatMap.set(pid, { wins: 0, pointDiff: 0 })
+          if (!sessionStatMap.has(pid)) sessionStatMap.set(pid, { wins: 0, games: 0, pointDiff: 0 })
         }
         const isDraw = m.team1_score === m.team2_score
         const team1Won = m.team1_score > m.team2_score
         for (const pid of [m.team1_p1, m.team1_p2]) {
           const s = sessionStatMap.get(pid)!
           if (!isDraw && team1Won) s.wins++
+          if (!isDraw) s.games++
           s.pointDiff += m.team1_score - m.team2_score
         }
         for (const pid of [m.team2_p1, m.team2_p2]) {
           const s = sessionStatMap.get(pid)!
           if (!isDraw && !team1Won) s.wins++
+          if (!isDraw) s.games++
           s.pointDiff += m.team2_score - m.team1_score
         }
       }
       const sorted = [...sessionStatMap.entries()].sort((a, b) => {
-        if (b[1].wins !== a[1].wins) return b[1].wins - a[1].wins
+        const aRate = a[1].games > 0 ? a[1].wins / a[1].games : 0
+        const bRate = b[1].games > 0 ? b[1].wins / b[1].games : 0
+        if (bRate !== aRate) return bRate - aRate
         return b[1].pointDiff - a[1].pointDiff
       })
       if (sorted[0]?.[0] === playerId) sessionsTopped++

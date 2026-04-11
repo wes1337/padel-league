@@ -55,10 +55,13 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
               )}
             </div>
 
-            {/* Name + badge */}
+            {/* Name + point diff + badges */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-900 font-semibold truncate">{s.player.name}</span>
+                <span className={`font-semibold shrink-0 ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                  {diff > 0 ? `+${diff}` : diff}
+                </span>
                 {isChampion && <span className="shrink-0" title="Season Champion">🏆</span>}
                 {isCrown && <span className="shrink-0">👑</span>}
                 {isPoop && <span className="shrink-0">💩</span>}
@@ -67,14 +70,15 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
                 )}
               </div>
               <div className="text-gray-500 text-xs mt-0.5">
-                {s.wins}W – {s.losses}L · <span className={diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-500'}>{diff > 0 ? `+${diff}` : diff}</span> diff
+                {s.wins}W – {s.losses}L
               </div>
             </div>
 
             {/* Win rate + view stats */}
             <div className="shrink-0 flex items-center gap-2">
-              <div className="text-sm font-semibold text-gray-900">
-                {winPct}%
+              <div className="flex flex-col items-end leading-tight">
+                <span className="text-sm font-semibold text-gray-900">{winPct}%</span>
+                <span className="text-[9px] uppercase tracking-wide text-gray-400 mt-0.5">Win rate</span>
               </div>
               <div className="flex items-center gap-0.5 text-gray-400">
                 <span className="text-xs">Stats</span>
