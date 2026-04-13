@@ -55,14 +55,10 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
               )}
             </div>
 
-            {/* Name + point diff + badges */}
+            {/* Name + badges */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="text-gray-900 font-semibold truncate">{s.player.name}</span>
-                <span className={`font-semibold shrink-0 ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                  {diff > 0 ? `+${diff}` : diff}
-                </span>
-                <span className="text-[9px] uppercase tracking-wide text-gray-400 shrink-0">Pts diff</span>
                 {isChampion && <span className="shrink-0" title="Season Champion">🏆</span>}
                 {isCrown && <span className="shrink-0">👑</span>}
                 {isPoop && <span className="shrink-0">💩</span>}
@@ -70,8 +66,12 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
                   <span className="text-yellow-600 text-sm shrink-0" title={`Low attendance (${Math.round(s.attendancePct * 100)}%)`}>⚠</span>
                 )}
               </div>
-              <div className="text-gray-500 text-xs mt-0.5">
-                {s.wins}W – {s.losses}L
+              <div className="text-gray-500 text-xs mt-0.5 flex items-center gap-1.5">
+                <span>{s.wins}W – {s.losses}L</span>
+                <span className={`font-semibold ${diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                  {diff > 0 ? `+${diff}` : diff}
+                </span>
+                <span className="text-[9px] uppercase tracking-wide text-gray-400">Pts diff</span>
               </div>
             </div>
 
@@ -79,11 +79,10 @@ export default function Leaderboard({ stats, leagueId, sessionId, crownPlayerId,
             <div className="shrink-0 flex items-center gap-2">
               <div className="flex flex-col items-end leading-tight">
                 <span className="text-sm font-semibold text-gray-900">{winPct}%</span>
-                <span className="text-[9px] uppercase tracking-wide text-gray-400 mt-0.5">Win rate</span>
-              </div>
-              <div className="flex items-center gap-0.5 text-gray-400">
-                <span className="text-xs">Stats</span>
-                <span className={`text-sm ${sessionId ? 'text-blue-400' : 'text-green-500'}`}>→</span>
+                <div className="flex items-center gap-0.5 text-gray-400 mt-0.5">
+                  <span className="text-xs">Stats</span>
+                  <span className={`text-sm ${sessionId ? 'text-blue-400' : 'text-green-500'}`}>→</span>
+                </div>
               </div>
             </div>
           </Link>
