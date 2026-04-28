@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import { usePlayers, useLeague, qk } from '../lib/queries'
+import { usePlayers, useLeague, useSession, qk } from '../lib/queries'
 import type { Player } from '../types'
 
 const TEAM_COLORS = {
@@ -252,6 +252,7 @@ export default function AddMatch() {
 
   const { data: players = [] } = usePlayers(leagueId)
   const { data: league } = useLeague(leagueId)
+  const { data: session } = useSession(sessionId)
   const scoringType = league?.scoring_type ?? 'americano'
 
   const [slots, setSlots] = useState<(Player | null)[]>([null, null, null, null])
@@ -287,8 +288,15 @@ export default function AddMatch() {
       return
     }
     setAddingPlayer(true)
-    const { data, error } = await supabase.from('players').insert({ league_id: leagueId, name }).select().single()
-    if (data && !error) {
+    const { data, error: dbError } = await supabase.from('players').insert({ league_id: leagueId, name }).select().single()
+    if (dbError) {
+      console.error('Add player failed:', dbError)
+      setError(`Failed to add player: ${dbError.message}`)
+      setTimeout(() => setError(''), 4000)
+      setAddingPlayer(false)
+      return
+    }
+    if (data) {
       queryClient.setQueryData(qk.players(leagueId!), (old: Player[] = []) =>
         [...old, data as Player].sort((a, b) => a.name.localeCompare(b.name))
       )
@@ -302,8 +310,14 @@ export default function AddMatch() {
     const name = raw.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
     const existing = allPlayers.find(p => p.name.toLowerCase() === name.toLowerCase())
     if (existing) return existing
-    const { data, error } = await supabase.from('players').insert({ league_id: leagueId, name }).select().single()
-    if (data && !error) {
+    const { data, error: dbError } = await supabase.from('players').insert({ league_id: leagueId, name }).select().single()
+    if (dbError) {
+      console.error('Create player failed:', dbError)
+      setError(`Failed to add player: ${dbError.message}`)
+      setTimeout(() => setError(''), 4000)
+      return null
+    }
+    if (data) {
       queryClient.setQueryData(qk.players(leagueId!), (old: Player[] = []) =>
         [...old, data as Player].sort((a, b) => a.name.localeCompare(b.name))
       )
@@ -314,6 +328,7 @@ export default function AddMatch() {
 
   async function handleSave() {
     if (!league) { setError('League data not loaded yet.'); return }
+    if (session?.ended) { setError('This session has ended.'); return }
     if (slots.some(p => !p)) { setError('Please select all 4 players.'); return }
     if (new Set(slots.map(p => p!.id)).size < 4) { setError('All 4 players must be different.'); return }
     const s1 = parseInt(team1Score)
