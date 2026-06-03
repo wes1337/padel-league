@@ -23,6 +23,9 @@ export default function Landing() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showIOSInstall, setShowIOSInstall] = useState(false)
   const [installDismissed, setInstallDismissed] = useState(() => sessionStorage.getItem('install_dismissed') === '1')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<{ id: string; name: string }[]>([])
+  const [searching, setSearching] = useState(false)
 
   useEffect(() => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
@@ -55,6 +58,19 @@ export default function Landing() {
     setInstallPrompt(null)
     setShowIOSInstall(false)
     sessionStorage.setItem('install_dismissed', '1')
+  }
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    if (!searchQuery.trim()) return
+    setSearching(true)
+    const { data } = await supabase
+      .from('leagues')
+      .select('id, name')
+      .ilike('name', `%${searchQuery.trim()}%`)
+      .limit(5)
+    setSearchResults(data ?? [])
+    setSearching(false)
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -142,6 +158,45 @@ export default function Landing() {
             ))}
           </div>
         )}
+
+        {/* Find league */}
+        <form onSubmit={handleSearch} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col gap-3">
+          <h2 className="font-semibold text-gray-900 text-lg">Find a League</h2>
+          <div className="flex gap-2">
+            <input
+              className="flex-1 bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Search by name..."
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setSearchResults([]) }}
+            />
+            <button
+              type="submit"
+              disabled={searching || !searchQuery.trim()}
+              className="bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold rounded-lg px-4 py-2.5 transition-colors"
+            >
+              {searching ? '...' : 'Search'}
+            </button>
+          </div>
+          {searchResults.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {searchResults.map(l => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => navigate(`/l/${l.id}`)}
+                  onMouseEnter={() => prefetchLeagueData(queryClient, l.id)}
+                  className="flex items-center justify-between bg-gray-100 hover:bg-gray-200 rounded-xl px-4 py-3 transition-colors"
+                >
+                  <span className="text-gray-900 font-medium">{l.name}</span>
+                  <span className="text-gray-500 text-sm">→</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {searchResults.length === 0 && searchQuery && !searching && (
+            <p className="text-gray-400 text-sm text-center">No leagues found</p>
+          )}
+        </form>
 
         {/* Create league */}
         <form onSubmit={handleCreate} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col gap-3">
