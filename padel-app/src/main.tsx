@@ -7,6 +7,13 @@ import { initSentry, reportError } from './lib/sentry'
 
 initSentry()
 
+// When a new service worker takes control, reload to serve fresh assets
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload()
+  })
+}
+
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error, query) => reportError(error, { queryKey: query.queryKey }),
