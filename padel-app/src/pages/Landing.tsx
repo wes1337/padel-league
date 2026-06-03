@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { nanoid } from 'nanoid'
@@ -181,6 +181,12 @@ export default function Landing() {
 
         {error && <p className="text-red-600 text-sm text-center">{error}</p>}
       </div>
+
+      <footer className="text-xs text-gray-400 flex gap-4">
+        <Link to="/privacy" className="hover:text-gray-600">Privacy</Link>
+        <span>·</span>
+        <Link to="/terms" className="hover:text-gray-600">Terms</Link>
+      </footer>
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { computeStats } from '../lib/stats'
-import { usePlayers, useMultiSessionMatches } from '../lib/queries'
+import { usePlayers, useSeasons, useMultiSessionMatches } from '../lib/queries'
 import type { Player, Match, Session, Season } from '../types'
 
 interface MatchDetail extends Match {
@@ -109,12 +109,11 @@ export default function PlayerProfile() {
   // Scroll to top on navigation
   useEffect(() => { window.scrollTo(0, 0) }, [playerId])
 
-  const year = new Date().getFullYear()
-  const yearStart = `${year}-01-01`
-  const yearEnd   = `${year}-12-31`
-
   // ── Raw data (cached) ────────────────────────────────────────────────────
   const { data: allPlayersList = [] } = usePlayers(leagueId)
+  const { data: seasons = [] } = useSeasons(leagueId)
+
+  const activeSeason = (seasons as Season[]).find(s => !s.ended) ?? (seasons as Season[])[0] ?? null
 
   const [player, setPlayer] = useState<Player | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
@@ -125,8 +124,15 @@ export default function PlayerProfile() {
     setSessionsLoading(true)
     const sessionsQuery = sessionId
       ? supabase.from('sessions').select('*').eq('id', sessionId)
-      : supabase.from('sessions').select('*').eq('league_id', leagueId)
-          .eq('excluded', false).eq('confirmed', true).gte('date', yearStart).lte('date', yearEnd)
+      : activeSeason
+        ? supabase.from('sessions').select('*').eq('league_id', leagueId)
+            .eq('season_id', activeSeason.id).eq('excluded', false).eq('confirmed', true)
+        : null
+
+    if (!sessionsQuery) {
+      setSessionsLoading(false)
+      return
+    }
 
     Promise.all([
       supabase.from('players').select('*').eq('id', playerId).single(),
@@ -136,12 +142,12 @@ export default function PlayerProfile() {
       setSessions((sessionsRes.data ?? []) as Session[])
       setSessionsLoading(false)
     })
-  }, [playerId, sessionId, leagueId, yearStart, yearEnd])
+  }, [playerId, sessionId, leagueId, activeSeason?.id])
 
   const sessionIds = sessions.map(s => s.id)
   const { data: allMatches = [], isLoading: matchesLoading } = useMultiSessionMatches(
     sessionIds,
-    `profile-${leagueId}-${sessionId ?? `season-${year}`}`
+    `profile-${leagueId}-${sessionId ?? `season-${activeSeason?.id ?? 'none'}`}`
   )
 
   // Season championships for this player
@@ -451,8 +457,9 @@ export default function PlayerProfile() {
   }
   const sessionHistory = [...sessionStatsMap.values()].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   const bestSession = [...sessionHistory].sort((a, b) => {
-    const pctA = a.wins / (a.wins + a.losses)
-    const pctB = b.wins / (b.wins + b.losses)
+    const dA = a.wins + a.losses, dB = b.wins + b.losses
+    const pctA = dA > 0 ? a.wins / dA : 0
+    const pctB = dB > 0 ? b.wins / dB : 0
     return pctB - pctA
   })[0]
 
@@ -476,7 +483,7 @@ export default function PlayerProfile() {
               </span>
             )}
           </div>
-          <p className="text-gray-500 text-sm">{sessionId ? 'Session stats' : `${new Date().getFullYear()} Season`}</p>
+          <p className="text-gray-500 text-sm">{sessionId ? 'Session stats' : activeSeason?.name ?? 'Season'}</p>
         </div>
       </div>
 
@@ -731,11 +738,12 @@ export default function PlayerProfile() {
               <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-3 mb-3 text-center">
                 <p className="text-yellow-600 text-xs mb-1">Best session</p>
                 <p className="text-gray-900 font-bold">{bestSession.label}</p>
-                <p className="text-gray-500 text-xs">{bestSession.wins}W {bestSession.losses}L · {Math.round(bestSession.wins / (bestSession.wins + bestSession.losses) * 100)}% win rate</p>
+                <p className="text-gray-500 text-xs">{bestSession.wins}W {bestSession.losses}L · {bestSession.wins + bestSession.losses > 0 ? Math.round(bestSession.wins / (bestSession.wins + bestSession.losses) * 100) : 0}% win rate</p>
               </div>
             )}
             {sessionHistory.map(s => {
-              const pct = Math.round(s.wins / (s.wins + s.losses) * 100)
+              const decisive = s.wins + s.losses
+              const pct = decisive > 0 ? Math.round(s.wins / decisive * 100) : 0
               const diff = s.diff
               return (
                 <Link key={s.id} to={`/l/${leagueId}/session/${s.id}`} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0 hover:bg-gray-100/50 -mx-1 px-1 rounded transition-colors">

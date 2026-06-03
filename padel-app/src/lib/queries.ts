@@ -30,7 +30,8 @@ export function useSeasons(leagueId: string | undefined) {
   return useQuery({
     queryKey: qk.seasons(leagueId ?? ''),
     queryFn: async () => {
-      const { data } = await supabase.from('seasons').select('*').eq('league_id', leagueId!).order('created_at', { ascending: false })
+      const { data, error } = await supabase.from('seasons').select('*').eq('league_id', leagueId!).order('created_at', { ascending: false })
+      if (error) throw error
       return (data ?? []) as Season[]
     },
     enabled: !!leagueId,
@@ -41,7 +42,8 @@ export function useSessions(leagueId: string | undefined) {
   return useQuery({
     queryKey: qk.sessions(leagueId ?? ''),
     queryFn: async () => {
-      const { data } = await supabase.from('sessions').select('*').eq('league_id', leagueId!).order('date', { ascending: false })
+      const { data, error } = await supabase.from('sessions').select('*').eq('league_id', leagueId!).order('date', { ascending: false })
+      if (error) throw error
       return (data ?? []) as Session[]
     },
     enabled: !!leagueId,
@@ -52,7 +54,8 @@ export function useSession(sessionId: string | undefined) {
   return useQuery({
     queryKey: qk.session(sessionId ?? ''),
     queryFn: async () => {
-      const { data } = await supabase.from('sessions').select('*').eq('id', sessionId!).single()
+      const { data, error } = await supabase.from('sessions').select('*').eq('id', sessionId!).single()
+      if (error) throw error
       return data as Session | null
     },
     enabled: !!sessionId,
@@ -63,7 +66,8 @@ export function usePlayers(leagueId: string | undefined) {
   return useQuery({
     queryKey: qk.players(leagueId ?? ''),
     queryFn: async () => {
-      const { data } = await supabase.from('players').select('*').eq('league_id', leagueId!).order('name')
+      const { data, error } = await supabase.from('players').select('*').eq('league_id', leagueId!).order('name')
+      if (error) throw error
       return (data ?? []) as Player[]
     },
     enabled: !!leagueId,
@@ -74,7 +78,8 @@ export function useSessionMatches(sessionId: string | undefined) {
   return useQuery({
     queryKey: qk.sessionMatches(sessionId ?? ''),
     queryFn: async () => {
-      const { data } = await supabase.from('matches').select('*').eq('session_id', sessionId!).order('created_at')
+      const { data, error } = await supabase.from('matches').select('*').eq('session_id', sessionId!).order('created_at')
+      if (error) throw error
       return (data ?? []) as Match[]
     },
     enabled: !!sessionId,
@@ -85,7 +90,8 @@ export function useSessionSignups(sessionId: string | undefined) {
   return useQuery({
     queryKey: qk.sessionSignups(sessionId ?? ''),
     queryFn: async () => {
-      const { data } = await supabase.from('session_signups').select('*').eq('session_id', sessionId!).order('created_at')
+      const { data, error } = await supabase.from('session_signups').select('*').eq('session_id', sessionId!).order('created_at')
+      if (error) throw error
       return (data ?? []) as SessionSignup[]
     },
     enabled: !!sessionId,
@@ -96,7 +102,8 @@ export function useSignupCounts(sessionIds: string[]) {
   return useQuery({
     queryKey: ['signup_counts', sessionIds.join(',')],
     queryFn: async () => {
-      const { data } = await supabase.from('session_signups').select('session_id').in('session_id', sessionIds)
+      const { data, error } = await supabase.from('session_signups').select('session_id').in('session_id', sessionIds)
+      if (error) throw error
       const counts: Record<string, number> = {}
       for (const row of data ?? []) {
         counts[row.session_id] = (counts[row.session_id] ?? 0) + 1
@@ -120,21 +127,24 @@ export function prefetchLeagueData(qc: QueryClient, leagueId: string) {
   qc.prefetchQuery({
     queryKey: qk.seasons(leagueId),
     queryFn: async () => {
-      const { data } = await supabase.from('seasons').select('*').eq('league_id', leagueId).order('created_at', { ascending: false })
+      const { data, error } = await supabase.from('seasons').select('*').eq('league_id', leagueId).order('created_at', { ascending: false })
+      if (error) throw error
       return (data ?? []) as Season[]
     },
   })
   qc.prefetchQuery({
     queryKey: qk.sessions(leagueId),
     queryFn: async () => {
-      const { data } = await supabase.from('sessions').select('*').eq('league_id', leagueId).order('date', { ascending: false })
+      const { data, error } = await supabase.from('sessions').select('*').eq('league_id', leagueId).order('date', { ascending: false })
+      if (error) throw error
       return (data ?? []) as Session[]
     },
   })
   qc.prefetchQuery({
     queryKey: qk.players(leagueId),
     queryFn: async () => {
-      const { data } = await supabase.from('players').select('*').eq('league_id', leagueId).order('name')
+      const { data, error } = await supabase.from('players').select('*').eq('league_id', leagueId).order('name')
+      if (error) throw error
       return (data ?? []) as Player[]
     },
   })
@@ -146,7 +156,8 @@ export function useMultiSessionMatches(sessionIds: string[], cacheScope: string)
   return useQuery({
     queryKey: ['matches', 'multi', cacheScope, sessionIds.join(',')],
     queryFn: async () => {
-      const { data } = await supabase.from('matches').select('*').in('session_id', sessionIds)
+      const { data, error } = await supabase.from('matches').select('*').in('session_id', sessionIds)
+      if (error) throw error
       return (data ?? []) as Match[]
     },
     enabled: sessionIds.length > 0,

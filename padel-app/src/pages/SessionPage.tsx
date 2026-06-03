@@ -90,16 +90,6 @@ export default function SessionPage() {
 
   const loading = sessionLoading || playersLoading
 
-  // Auto-end session 24h after its scheduled date (so pre-created future sessions stay open)
-  useEffect(() => {
-    if (!session || session.ended) return
-    const sessionDateMs = new Date(session.date).getTime()
-    if (Date.now() - sessionDateMs >= 24 * 60 * 60 * 1000) {
-      supabase.from('sessions').update({ ended: true }).eq('id', session.id).then(() => {
-        queryClient.invalidateQueries({ queryKey: qk.session(sessionId!) })
-      })
-    }
-  }, [session, sessionId, queryClient])
 
   const stats = useMemo(() => {
     if (matches.length === 0 || players.length === 0) return []
