@@ -3,8 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { nanoid } from 'nanoid'
 import { supabase } from '../lib/supabase'
-import { computeStats } from '../lib/stats'
+import { computeStats, isScored } from '../lib/stats'
 import { isLeagueAdmin, saveLeagueAdmin, saveSessionCreator } from '../lib/admin'
+import { genToken } from '../lib/id'
 import { useLeague, useSeasons, useSessions, usePlayers, useMultiSessionMatches, qk } from '../lib/queries'
 import type { Season, Session, Match, Player, PlayerStats } from '../types'
 import Leaderboard from '../components/Leaderboard'
@@ -62,6 +63,9 @@ export default function LeagueHome() {
     filteredSessionIds,
     `${leagueId}-${currentSeason?.id ?? 'none'}`
   )
+  // Exclude 0–0 placeholder games ("Apply line-up" round not yet scored) from all
+  // season computations so they don't skew standings or attendance.
+  const scoredSeasonMatches = useMemo(() => (seasonMatches as Match[]).filter(isScored), [seasonMatches])
 
   const today = new Date().toISOString().split('T')[0]
   const upcomingSessions = useMemo(() =>
@@ -112,19 +116,19 @@ export default function LeagueHome() {
 
   // ── Computed season stats ──────────────────────────────────────────────────
   const sessionIdsWithMatches = useMemo(() =>
-    filteredSessionIds.filter(id => (seasonMatches as Match[]).some(m => m.session_id === id)),
-    [filteredSessionIds, seasonMatches]
+    filteredSessionIds.filter(id => scoredSeasonMatches.some(m => m.session_id === id)),
+    [filteredSessionIds, scoredSeasonMatches]
   )
 
   const seasonStats: PlayerStats[] = useMemo(() => {
     if ((players as Player[]).length === 0 || sessionIdsWithMatches.length === 0) return []
-    return computeStats(players as Player[], seasonMatches as Match[], sessionIdsWithMatches.length, true)
-  }, [players, seasonMatches, sessionIdsWithMatches])
+    return computeStats(players as Player[], scoredSeasonMatches, sessionIdsWithMatches.length, true)
+  }, [players, scoredSeasonMatches, sessionIdsWithMatches])
 
   const movements: Record<string, number> | undefined = useMemo(() => {
     if (sessionIdsWithMatches.length < 2) return undefined
     const prevIds = sessionIdsWithMatches.slice(1)
-    const prevMatches = (seasonMatches as Match[]).filter(m => prevIds.includes(m.session_id))
+    const prevMatches = scoredSeasonMatches.filter(m => prevIds.includes(m.session_id))
     const prevStats = computeStats(players as Player[], prevMatches, prevIds.length, true)
     const prevRanks: Record<string, number> = {}
     prevStats.forEach((s, i) => { prevRanks[s.player.id] = i })
@@ -134,12 +138,12 @@ export default function LeagueHome() {
       mvmt[s.player.id] = prev === undefined ? Infinity : prev - i
     })
     return mvmt
-  }, [sessionIdsWithMatches, seasonMatches, players, seasonStats])
+  }, [sessionIdsWithMatches, scoredSeasonMatches, players, seasonStats])
 
   const { recentTopId, recentBottomId } = useMemo(() => {
     if (sessionIdsWithMatches.length === 0) return {}
     const recentSessionId = sessionIdsWithMatches[0]
-    const recentMatches = (seasonMatches as Match[]).filter(m => m.session_id === recentSessionId)
+    const recentMatches = scoredSeasonMatches.filter(m => m.session_id === recentSessionId)
     if (recentMatches.length === 0) return {}
     const recentStats = computeStats(players as Player[], recentMatches)
     return {
@@ -180,7 +184,7 @@ export default function LeagueHome() {
     const date = newSessionDate
     const dateObj = new Date(date + 'T12:00:00')
     const label = `Padello – ${dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
-    const creator_token = crypto.randomUUID()
+    const creator_token = genToken()
     const { data, error } = await supabase
       .from('sessions')
       .insert({ league_id: leagueId, season_id: activeSeason.id, date, label, confirmed: true, creator_token, short_id: nanoid(8) })

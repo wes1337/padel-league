@@ -49,6 +49,8 @@ export interface Match {
   team2_p2: string
   team1_score: number
   team2_score: number
+  round: number | null // set when created via the line-up / next-round tools
+  court: number | null // 1 = top court; needed for winner-court movement
   created_at: string
 }
 

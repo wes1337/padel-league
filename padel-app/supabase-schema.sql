@@ -84,8 +84,14 @@ create table matches (
   team2_p2 uuid references players(id) not null,
   team1_score integer not null check (team1_score >= 0),
   team2_score integer not null check (team2_score >= 0),
+  round smallint,   -- round number within the night (set by line-up / next-round tools)
+  court smallint,   -- 1 = top court; needed for winner-court movement
   created_at timestamptz default now()
 );
+
+-- Migration (run this if the matches table already exists):
+-- alter table matches add column if not exists round smallint;
+-- alter table matches add column if not exists court smallint;
 
 create table session_signups (
   id uuid primary key default gen_random_uuid(),

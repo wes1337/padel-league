@@ -11,6 +11,7 @@ const PlayerProfile = lazy(() => import('./pages/PlayerProfile'))
 const CardPreview = lazy(() => import('./pages/CardPreview'))
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Terms = lazy(() => import('./pages/Terms'))
+const StartingLineup = lazy(() => import('./pages/StartingLineup'))
 
 // Preload the most-visited page chunks so they're ready before navigation
 import('./pages/LeagueHome')
@@ -58,6 +59,8 @@ export default function App() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/s/:shortId" element={<SessionRedirect />} />
               <Route path="/l/:leagueId" element={<LeagueHome />} />
+              <Route path="/l/:leagueId/lineup" element={<StartingLineup />} />
+              <Route path="/l/:leagueId/session/:sessionId/lineup" element={<StartingLineup />} />
               <Route path="/l/:leagueId/session/:sessionId" element={<SessionPage />} />
               <Route path="/l/:leagueId/session/:sessionId/add-match" element={<AddMatch />} />
               <Route path="/l/:leagueId/player/:playerId" element={<PlayerProfile />} />
