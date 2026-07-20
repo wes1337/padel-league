@@ -78,15 +78,14 @@ export function courtSeasonStats(pair1: Pair, pair2: Pair, season: Match[], toni
     const pr = partnerRec(a, b, season)
     const hh = h2h(a, b, season)
     if (pr.g + hh.meet < 4) continue // only flag genuinely over-shared pairs
+    // A neutral "heads-up" that these two over-share the court this season — NOT
+    // a statement about what this game does. Whether they're partners or opponents
+    // now is already visible from the teams above.
     const together = sameTeam(a, b)
     const partners = pr.g ? `${pr.g}× partners (${pr.w}W–${pr.g - pr.w}L)` : 'never partnered'
     const leader = hh.aw >= hh.meet - hh.aw ? a : b
     const opp = hh.meet ? `${hh.meet}× opponents (${nameOf(leader)} ${Math.max(hh.aw, hh.meet - hh.aw)}–${Math.min(hh.aw, hh.meet - hh.aw)})` : 'never opponents'
-    // "again" only if they've actually been in this configuration before.
-    const status = together
-      ? (pr.g > 0 ? 'partners again here' : 'finally teamed up here')
-      : (hh.meet > 0 ? 'opponents again here' : 'first meeting here')
-    flags.push({ item: { icon: '♻️', head: `${nameOf(a)} & ${nameOf(b)} — ${status}`, sub: `${partners} · ${opp}${tonightNote(a, b, together)}` }, total: pr.g + hh.meet })
+    flags.push({ item: { icon: '♻️', head: `${nameOf(a)} & ${nameOf(b)} — see a lot of each other`, sub: `${partners} · ${opp}${tonightNote(a, b, together)}` }, total: pr.g + hh.meet })
   }
   flags.sort((x, y) => y.total - x.total)
   for (const f of flags.slice(0, 2)) items.push(f.item)
