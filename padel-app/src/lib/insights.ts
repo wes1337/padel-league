@@ -49,11 +49,11 @@ export function courtSeasonStats(pair1: Pair, pair2: Pair, season: Match[], toni
     const tp = partnerRec(a, b, tonight).g
     const to = h2h(a, b, tonight).meet
     if (asPartners) {
-      if (tp > 0) return ' · ⚠️ already partnered earlier tonight'
-      if (to > 0) return ` · were rivals earlier tonight${to > 1 ? ` (${to}×)` : ''}`
+      if (tp > 0) return ' · ⚠️ already partnered this session'
+      if (to > 0) return ` · faced off earlier this session${to > 1 ? ` (${to}×)` : ''}`
     } else {
-      if (to > 0) return ` · ⚠️ already faced off tonight${to > 1 ? ` (${to}×)` : ''}`
-      if (tp > 0) return ' · partnered earlier tonight'
+      if (to > 0) return ` · ⚠️ already faced off this session${to > 1 ? ` (${to}×)` : ''}`
+      if (tp > 0) return ' · played together earlier this session'
     }
     return ''
   }
@@ -64,7 +64,7 @@ export function courtSeasonStats(pair1: Pair, pair2: Pair, season: Match[], toni
     const rec = pr.g ? ` · ${pr.w}W–${pr.g - pr.w}L` : ''
     const base = pr.g === 0 ? 'Fresh pairing — first time together this season'
       : pr.g === 1 ? `2nd time together${rec}`
-      : `Together ${pr.g + 1}× counting tonight${rec}`
+      : `Together ${pr.g + 1}× counting this game${rec}`
     items.push({ icon: '🤝', head: nm(p), sub: base + tonightNote(p[0], p[1], true) })
   }
 
