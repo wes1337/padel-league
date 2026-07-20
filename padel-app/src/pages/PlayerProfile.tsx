@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import { computeStats } from '../lib/stats'
+import { computeStats, isScored } from '../lib/stats'
 import { usePlayers, useSeasons, useMultiSessionMatches } from '../lib/queries'
 import type { Player, Match, Session, Season } from '../types'
 
@@ -178,6 +178,9 @@ export default function PlayerProfile() {
     if (sessions.length === 0) { setTotalSessions(0); setMatchDetails([]); return }
     if (sessionIds.length > 0 && matchesLoading) return
 
+    // Exclude 0–0 placeholder games (unscored "Apply line-up" round) from stats.
+    const scoredMatches = (allMatches as Match[]).filter(isScored)
+
     const pMap = new Map<string, Player>()
     for (const p of allPlayersList) pMap.set(p.id, p as Player)
 
@@ -186,14 +189,14 @@ export default function PlayerProfile() {
 
     // Compute attendance for every player — sessions attended / total sessions with matches
     const playerSessionsMap = new Map<string, Set<string>>()
-    for (const m of allMatches as Match[]) {
+    for (const m of scoredMatches) {
       for (const pid of [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2]) {
         if (!playerSessionsMap.has(pid)) playerSessionsMap.set(pid, new Set())
         playerSessionsMap.get(pid)!.add(m.session_id)
       }
     }
     // Only count sessions that have at least one match recorded
-    const sessionsWithMatches = new Set((allMatches as Match[]).map(m => m.session_id))
+    const sessionsWithMatches = new Set((scoredMatches).map(m => m.session_id))
     const totalSessionsWithMatches = sessionsWithMatches.size
     setTotalSessions(totalSessionsWithMatches)
 
@@ -204,7 +207,7 @@ export default function PlayerProfile() {
     setRegularPlayerIds(regularIds)
 
     const details: MatchDetail[] = []
-    for (const m of allMatches as Match[]) {
+    for (const m of scoredMatches) {
       const isT1 = m.team1_p1 === playerId || m.team1_p2 === playerId
       const isT2 = m.team2_p1 === playerId || m.team2_p2 === playerId
       if (!isT1 && !isT2) continue
@@ -244,13 +247,13 @@ export default function PlayerProfile() {
     // Season rank trendline (season mode only)
     if (!sessionId && allMatches.length >= 0) {
       const chronoSessions = [...sessions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      const sessionsWithMatches = chronoSessions.filter(s => (allMatches as Match[]).some(m => m.session_id === s.id))
+      const sessionsWithMatches = chronoSessions.filter(s => (scoredMatches).some(m => m.session_id === s.id))
       const allPlayers = allPlayersList as Player[]
 
       const history: Record<string, number | string>[] = []
       for (let i = 0; i < sessionsWithMatches.length; i++) {
         const cumulativeSessionIds = new Set(sessionsWithMatches.slice(0, i + 1).map(s => s.id))
-        const cumulativeMatches = (allMatches as Match[]).filter(m => cumulativeSessionIds.has(m.session_id))
+        const cumulativeMatches = (scoredMatches).filter(m => cumulativeSessionIds.has(m.session_id))
         const stats = computeStats(allPlayers, cumulativeMatches, i + 1, true)
         const point: Record<string, number | string> = {
           label: sessionsWithMatches[i].label?.replace(/^(Session|Padello) – /, '') ?? sessionsWithMatches[i].date
@@ -283,7 +286,7 @@ export default function PlayerProfile() {
     // Session rank + averages
     if (sessionId) {
       const sMap = new Map<string, { wins: number; games: number; pointDiff: number; scored: number; conceded: number }>()
-      for (const m of allMatches as Match[]) {
+      for (const m of scoredMatches) {
         const t1Won = m.team1_score > m.team2_score
         const draw = m.team1_score === m.team2_score
         for (const pid of [m.team1_p1, m.team1_p2]) {
@@ -325,7 +328,7 @@ export default function PlayerProfile() {
     const sessionsAttendedSet = new Set(details.map(d => d.session_id))
     let sessionsTopped = 0
     for (const session of sessions) {
-      const sessionMatches = (allMatches as Match[]).filter(m => m.session_id === session.id)
+      const sessionMatches = (scoredMatches).filter(m => m.session_id === session.id)
       if (sessionMatches.length === 0 || !sessionsAttendedSet.has(session.id)) continue
       const sessionStatMap = new Map<string, { wins: number; games: number; pointDiff: number }>()
       for (const m of sessionMatches) {

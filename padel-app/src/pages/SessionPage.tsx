@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '../lib/supabase'
-import { computeStats } from '../lib/stats'
+import { computeStats, isScored } from '../lib/stats'
+import { planNextRound, type NextCourtSlot } from '../lib/rounds'
+import { courtSeasonStats } from '../lib/insights'
+import { courtLabel } from '../lib/courts'
 import { isLeagueAdmin } from '../lib/admin'
-import { useSession, useSessionMatches, usePlayers, useLeague, qk } from '../lib/queries'
-import type { Match } from '../types'
+import { useSession, useSessionMatches, usePlayers, useLeague, useSessions, useMultiSessionMatches, qk } from '../lib/queries'
+import type { Match, Session } from '../types'
 import Leaderboard from '../components/Leaderboard'
 import SessionSummary from '../components/SessionSummary'
 
@@ -81,6 +84,15 @@ export default function SessionPage() {
   const { data: players = [], isLoading: playersLoading } = usePlayers(leagueId)
   const { data: league } = useLeague(leagueId)
 
+  // Season-wide games (this season, all counted sessions) for next-round tie-breaks
+  // and the "why these teams" season callouts.
+  const { data: allSessions = [] } = useSessions(leagueId)
+  const seasonSessionIds = useMemo(() =>
+    (allSessions as Session[]).filter(s => !s.excluded && s.confirmed && s.season_id === session?.season_id).map(s => s.id),
+    [allSessions, session?.season_id]
+  )
+  const { data: seasonAllMatches = [] } = useMultiSessionMatches(seasonSessionIds, `sess-season-${leagueId}-${session?.season_id ?? 'none'}`)
+
   const [awardsRevealed, setAwardsRevealed] = useState(() =>
     localStorage.getItem(`awards_revealed_${sessionId}`) === '1'
   )
@@ -91,15 +103,110 @@ export default function SessionPage() {
   const loading = sessionLoading || playersLoading
 
 
+  // "Apply line-up" creates games with a 0–0 placeholder score. They show in the
+  // list with an Enter-score action but are excluded from every stat/chart/warning.
+  const scoredMatches = useMemo(() => matches.filter(isScored), [matches])
+  const pendingCount = matches.length - scoredMatches.length
+  const seasonScored = useMemo(() => (seasonAllMatches as Match[]).filter(isScored), [seasonAllMatches])
+
+  // Match-list order: latest round first, and within a round Court 1 → bottom.
+  // Legacy games (no round stamped) fall back to newest-first.
+  const orderedMatches = useMemo(() => [...matches].sort((a, b) => {
+    const ar = a.round ?? -1, br = b.round ?? -1
+    if (ar !== br) return br - ar
+    const ac = a.court ?? 0, bc = b.court ?? 0
+    if (ac !== bc) return ac - bc
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  }), [matches])
+  // Stable chronological game numbers for the legacy "Game N" label.
+  const gameNumber = useMemo(() => {
+    const m = new Map<string, number>()
+    ;[...matches].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).forEach((mm, i) => m.set(mm.id, i + 1))
+    return m
+  }, [matches])
+
+  // Winner-court progression, court by court. Each next-round court can be
+  // created the moment its two feeding games are scored — so fast courts don't
+  // wait for slow ones. We advance from the highest fully-created round.
+  const [creatingCourt, setCreatingCourt] = useState<number | null>(null)
+  const nextRoundPlan = useMemo(() => {
+    const byRound = new Map<number, Match[]>()
+    for (const m of matches) if (m.round != null) {
+      if (!byRound.has(m.round)) byRound.set(m.round, [])
+      byRound.get(m.round)!.push(m)
+    }
+    if (byRound.size === 0) return null
+    const rounds = [...byRound.keys()].sort((a, b) => a - b)
+    const courtsPerRound = byRound.get(rounds[0])!.length
+    const fullRounds = rounds.filter(r => byRound.get(r)!.length >= courtsPerRound)
+    const sourceRoundNo = fullRounds.length ? Math.max(...fullRounds) : rounds[0]
+    const targetRoundNo = sourceRoundNo + 1
+    const sourceGames = [...(byRound.get(sourceRoundNo) ?? [])].sort((a, b) => (a.court ?? 0) - (b.court ?? 0))
+    const existingTarget = new Set((byRound.get(targetRoundNo) ?? []).map(m => m.court))
+    const plan = planNextRound(sourceGames, scoredMatches, seasonScored).filter(c => !existingTarget.has(c.court))
+    const ready = plan.filter(c => c.ready)
+    const waiting = plan.filter(c => !c.ready)
+    return { targetRoundNo, sourceRoundNo, ready, waiting, sourceGames, totalCourts: courtsPerRound }
+  }, [matches, scoredMatches, seasonScored])
+  const [insightCourt, setInsightCourt] = useState<number | null>(null)
+
+  // Per-court manual override of a suggested next-round pairing (tap two to swap).
+  const [editCourt, setEditCourt] = useState<number | null>(null)
+  const [courtEdits, setCourtEdits] = useState<Record<number, [string, string, string, string]>>({})
+  const [editSel, setEditSel] = useState<number | null>(null)
+
+  // Current teams for a ready court — the manual edit if there is one, else the suggestion.
+  function courtPairs(c: NextCourtSlot): { pair1: [string, string]; pair2: [string, string] } {
+    const e = courtEdits[c.court]
+    if (e) return { pair1: [e[0], e[1]], pair2: [e[2], e[3]] }
+    return { pair1: c.pair1!, pair2: c.pair2! }
+  }
+  function startEditReady(c: NextCourtSlot) {
+    setCourtEdits(prev => (prev[c.court] ? prev : { ...prev, [c.court]: [c.pair1![0], c.pair1![1], c.pair2![0], c.pair2![1]] }))
+    setEditCourt(c.court)
+    setEditSel(null)
+  }
+  function tapReadySlot(court: number, slot: number) {
+    if (editSel === null) { setEditSel(slot); return }
+    if (editSel === slot) { setEditSel(null); return }
+    setCourtEdits(prev => {
+      const arr = [...prev[court]] as [string, string, string, string]
+      const tmp = arr[editSel]; arr[editSel] = arr[slot]; arr[slot] = tmp
+      return { ...prev, [court]: arr }
+    })
+    setEditSel(null)
+  }
+
+  async function createNextCourt(slot: NextCourtSlot) {
+    if (!nextRoundPlan || !slot.pair1 || !slot.pair2 || creatingCourt != null) return
+    const { pair1, pair2 } = courtPairs(slot)
+    setCreatingCourt(slot.court)
+    const scoring = league?.scoring_type ?? 'americano'
+    const { error } = await supabase.from('matches').insert({
+      session_id: sessionId,
+      scoring_type: scoring,
+      team1_p1: pair1[0], team1_p2: pair1[1],
+      team2_p1: pair2[0], team2_p2: pair2[1],
+      team1_score: 0, team2_score: 0,
+      round: nextRoundPlan.targetRoundNo, court: slot.court,
+    })
+    setCreatingCourt(null)
+    if (error) return
+    setCourtEdits(prev => { const n = { ...prev }; delete n[slot.court]; return n })
+    setEditCourt(null)
+    queryClient.invalidateQueries({ queryKey: ['matches'] })
+  }
+
   const stats = useMemo(() => {
-    if (matches.length === 0 || players.length === 0) return []
-    return computeStats(players, matches)
-  }, [matches, players])
+    if (scoredMatches.length === 0 || players.length === 0) return []
+    return computeStats(players, scoredMatches)
+  }, [scoredMatches, players])
 
   function startEdit(m: Match) {
     setEditingMatchId(m.id)
+    const pending = !isScored(m)
     setEditState({
-      s1: String(m.team1_score), s2: String(m.team2_score),
+      s1: pending ? '' : String(m.team1_score), s2: pending ? '' : String(m.team2_score),
       p1: m.team1_p1, p2: m.team1_p2, p3: m.team2_p1, p4: m.team2_p2,
     })
   }
@@ -150,13 +257,34 @@ export default function SessionPage() {
   }
 
   function getPlayerName(id: string) {
-    return players.find(p => p.id === id)?.name ?? id
+    // Neutral placeholder rather than a raw UUID when a player isn't in the cached
+    // list yet (e.g. added on another device); the effect below refetches to fix it.
+    return players.find(p => p.id === id)?.name ?? '…'
   }
 
-  function getUnevenWarning(): { allPlayers: { name: string; count: number; diff: number }[]; mode: number } | null {
-    if (matches.length === 0) return null
-    const counts = new Map<string, number>()
+  // If a match references a player we don't have cached (added on another device),
+  // refetch the player list so their name resolves. Guarded so we only refetch
+  // once per unknown id — avoids a loop if the player was genuinely deleted.
+  const refetchedForRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (players.length === 0 || matches.length === 0) return
+    const known = new Set(players.map(p => p.id))
+    const unknown = new Set<string>()
     for (const m of matches) {
+      for (const id of [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2]) {
+        if (!known.has(id) && !refetchedForRef.current.has(id)) unknown.add(id)
+      }
+    }
+    if (unknown.size > 0) {
+      unknown.forEach(id => refetchedForRef.current.add(id))
+      queryClient.invalidateQueries({ queryKey: qk.players(leagueId!) })
+    }
+  }, [players, matches, leagueId, queryClient])
+
+  function getUnevenWarning(): { allPlayers: { name: string; count: number; diff: number }[]; mode: number } | null {
+    if (scoredMatches.length === 0) return null
+    const counts = new Map<string, number>()
+    for (const m of scoredMatches) {
       for (const pid of [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2]) {
         counts.set(pid, (counts.get(pid) || 0) + 1)
       }
@@ -178,7 +306,7 @@ export default function SessionPage() {
   function getDuplicateMatchIds(): Set<string> {
     const dupes = new Set<string>()
     const seen = new Map<string, string[]>()
-    for (const m of matches) {
+    for (const m of scoredMatches) {
       const t1 = [m.team1_p1, m.team1_p2].sort().join(',')
       const t2 = [m.team2_p1, m.team2_p2].sort().join(',')
       // Normalize team order so A vs B == B vs A with swapped scores
@@ -197,8 +325,8 @@ export default function SessionPage() {
     return dupes
   }
 
-  const unevenWarning = matches.length > 0 ? getUnevenWarning() : null
-  const duplicateIds = useMemo(() => getDuplicateMatchIds(), [matches])
+  const unevenWarning = scoredMatches.length > 0 ? getUnevenWarning() : null
+  const duplicateIds = useMemo(() => getDuplicateMatchIds(), [scoredMatches])
 
   if (loading) return <div className="flex justify-center items-center min-h-screen text-gray-500">Loading...</div>
 
@@ -211,7 +339,10 @@ export default function SessionPage() {
         <div className="min-w-0">
           <h1 className="text-xl font-bold text-gray-900">{session?.label || session?.date}</h1>
           <p className="text-gray-500 text-sm">{league?.name ?? 'League'}</p>
-          <p className="text-gray-500 text-xs">{matches.length} match{matches.length !== 1 ? 'es' : ''} played</p>
+          <p className="text-gray-500 text-xs">
+            {scoredMatches.length} match{scoredMatches.length !== 1 ? 'es' : ''} played
+            {pendingCount > 0 && ` · ${pendingCount} awaiting score`}
+          </p>
           {session?.excluded && (
             <span className="inline-block text-xs bg-yellow-50 text-yellow-600 border border-yellow-300 rounded-lg px-2 py-1 mt-1">Excluded</span>
           )}
@@ -227,6 +358,107 @@ export default function SessionPage() {
         >
           + Add Match
         </button>
+      )}
+
+      {/* Plan starting line-up — most useful before the first game is logged */}
+      {!session?.ended && matches.length === 0 && (
+        <Link
+          to={`/l/${leagueId}/session/${sessionId}/lineup`}
+          className="w-full bg-white hover:bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 flex items-center justify-between transition-colors"
+        >
+          <div>
+            <p className="text-gray-900 text-sm font-semibold">🎾 Plan starting line-up</p>
+            <p className="text-gray-500 text-xs">Pick who's here → balanced opening courts</p>
+          </div>
+          <span className="text-gray-400 text-sm">→</span>
+        </Link>
+      )}
+
+      {/* Next round — courts appear the moment their feeding games are scored */}
+      {!session?.ended && nextRoundPlan && nextRoundPlan.ready.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
+          <div>
+            <h2 className="font-semibold text-gray-900">Round {nextRoundPlan.targetRoundNo} — ready to start</h2>
+            <p className="text-gray-500 text-xs">Winners up, losers down, fresh partners. Start each court as its players free up.</p>
+          </div>
+          {nextRoundPlan.ready.map(c => {
+            const { pair1, pair2 } = courtPairs(c)
+            const editing = editCourt === c.court
+            const slots = [pair1[0], pair1[1], pair2[0], pair2[1]]
+            return (
+              <div key={c.court} className="rounded-xl bg-green-50 border border-green-200 p-3 flex flex-col gap-2">
+                <span className="text-xs text-gray-500 uppercase tracking-wide">{courtLabel(c.court)}</span>
+                {editing ? (
+                  <div className="flex items-stretch gap-2 text-sm">
+                    <div className="flex-1 flex flex-col gap-1">
+                      {[0, 1].map(k => (
+                        <button key={k} onClick={() => tapReadySlot(c.court, k)}
+                          className={`w-full text-left rounded-lg px-2 py-1.5 text-sm font-semibold border transition-colors ${editSel === k ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'}`}>
+                          {getPlayerName(slots[k])}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-gray-400 font-semibold shrink-0 self-center">vs</span>
+                    <div className="flex-1 flex flex-col gap-1">
+                      {[2, 3].map(k => (
+                        <button key={k} onClick={() => tapReadySlot(c.court, k)}
+                          className={`w-full text-left rounded-lg px-2 py-1.5 text-sm font-semibold border transition-colors ${editSel === k ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'}`}>
+                          {getPlayerName(slots[k])}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="flex-1 font-semibold text-gray-900">{getPlayerName(pair1[0])} & {getPlayerName(pair1[1])}</span>
+                    <span className="text-gray-400 shrink-0">vs</span>
+                    <span className="flex-1 font-semibold text-gray-900 text-right">{getPlayerName(pair2[0])} & {getPlayerName(pair2[1])}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-4">
+                  {!editing && (
+                    <button onClick={() => setInsightCourt(insightCourt === c.court ? null : c.court)} className="text-gray-500 hover:text-gray-700 text-xs transition-colors">
+                      {insightCourt === c.court ? '▾ Hide details' : '▸ Why these teams?'}
+                    </button>
+                  )}
+                  <button onClick={() => (editing ? setEditCourt(null) : startEditReady(c))} className="text-gray-500 hover:text-gray-700 text-xs transition-colors">
+                    {editing ? '✓ Done' : '✎ Edit teams'}
+                  </button>
+                  {editing && <span className="text-gray-400 text-xs">Tap two to swap</span>}
+                </div>
+                {(editing || insightCourt === c.court) && (() => {
+                  const items = courtSeasonStats(pair1, pair2, seasonScored, scoredMatches, getPlayerName)
+                  return (
+                    <div className="rounded-lg bg-white border border-green-200 p-3 flex flex-col gap-2 text-xs">
+                      <p className="text-gray-900 font-semibold">📊 Rotation check</p>
+                      {items.map((it, i) => (
+                        <div key={i} className="flex gap-2">
+                          <span className="shrink-0">{it.icon}</span>
+                          <div className="min-w-0">
+                            <p className="text-gray-900 font-medium">{it.head}</p>
+                            <p className="text-gray-500">{it.sub}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+                <button
+                  onClick={() => createNextCourt(c)}
+                  disabled={creatingCourt != null}
+                  className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold rounded-lg py-2 text-sm transition-colors"
+                >
+                  {creatingCourt === c.court ? 'Creating…' : 'Start this court'}
+                </button>
+              </div>
+            )
+          })}
+          {nextRoundPlan.waiting.length > 0 && (
+            <p className="text-gray-500 text-xs">
+              {nextRoundPlan.waiting.map(c => courtLabel(c.court)).join(', ')} — waiting on Round {nextRoundPlan.sourceRoundNo} to finish.
+            </p>
+          )}
+        </div>
       )}
 
       {/* Uneven games warning */}
@@ -262,8 +494,8 @@ export default function SessionPage() {
       )}
 
       {/* Session Awards — only after reveal */}
-      {matches.length > 0 && awardsRevealed && (
-        <SessionSummary matches={matches} players={players} stats={stats} sessionLabel={session?.label || session?.date || ''} sessionShortId={session?.short_id} />
+      {scoredMatches.length > 0 && awardsRevealed && (
+        <SessionSummary matches={scoredMatches} players={players} stats={stats} sessionLabel={session?.label || session?.date || ''} sessionShortId={session?.short_id} />
       )}
 
       {/* Session Standings + Charts — only after reveal */}
@@ -272,7 +504,7 @@ export default function SessionPage() {
         const pMap = new Map(players.map(p => [p.id, p.name]))
 
         const rounds: Match[][] = []
-        for (const m of matches) {
+        for (const m of scoredMatches) {
           const mPlayers = [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2]
           const last = rounds[rounds.length - 1]
           const lastPlayers = last ? last.flatMap(r => [r.team1_p1, r.team1_p2, r.team2_p1, r.team2_p2]) : []
@@ -286,7 +518,7 @@ export default function SessionPage() {
         const netWins = new Map<string, number>()
         const netPoints = new Map<string, number>()
         const chartPlayerIds = new Set<string>()
-        matches.forEach(m => [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2].forEach(id => chartPlayerIds.add(id)))
+        scoredMatches.forEach(m => [m.team1_p1, m.team1_p2, m.team2_p1, m.team2_p2].forEach(id => chartPlayerIds.add(id)))
 
         const midRank = Math.ceil(chartPlayerIds.size / 2)
         chartPlayerIds.forEach(id => { netWins.set(id, 0); netPoints.set(id, 0) })
@@ -394,20 +626,23 @@ export default function SessionPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
           <h2 className="font-semibold text-gray-900 mb-3">Matches</h2>
           <div className="flex flex-col gap-3">
-            {[...matches].reverse().map((m, i) => {
-              const t1Won = m.team1_score > m.team2_score
+            {orderedMatches.map(m => {
+              const isPending = !isScored(m)
+              const t1Won = !isPending && m.team1_score > m.team2_score
               const isEditing = editingMatchId === m.id
               const isDupe = duplicateIds.has(m.id)
               const es = editState
+              const roundLabel = m.round != null ? `Round ${m.round} · ${courtLabel(m.court ?? 0)}` : `Game ${gameNumber.get(m.id)}`
               return (
-                <div key={m.id} className={`rounded-xl p-3 flex flex-col gap-2 ${isDupe ? 'bg-red-50 border border-red-300' : 'bg-gray-100'}`}>
+                <div key={m.id} className={`rounded-xl p-3 flex flex-col gap-2 ${isDupe ? 'bg-red-50 border border-red-300' : isPending ? 'bg-amber-50 border border-amber-200' : 'bg-gray-100'}`}>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500 uppercase tracking-wide">
-                      Game {matches.length - i} · {(league?.scoring_type ?? m.scoring_type) === 'americano' ? 'Americano' : 'Traditional'}
-                      {isDupe && <span className="text-red-500 ml-1 normal-case">· Possible duplicate</span>}
+                      {roundLabel}
+                      {isPending && <span className="text-amber-600 font-semibold"> · Awaiting</span>}
+                      {isDupe && <span className="text-red-500 ml-1 normal-case"> · Possible duplicate</span>}
                     </span>
                     <div className="flex items-center gap-2">
-                      {!isEditing && (
+                      {!isEditing && !isPending && (
                         <button onClick={() => startEdit(m)} className="text-gray-500 hover:text-gray-700 text-xs transition-colors">Edit</button>
                       )}
                       <button onClick={() => deleteMatch(m.id)} className="text-gray-400 hover:text-red-600 text-sm transition-colors">✕</button>
@@ -444,6 +679,15 @@ export default function SessionPage() {
                         <button onClick={() => { setEditingMatchId(null); setEditState(null) }} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-600 text-sm rounded-lg py-1.5 transition-colors">Cancel</button>
                       </div>
                     </div>
+                  ) : isPending ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="flex-1 font-semibold text-gray-900">{getPlayerName(m.team1_p1)} & {getPlayerName(m.team1_p2)}</div>
+                        <span className="text-gray-400 text-xs shrink-0">vs</span>
+                        <div className="flex-1 font-semibold text-gray-900 text-right">{getPlayerName(m.team2_p1)} & {getPlayerName(m.team2_p2)}</div>
+                      </div>
+                      <button onClick={() => startEdit(m)} className="w-full bg-green-600 hover:bg-green-500 text-white text-sm font-semibold rounded-lg py-2 transition-colors">Enter score</button>
+                    </div>
                   ) : (
                     <div className="flex items-center gap-2">
                       <div className={`flex-1 text-sm font-semibold ${t1Won ? 'text-green-600' : 'text-red-600'}`}>
@@ -467,7 +711,7 @@ export default function SessionPage() {
       )}
 
       {/* Reveal Awards button — shown after matches */}
-      {matches.length > 0 && !awardsRevealed && (
+      {scoredMatches.length > 0 && !awardsRevealed && (
         <button
           onClick={revealAwards}
           className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl py-4 text-lg transition-colors"

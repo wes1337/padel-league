@@ -2,3 +2,8 @@
 .env
 .env.*
 !.env.example
+
+.vercel
+
+# local data backups
+padel-backup-*.json

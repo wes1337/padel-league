@@ -2,7 +2,9 @@ import * as Sentry from '@sentry/react'
 
 export function initSentry() {
   const dsn = import.meta.env.VITE_SENTRY_DSN
-  if (!dsn) return
+  // Only report from production builds — keeps local dev / HMR errors out of Sentry
+  // (and out of your inbox). import.meta.env.PROD is true only in `vite build` output.
+  if (!dsn || !import.meta.env.PROD) return
 
   Sentry.init({
     dsn,
@@ -14,7 +16,8 @@ export function initSentry() {
 }
 
 export function reportError(error: unknown, context?: Record<string, unknown>) {
-  if (!import.meta.env.VITE_SENTRY_DSN) {
+  // In dev (or with no DSN) just log locally — don't ship it to Sentry.
+  if (!import.meta.env.VITE_SENTRY_DSN || !import.meta.env.PROD) {
     console.error('[error]', error, context)
     return
   }

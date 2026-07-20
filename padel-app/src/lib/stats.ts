@@ -1,5 +1,13 @@
 import type { Match, Player, PlayerStats } from '../types'
 
+// A game logged with 0–0 is a placeholder created by "Apply line-up" — the teams
+// are set but the score hasn't been entered yet. 0–0 can't happen in a real
+// Americano/Traditional game, so it's a safe sentinel. Unscored games are shown
+// on the session but excluded from every stat until a real score is entered.
+export function isScored(m: Match): boolean {
+  return !(m.team1_score === 0 && m.team2_score === 0)
+}
+
 /**
  * Compute stats for a list of players given a set of matches.
  * totalSessions is the number of sessions in the season (for attendance %).
@@ -26,6 +34,7 @@ export function computeStats(
   }
 
   for (const match of matches) {
+    if (!isScored(match)) continue // skip unscored placeholder games
     const team1 = [match.team1_p1, match.team1_p2]
     const team2 = [match.team2_p1, match.team2_p2]
     const isDraw = match.team1_score === match.team2_score
@@ -54,7 +63,7 @@ export function computeStats(
   }
 
   // Compute current streak per player (chronological order)
-  const sortedMatches = [...matches].sort((a, b) =>
+  const sortedMatches = [...matches].filter(isScored).sort((a, b) =>
     new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
   )
   for (const player of players) {
