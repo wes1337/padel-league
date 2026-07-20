@@ -272,11 +272,11 @@ export default function StartingLineup() {
       {/* Roster picker */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-4">
         <div>
-          <p className="text-gray-900 text-sm font-medium">Who's playing tonight?</p>
+          <p className="text-gray-900 text-sm font-medium">Who's playing today?</p>
           <p className="text-gray-500 text-xs mt-0.5">
             {lastWeekLabel
               ? `Starting from last week (${lastWeekLabel}). Tap to add or drop players.`
-              : 'Tap players to add them to tonight’s line-up.'}
+              : 'Tap players to add them to the line-up.'}
           </p>
         </div>
 
