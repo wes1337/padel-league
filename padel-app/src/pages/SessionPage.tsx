@@ -109,9 +109,12 @@ export default function SessionPage() {
   const pendingCount = matches.length - scoredMatches.length
   const seasonScored = useMemo(() => (seasonAllMatches as Match[]).filter(isScored), [seasonAllMatches])
 
-  // Match-list order: latest round first, and within a round Court 1 → bottom.
-  // Legacy games (no round stamped) fall back to newest-first.
+  // Match-list order: awaiting-score games first (they need action), then latest
+  // round, and within a round Court 1 → bottom. Legacy games (no round stamped)
+  // fall back to newest-first.
   const orderedMatches = useMemo(() => [...matches].sort((a, b) => {
+    const ap = isScored(a) ? 1 : 0, bp = isScored(b) ? 1 : 0
+    if (ap !== bp) return ap - bp // pending (0) before scored (1)
     const ar = a.round ?? -1, br = b.round ?? -1
     if (ar !== br) return br - ar
     const ac = a.court ?? 0, bc = b.court ?? 0

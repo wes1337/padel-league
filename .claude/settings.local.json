@@ -71,7 +71,10 @@
       "Read(//tmp/**)",
       "Bash(netstat -ano)",
       "PowerShell(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -ne '127.0.0.1' } | ForEach-Object { $alias = \\(Get-NetAdapter -InterfaceIndex $_.InterfaceIndex -ErrorAction SilentlyContinue\\).InterfaceDescription; \"{0,-18} | {1}\" -f $_.IPAddress, $alias })",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(gh pr create --title 'Starting line-up planner + winner-court round rotations' --body ' *)",
+      "Bash(gh pr *)",
+      "Bash(git fetch *)"
     ]
   }
 }
