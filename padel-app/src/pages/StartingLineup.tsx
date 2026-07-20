@@ -6,6 +6,7 @@ import { useLeague, useSessions, useSeasons, usePlayers, useMultiSessionMatches,
 import { computeStats, isScored } from '../lib/stats'
 import { suggestStartingPairs, parseNames, formatLineup, type SeededPlayer, type Court } from '../lib/seeding'
 import { courtLabel } from '../lib/courts'
+import { courtSeasonStats } from '../lib/insights'
 import type { Session, Season, Match, Player } from '../types'
 
 function SourceTag({ source }: { source: SeededPlayer['source'] }) {
@@ -67,6 +68,7 @@ export default function StartingLineup() {
   const [initialized, setInitialized] = useState(false)
   const [guestText, setGuestText] = useState('')
   const [copied, setCopied] = useState(false)
+  const [insightCourt, setInsightCourt] = useState<number | null>(null)
 
   const { data: league } = useLeague(leagueId)
   const { data: seasons = [] } = useSeasons(leagueId)
@@ -370,6 +372,42 @@ export default function StartingLineup() {
                       <span className="text-gray-400 font-semibold shrink-0">vs</span>
                       <div className="flex-1 text-right"><PlayerChip p={court.pair2[0]} /> <span className="text-gray-400">&</span> <PlayerChip p={court.pair2[1]} /></div>
                     </div>
+                  )}
+                  {!editMode && [court.pair1[0], court.pair1[1], court.pair2[0], court.pair2[1]].every(p => p.id) && (
+                    <>
+                      <button
+                        onClick={() => setInsightCourt(insightCourt === court.court ? null : court.court)}
+                        className="self-start text-gray-500 hover:text-gray-700 text-xs transition-colors"
+                      >
+                        {insightCourt === court.court ? '▾ Hide details' : '▸ Why these teams?'}
+                      </button>
+                      {insightCourt === court.court && (() => {
+                        const nameOf = (id: string) => (players as Player[]).find(p => p.id === id)?.name ?? '…'
+                        const tonight = (existingMatches as Match[]).filter(isScored)
+                        const items = courtSeasonStats(
+                          [court.pair1[0].id!, court.pair1[1].id!],
+                          [court.pair2[0].id!, court.pair2[1].id!],
+                          seasonMatches, tonight, nameOf,
+                        )
+                        return (
+                          <div className="rounded-lg bg-white border border-gray-200 p-3 flex flex-col gap-2 text-xs">
+                            <div>
+                              <p className="text-gray-900 font-semibold">📊 Rotation check</p>
+                              <p className="text-gray-500">{courtLabel(court.court)} — seeded from last week's finish (subs by season standing), paired best + worst for a balanced opener.</p>
+                            </div>
+                            {items.map((it, i) => (
+                              <div key={i} className="flex gap-2">
+                                <span className="shrink-0">{it.icon}</span>
+                                <div className="min-w-0">
+                                  <p className="text-gray-900 font-medium">{it.head}</p>
+                                  <p className="text-gray-500">{it.sub}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })()}
+                    </>
                   )}
                 </div>
               )
