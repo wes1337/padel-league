@@ -75,7 +75,8 @@
       "Bash(gh pr create --title 'Starting line-up planner + winner-court round rotations' --body ' *)",
       "Bash(gh pr *)",
       "Bash(git fetch *)",
-      "Bash(gh pr create --head lineup-tweaks-v2 --title 'Awaiting-score ordering + rotation insight on opening courts' --body 'Two UX tweaks: awaiting-score games float to top of the match list; opening courts get the '\\\\''Why these teams?'\\\\'' rotation panel + seeding note. *)"
+      "Bash(gh pr create --head lineup-tweaks-v2 --title 'Awaiting-score ordering + rotation insight on opening courts' --body 'Two UX tweaks: awaiting-score games float to top of the match list; opening courts get the '\\\\''Why these teams?'\\\\'' rotation panel + seeding note. *)",
+      "Bash(gh pr create --head fix-rotation-wording --title 'Fix rotation-check '\\\\''again'\\\\'' wording' --body 'First-time pairing of two frequent opponents now reads '\\\\''finally teamed up here'\\\\'' instead of the incorrect '\\\\''partners again here'\\\\''. *)"
     ]
   }
 }
