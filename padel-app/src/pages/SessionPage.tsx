@@ -158,6 +158,17 @@ export default function SessionPage() {
   const [courtEdits, setCourtEdits] = useState<Record<number, [string, string, string, string]>>({})
   const [editSel, setEditSel] = useState<number | null>(null)
 
+  // "Build manually" — ignore the winner-court suggestions and arrange the whole
+  // next round by hand. manualFlat holds every player id, 4 per court in court
+  // order; manualSel is the slot picked for a swap. Only offered before any court
+  // of the target round exists, so reseating from the source round can't double-book.
+  const [manualMode, setManualMode] = useState(false)
+  const [manualFlat, setManualFlat] = useState<string[]>([])
+  const [manualSel, setManualSel] = useState<number | null>(null)
+  const [creatingRound, setCreatingRound] = useState(false)
+  // Drop manual mode whenever the round we'd be building changes.
+  useEffect(() => { setManualMode(false); setManualSel(null) }, [nextRoundPlan?.targetRoundNo])
+
   // Current teams for a ready court — the manual edit if there is one, else the suggestion.
   function courtPairs(c: NextCourtSlot): { pair1: [string, string]; pair2: [string, string] } {
     const e = courtEdits[c.court]
@@ -197,6 +208,52 @@ export default function SessionPage() {
     if (error) return
     setCourtEdits(prev => { const n = { ...prev }; delete n[slot.court]; return n })
     setEditCourt(null)
+    queryClient.invalidateQueries({ queryKey: ['matches'] })
+  }
+
+  // Seed the manual builder from the source round's seating (the players who'll
+  // play the next round), then let the organiser rearrange them freely.
+  function startManualRound() {
+    if (!nextRoundPlan) return
+    const flat: string[] = []
+    for (const g of nextRoundPlan.sourceGames) flat.push(g.team1_p1, g.team1_p2, g.team2_p1, g.team2_p2)
+    setManualFlat(flat)
+    setManualSel(null)
+    setEditCourt(null)
+    setInsightCourt(null)
+    setManualMode(true)
+  }
+  function tapManualSlot(idx: number) {
+    if (manualSel === null) { setManualSel(idx); return }
+    if (manualSel === idx) { setManualSel(null); return }
+    setManualFlat(prev => {
+      const n = [...prev]
+      const tmp = n[manualSel]; n[manualSel] = n[idx]; n[idx] = tmp
+      return n
+    })
+    setManualSel(null)
+  }
+  async function createManualRound() {
+    if (!nextRoundPlan || creatingRound) return
+    const perCourt = nextRoundPlan.totalCourts
+    if (manualFlat.length < perCourt * 4) return
+    setCreatingRound(true)
+    const scoring = league?.scoring_type ?? 'americano'
+    const rows = Array.from({ length: perCourt }, (_, i) => {
+      const s = manualFlat.slice(i * 4, i * 4 + 4)
+      return {
+        session_id: sessionId,
+        scoring_type: scoring,
+        team1_p1: s[0], team1_p2: s[1], team2_p1: s[2], team2_p2: s[3],
+        team1_score: 0, team2_score: 0,
+        round: nextRoundPlan.targetRoundNo, court: i + 1,
+      }
+    })
+    const { error } = await supabase.from('matches').insert(rows)
+    setCreatingRound(false)
+    if (error) return
+    setManualMode(false)
+    setManualFlat([])
     queryClient.invalidateQueries({ queryKey: ['matches'] })
   }
 
@@ -377,13 +434,76 @@ export default function SessionPage() {
         </Link>
       )}
 
-      {/* Next round — courts appear the moment their feeding games are scored */}
-      {!session?.ended && nextRoundPlan && nextRoundPlan.ready.length > 0 && (
+      {/* Next round — accept the winner-court suggestions court by court, or build the whole round by hand */}
+      {!session?.ended && nextRoundPlan && (nextRoundPlan.ready.length > 0 || nextRoundPlan.waiting.length > 0) && (() => {
+        // Manual build is only offered before any court of the target round exists,
+        // so reseating everyone from the source round can't double-book a player.
+        const canManual = nextRoundPlan.ready.length + nextRoundPlan.waiting.length === nextRoundPlan.totalCourts
+        return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col gap-3">
-          <div>
-            <h2 className="font-semibold text-gray-900">Round {nextRoundPlan.targetRoundNo} — ready to start</h2>
-            <p className="text-gray-500 text-xs">Winners up, losers down, fresh partners. Start each court as its players free up.</p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="font-semibold text-gray-900">Round {nextRoundPlan.targetRoundNo}{manualMode ? ' — build it yourself' : ' — ready to start'}</h2>
+              <p className="text-gray-500 text-xs">
+                {manualMode
+                  ? 'Tap two players to swap them. Start the round, then enter scores as you go.'
+                  : 'Winners up, losers down, fresh partners. Start each court as its players free up.'}
+              </p>
+            </div>
+            {canManual && (
+              <button
+                onClick={() => (manualMode ? setManualMode(false) : startManualRound())}
+                className="shrink-0 text-gray-500 hover:text-gray-700 text-xs transition-colors"
+              >
+                {manualMode ? '↩ Use suggestions' : '✎ Build manually'}
+              </button>
+            )}
           </div>
+          {manualMode ? (
+            <>
+              {Array.from({ length: nextRoundPlan.totalCourts }, (_, ci) => {
+                const base = ci * 4
+                return (
+                  <div key={ci} className="rounded-xl bg-blue-50 border border-blue-200 p-3 flex flex-col gap-2">
+                    <span className="text-xs text-gray-500 uppercase tracking-wide">{courtLabel(ci + 1)}</span>
+                    <div className="flex items-stretch gap-2 text-sm">
+                      <div className="flex-1 flex flex-col gap-1">
+                        {[0, 1].map(k => {
+                          const idx = base + k
+                          return (
+                            <button key={k} onClick={() => tapManualSlot(idx)}
+                              className={`w-full text-left rounded-lg px-2 py-1.5 text-sm font-semibold border transition-colors ${manualSel === idx ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'}`}>
+                              {getPlayerName(manualFlat[idx])}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <span className="text-gray-400 font-semibold shrink-0 self-center">vs</span>
+                      <div className="flex-1 flex flex-col gap-1">
+                        {[2, 3].map(k => {
+                          const idx = base + k
+                          return (
+                            <button key={k} onClick={() => tapManualSlot(idx)}
+                              className={`w-full text-left rounded-lg px-2 py-1.5 text-sm font-semibold border transition-colors ${manualSel === idx ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'}`}>
+                              {getPlayerName(manualFlat[idx])}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+              <button
+                onClick={createManualRound}
+                disabled={creatingRound}
+                className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold rounded-lg py-2 text-sm transition-colors"
+              >
+                {creatingRound ? 'Creating…' : `Start Round ${nextRoundPlan.targetRoundNo}`}
+              </button>
+            </>
+          ) : (
+            <>
           {nextRoundPlan.ready.map(c => {
             const { pair1, pair2 } = courtPairs(c)
             const editing = editCourt === c.court
@@ -461,8 +581,11 @@ export default function SessionPage() {
               {nextRoundPlan.waiting.map(c => courtLabel(c.court)).join(', ')} — waiting on Round {nextRoundPlan.sourceRoundNo} to finish.
             </p>
           )}
+            </>
+          )}
         </div>
-      )}
+        )
+      })()}
 
       {/* Uneven games warning */}
       {unevenWarning && (
