@@ -100,6 +100,20 @@ export default function SessionPage() {
   // Scroll to top when navigating to a session
   useEffect(() => { window.scrollTo(0, 0) }, [sessionId])
 
+  // Live multi-device sync: when any match in this session is created, scored, or
+  // deleted on another phone, refresh so everyone sees the same games within a
+  // second. (Requires realtime enabled on the matches table — see the migration.)
+  useEffect(() => {
+    if (!sessionId) return
+    const channel = supabase
+      .channel(`session-matches-${sessionId}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'matches', filter: `session_id=eq.${sessionId}` },
+        () => queryClient.invalidateQueries({ queryKey: ['matches'] }))
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [sessionId, queryClient])
+
   const loading = sessionLoading || playersLoading
 
 
@@ -205,10 +219,12 @@ export default function SessionPage() {
       round: nextRoundPlan.targetRoundNo, court: slot.court,
     })
     setCreatingCourt(null)
-    if (error) return
     setCourtEdits(prev => { const n = { ...prev }; delete n[slot.court]; return n })
     setEditCourt(null)
+    // 23505 = another phone already started this court (unique index). Not an
+    // error from the user's view — just refresh to show the existing game.
     queryClient.invalidateQueries({ queryKey: ['matches'] })
+    if (error && error.code !== '23505') return
   }
 
   // Seed the manual builder from the source round's seating (the players who'll
@@ -251,10 +267,11 @@ export default function SessionPage() {
     })
     const { error } = await supabase.from('matches').insert(rows)
     setCreatingRound(false)
-    if (error) return
     setManualMode(false)
     setManualFlat([])
+    // 23505 = another phone already built this round (unique index) — refresh to theirs.
     queryClient.invalidateQueries({ queryKey: ['matches'] })
+    if (error && error.code !== '23505') return
   }
 
   const stats = useMemo(() => {

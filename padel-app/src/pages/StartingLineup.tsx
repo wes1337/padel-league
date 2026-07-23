@@ -253,7 +253,9 @@ export default function StartingLineup() {
     }))
     const { error } = await supabase.from('matches').insert(rows)
     setApplying(false)
-    if (error) { setApplyError('Could not create the games — please try again.'); return }
+    // 23505 = another phone already created this round (unique index). Treat as
+    // success — navigate on and show the existing games rather than erroring.
+    if (error && error.code !== '23505') { setApplyError('Could not create the games — please try again.'); return }
     queryClient.invalidateQueries({ queryKey: ['matches'] })
     navigate(`/l/${leagueId}/session/${sessionId}`)
   }
