@@ -333,6 +333,19 @@ export default function SessionPage() {
     queryClient.invalidateQueries({ queryKey: qk.sessions(leagueId!) })
   }
 
+  // End (or reopen) the session. Ending hides the next-round prompt and Add Match;
+  // reopening brings them back so you can build more games. Fully reversible, so no
+  // confirm on ending — an accidental tap is undone with one tap on Reopen.
+  const [endingSession, setEndingSession] = useState(false)
+  async function setEnded(next: boolean) {
+    if (!session || endingSession) return
+    setEndingSession(true)
+    await supabase.from('sessions').update({ ended: next }).eq('id', sessionId!)
+    setEndingSession(false)
+    queryClient.invalidateQueries({ queryKey: qk.session(sessionId!) })
+    queryClient.invalidateQueries({ queryKey: qk.sessions(leagueId!) })
+  }
+
   function getPlayerName(id: string) {
     // Neutral placeholder rather than a raw UUID when a player isn't in the cached
     // list yet (e.g. added on another device); the effect below refetches to fix it.
@@ -600,9 +613,34 @@ export default function SessionPage() {
           )}
             </>
           )}
+          {/* Wrap-up — stop the next-round prompt when the night's done. Reversible. */}
+          <button
+            onClick={() => setEnded(true)}
+            disabled={endingSession}
+            className="self-center mt-1 text-red-600 hover:text-red-700 disabled:opacity-50 text-xs font-medium transition-colors"
+          >
+            {endingSession ? 'Ending…' : '■ End session'}
+          </button>
         </div>
         )
       })()}
+
+      {/* Session ended — reopen to build more games */}
+      {!!session?.ended && (
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-gray-900 text-sm font-semibold">Session ended</p>
+            <p className="text-gray-500 text-xs">Reopen if you want to add more rounds or games.</p>
+          </div>
+          <button
+            onClick={() => setEnded(false)}
+            disabled={endingSession}
+            className="shrink-0 bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          >
+            {endingSession ? '...' : 'Reopen'}
+          </button>
+        </div>
+      )}
 
       {/* Uneven games warning */}
       {unevenWarning && (
