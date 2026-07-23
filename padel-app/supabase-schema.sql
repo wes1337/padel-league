@@ -89,9 +89,17 @@ create table matches (
   created_at timestamptz default now()
 );
 
+-- One game per (session, round, court). NULL round/court (manual "Add Match"
+-- games) are treated as distinct by Postgres, so this only blocks two devices
+-- creating the same Round-N / Court-C slot — the multi-phone duplicate bug.
+create unique index if not exists matches_session_round_court_uniq
+  on matches (session_id, round, court);
+
 -- Migration (run this if the matches table already exists):
 -- alter table matches add column if not exists round smallint;
 -- alter table matches add column if not exists court smallint;
+-- create unique index if not exists matches_session_round_court_uniq on matches (session_id, round, court);
+-- alter publication supabase_realtime add table matches;  -- live cross-device sync
 
 create table session_signups (
   id uuid primary key default gen_random_uuid(),
