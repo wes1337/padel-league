@@ -101,6 +101,13 @@ export function useSessionMatches(sessionId: string | undefined) {
       return (data ?? []) as Match[]
     },
     enabled: !!sessionId,
+    // Safety net for live scoring: realtime pushes updates instantly, but a phone
+    // that's just watching can miss an event if its socket drops (screen off,
+    // backgrounded, network blip) — and realtime never replays missed events. Poll
+    // every 15s so a passive phone self-corrects within seconds instead of getting
+    // stuck on a stale "awaiting" state. Only runs while the tab is visible (the
+    // default), so it doesn't drain the battery in the background.
+    refetchInterval: 15000,
   })
 }
 

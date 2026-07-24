@@ -110,7 +110,11 @@ export default function SessionPage() {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'matches', filter: `session_id=eq.${sessionId}` },
         () => queryClient.invalidateQueries({ queryKey: ['matches'] }))
-      .subscribe()
+      // On (re)connect, pull once — recovers any events missed while the socket was
+      // down (screen off / backgrounded), so a watching phone can't stay stale.
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') queryClient.invalidateQueries({ queryKey: ['matches'] })
+      })
     return () => { supabase.removeChannel(channel) }
   }, [sessionId, queryClient])
 
