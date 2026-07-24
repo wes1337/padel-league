@@ -74,6 +74,7 @@ export default function SessionPage() {
 
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
   const [editState, setEditState] = useState<EditState | null>(null)
+  const [conflictNote, setConflictNote] = useState<string | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
   const [inviting, setInviting] = useState(false)
   const [rankHighlightedIds, setRankHighlightedIds] = useState<Map<string, string>>(new Map())
@@ -299,13 +300,25 @@ export default function SessionPage() {
     if (isNaN(s1) || isNaN(s2) || s1 < 0 || s2 < 0) return
     const ids = [editState.p1, editState.p2, editState.p3, editState.p4]
     if (new Set(ids).size < 4) return
-    await supabase.from('matches').update({
+    // If this game still looks unscored to us, guard the write so it only lands
+    // while it's genuinely 0–0. If another phone entered a score first, our update
+    // matches no rows — so we DON'T silently overwrite their result; we refresh and
+    // tell the user. (Editing an already-scored game is a deliberate correction, so
+    // it isn't guarded.)
+    const original = matches.find(m => m.id === matchId)
+    const wasPending = !!original && !isScored(original)
+    let q = supabase.from('matches').update({
       team1_score: s1, team2_score: s2,
       team1_p1: editState.p1, team1_p2: editState.p2,
       team2_p1: editState.p3, team2_p2: editState.p4,
     }).eq('id', matchId)
+    if (wasPending) q = q.eq('team1_score', 0).eq('team2_score', 0)
+    const { data } = await q.select()
     setEditingMatchId(null)
     setEditState(null)
+    if (wasPending && (!data || data.length === 0)) {
+      setConflictNote('That match was just scored on another phone. Showing the saved result — tap Edit if you need to change it.')
+    }
     queryClient.invalidateQueries({ queryKey: ['matches'] })
   }
 
@@ -443,6 +456,14 @@ export default function SessionPage() {
         </div>
         <Link to={`/l/${leagueId}`} className="text-gray-500 hover:text-gray-700 text-sm transition-colors pt-1 shrink-0">← View Season</Link>
       </div>
+
+      {/* Score-conflict notice — another device scored a game we thought was open */}
+      {conflictNote && (
+        <div className="bg-yellow-50 border border-yellow-300 rounded-xl px-4 py-3 flex items-start justify-between gap-3">
+          <p className="text-yellow-700 text-sm">{conflictNote}</p>
+          <button onClick={() => setConflictNote(null)} className="text-yellow-600 hover:text-yellow-700 text-lg leading-none shrink-0">×</button>
+        </div>
+      )}
 
       {/* Add Match */}
       {!session?.ended && (
