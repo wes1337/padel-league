@@ -23,7 +23,11 @@ const queryClient = new QueryClient({
   }),
   defaultOptions: {
     queries: {
-      staleTime: 10 * 60 * 1000,  // data fresh for 10 min — mutations invalidate manually anyway
+      // Short stale window so returning to the app (tab focus / navigation) pulls
+      // fresh data instead of showing a 10-minute-old snapshot. Cached data still
+      // renders instantly first, then refetches in the background. Live screens
+      // (session, league home) also subscribe to realtime for sub-second updates.
+      staleTime: 20 * 1000,
       gcTime: 30 * 60 * 1000,     // keep unused cache 30 min — navigating back is always instant
       retry: 1,
     },
