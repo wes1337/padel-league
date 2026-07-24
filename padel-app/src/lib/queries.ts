@@ -1,6 +1,24 @@
-import { useQuery, type QueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { supabase } from './supabase'
 import type { League, Season, Session, Match, Player, SessionSignup } from '../types'
+
+// Subscribe to live match changes so any screen showing match-derived data
+// (scores, standings, round pairings) refreshes within a second when another
+// device creates, scores, or deletes a game — no manual refresh. Requires the
+// `matches` table to be in the supabase_realtime publication (see the migration).
+// `scope` just keeps each page's channel name distinct.
+export function useRealtimeMatches(scope: string) {
+  const qc = useQueryClient()
+  useEffect(() => {
+    const channel = supabase
+      .channel(`matches-sync-${scope}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' },
+        () => qc.invalidateQueries({ queryKey: ['matches'] }))
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [scope, qc])
+}
 
 // Centralised cache keys — import these when invalidating after mutations
 export const qk = {

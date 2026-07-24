@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 import { computeStats, isScored } from '../lib/stats'
 import { isLeagueAdmin, saveLeagueAdmin, saveSessionCreator } from '../lib/admin'
 import { genToken } from '../lib/id'
-import { useLeague, useSeasons, useSessions, usePlayers, useMultiSessionMatches, qk } from '../lib/queries'
+import { useLeague, useSeasons, useSessions, usePlayers, useMultiSessionMatches, useRealtimeMatches, qk } from '../lib/queries'
 import type { Season, Session, Match, Player, PlayerStats } from '../types'
 import Leaderboard from '../components/Leaderboard'
 
@@ -32,6 +32,9 @@ export default function LeagueHome() {
 
   // Scroll to top on navigation
   useEffect(() => { window.scrollTo(0, 0) }, [leagueId])
+
+  // Live standings — refresh when a score is entered on any device.
+  useRealtimeMatches(`league-${leagueId ?? ''}`)
 
   // ── Queries ────────────────────────────────────────────────────────────────
   const { data: league, isLoading: leagueLoading } = useLeague(leagueId)
