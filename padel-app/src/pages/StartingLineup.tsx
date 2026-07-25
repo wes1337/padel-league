@@ -66,7 +66,8 @@ export default function StartingLineup() {
   const [applyError, setApplyError] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [initialized, setInitialized] = useState(false)
-  const [guestText, setGuestText] = useState('')
+  const [guestInput, setGuestInput] = useState('')
+  const [guestList, setGuestList] = useState<string[]>([])
   const [copied, setCopied] = useState(false)
   const [insightCourt, setInsightCourt] = useState<number | null>(null)
 
@@ -161,12 +162,30 @@ export default function StartingLineup() {
     })
   }
 
-  const guestNames = useMemo(() => parseNames(guestText), [guestText])
+  // Add typed guest name(s) as chips. Supports pasting a "Sam, Alex" list too, and
+  // dedupes case-insensitively so the same name can't be added twice.
+  function addGuests() {
+    const parsed = parseNames(guestInput)
+    if (parsed.length === 0) return
+    setGuestList(prev => {
+      const seen = new Set(prev.map(n => n.toLowerCase()))
+      const next = [...prev]
+      for (const n of parsed) {
+        const key = n.toLowerCase()
+        if (!seen.has(key)) { seen.add(key); next.push(n) }
+      }
+      return next
+    })
+    setGuestInput('')
+  }
+  function removeGuest(name: string) {
+    setGuestList(prev => prev.filter(n => n !== name))
+  }
 
   const names = useMemo(() => {
     const picked = (players as Player[]).filter(p => selected.has(p.id)).map(p => p.name)
-    return [...picked, ...guestNames]
-  }, [players, selected, guestNames])
+    return [...picked, ...guestList]
+  }, [players, selected, guestList])
 
   const result = useMemo(() => {
     if (names.length < 4) return null
@@ -341,15 +360,41 @@ export default function StartingLineup() {
           </div>
         )}
 
-        <div className="flex flex-col gap-1">
-          <label className="text-gray-500 text-xs uppercase tracking-wide">Guests (not in the league)</label>
-          <input
-            type="text"
-            value={guestText}
-            onChange={e => setGuestText(e.target.value)}
-            placeholder="e.g. Sam, Alex"
-            className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-base outline-none focus:ring-2 focus:ring-green-500"
-          />
+        <div className="flex flex-col gap-2">
+          <label className="text-gray-500 text-xs uppercase tracking-wide">Add players (not in the league)</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={guestInput}
+              onChange={e => setGuestInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addGuests() } }}
+              placeholder="Type a name"
+              className="flex-1 min-w-0 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-base outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <button
+              onClick={addGuests}
+              disabled={!guestInput.trim()}
+              className="shrink-0 bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white font-semibold rounded-lg px-4 py-2 text-sm transition-colors"
+            >
+              + Add
+            </button>
+          </div>
+          {guestList.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {guestList.map(name => (
+                <span key={name} className="inline-flex items-center gap-1.5 bg-green-600 text-white text-sm font-medium rounded-full pl-3 pr-1.5 py-1">
+                  {name}
+                  <button
+                    onClick={() => removeGuest(name)}
+                    aria-label={`Remove ${name}`}
+                    className="text-white/80 hover:text-white text-base leading-none w-4 h-4 flex items-center justify-center"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <p className="text-gray-500 text-xs">{names.length} playing{names.length % 4 !== 0 ? ` · ${names.length % 4} will sit out game 1` : ''}</p>
