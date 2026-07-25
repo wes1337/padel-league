@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import { useLeague, useSessions, useSeasons, usePlayers, useMultiSessionMatches, useSession, useSessionMatches } from '../lib/queries'
+import { useLeague, useSessions, useSeasons, usePlayers, useMultiSessionMatches, useSession, useSessionMatches, qk } from '../lib/queries'
 import { computeStats, isScored } from '../lib/stats'
 import { suggestStartingPairs, parseNames, formatLineup, type SeededPlayer, type Court } from '../lib/seeding'
 import { courtLabel } from '../lib/courts'
@@ -222,15 +222,9 @@ export default function StartingLineup() {
     } catch { /* clipboard unavailable */ }
   }
 
-  // Courts whose four players are all real league players — only these can be
-  // handed to the match-entry screen (guests have no id yet).
-  const applicableCourts = useMemo(() =>
-    displayCourts.filter(c =>
-      [c.pair1[0], c.pair1[1], c.pair2[0], c.pair2[1]].every(p => p.id != null)
-    ),
-    [displayCourts]
-  )
-  const canApply = !!sessionId && !session?.ended && applicableCourts.length > 0
+  // Every seeded court can be applied — brand-new (guest) names typed into the box
+  // are created as league players on apply, so their court is no longer dropped.
+  const canApply = !!sessionId && !session?.ended && displayCourts.length > 0
 
   // Create the Round 1 games (teams set, score left as 0–0 to be filled in later).
   async function applyToSession() {
@@ -239,25 +233,66 @@ export default function StartingLineup() {
         !window.confirm('This session already has games. Add Round 1 on top of them?')) return
     setApplying(true)
     setApplyError('')
-    const scoring = league?.scoring_type ?? 'americano'
-    // Stamp the round number (next after any existing games) and court index so
-    // the winner-court "next round" logic can move winners up / losers down.
-    const nextRoundNo = Math.max(0, ...(existingMatches as Match[]).map(m => m.round ?? 0)) + 1
-    const rows = applicableCourts.map((c, i) => ({
-      session_id: sessionId,
-      scoring_type: scoring,
-      team1_p1: c.pair1[0].id!, team1_p2: c.pair1[1].id!,
-      team2_p1: c.pair2[0].id!, team2_p2: c.pair2[1].id!,
-      team1_score: 0, team2_score: 0,
-      round: nextRoundNo, court: i + 1,
-    }))
-    const { error } = await supabase.from('matches').insert(rows)
-    setApplying(false)
-    // 23505 = another phone already created this round (unique index). Treat as
-    // success — navigate on and show the existing games rather than erroring.
-    if (error && error.code !== '23505') { setApplyError('Could not create the games — please try again.'); return }
-    queryClient.invalidateQueries({ queryKey: ['matches'] })
-    navigate(`/l/${leagueId}/session/${sessionId}`)
+    try {
+      // Resolve every seeded player to a real DB id. Names typed into the box that
+      // aren't league players yet (id === null) are created now, so a court that
+      // includes them isn't silently skipped.
+      const idByName = new Map<string, string>()
+      for (const p of players as Player[]) idByName.set(p.name.trim().toLowerCase(), p.id)
+
+      const toCreate: string[] = []
+      const queued = new Set<string>()
+      for (const c of displayCourts) {
+        for (const p of [c.pair1[0], c.pair1[1], c.pair2[0], c.pair2[1]]) {
+          if (p.id) continue
+          const key = p.name.trim().toLowerCase()
+          if (idByName.has(key) || queued.has(key)) continue
+          queued.add(key)
+          toCreate.push(p.name.trim())
+        }
+      }
+
+      if (toCreate.length > 0) {
+        const newRows = toCreate.map(name => ({
+          league_id: leagueId,
+          name: name.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' '),
+        }))
+        const { data: created, error: pErr } = await supabase.from('players').insert(newRows).select()
+        if (pErr) throw pErr
+        const newPlayers = (created ?? []) as Player[]
+        for (const p of newPlayers) idByName.set(p.name.trim().toLowerCase(), p.id)
+        queryClient.setQueryData(qk.players(leagueId!), (old: Player[] = []) =>
+          [...old, ...newPlayers].sort((a, b) => a.name.localeCompare(b.name)))
+      }
+
+      const resolve = (p: SeededPlayer) => p.id ?? idByName.get(p.name.trim().toLowerCase())
+      const scoring = league?.scoring_type ?? 'americano'
+      // Stamp the round number (next after any existing games) and court index so
+      // the winner-court "next round" logic can move winners up / losers down.
+      const nextRoundNo = Math.max(0, ...(existingMatches as Match[]).map(m => m.round ?? 0)) + 1
+      const matchRows = displayCourts.map((c, i) => ({
+        session_id: sessionId,
+        scoring_type: scoring,
+        team1_p1: resolve(c.pair1[0]), team1_p2: resolve(c.pair1[1]),
+        team2_p1: resolve(c.pair2[0]), team2_p2: resolve(c.pair2[1]),
+        team1_score: 0, team2_score: 0,
+        round: nextRoundNo, court: i + 1,
+      }))
+      if (matchRows.some(r => !r.team1_p1 || !r.team1_p2 || !r.team2_p1 || !r.team2_p2)) {
+        throw new Error('Some players could not be created')
+      }
+      const { error } = await supabase.from('matches').insert(matchRows)
+      // 23505 = another phone already created this round (unique index). Treat as
+      // success — navigate on and show the existing games rather than erroring.
+      if (error && error.code !== '23505') throw error
+      queryClient.invalidateQueries({ queryKey: ['matches'] })
+      queryClient.invalidateQueries({ queryKey: qk.players(leagueId!) })
+      navigate(`/l/${leagueId}/session/${sessionId}`)
+    } catch {
+      setApplyError('Could not create the games — please try again.')
+    } finally {
+      setApplying(false)
+    }
   }
 
   return (
@@ -443,11 +478,10 @@ export default function StartingLineup() {
               >
                 {applying
                   ? 'Creating games…'
-                  : `Create Round 1 games (${applicableCourts.length} ${applicableCourts.length === 1 ? 'court' : 'courts'})`}
+                  : `Create Round 1 games (${displayCourts.length} ${displayCourts.length === 1 ? 'court' : 'courts'})`}
               </button>
               <p className="text-gray-500 text-xs text-center">
                 Teams are set now — scores get entered on the session as each game finishes.
-                {applicableCourts.length < result.courts.length && ' Courts with guests are skipped.'}
               </p>
               {applyError && <p className="text-red-600 text-xs text-center">{applyError}</p>}
             </div>
