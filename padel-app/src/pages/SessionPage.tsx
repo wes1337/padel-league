@@ -834,7 +834,11 @@ export default function SessionPage() {
           <div className="flex flex-col gap-3">
             {orderedMatches.map(m => {
               const isPending = !isScored(m)
+              const isDraw = !isPending && m.team1_score === m.team2_score
               const t1Won = !isPending && m.team1_score > m.team2_score
+              // Result colour per side: draw = orange for both, else winner green / loser red.
+              const side1 = isDraw ? 'text-orange-600' : t1Won ? 'text-green-600' : 'text-red-600'
+              const side2 = isDraw ? 'text-orange-600' : t1Won ? 'text-red-600' : 'text-green-600'
               const isEditing = editingMatchId === m.id
               const isDupe = duplicateIds.has(m.id)
               const es = editState
@@ -896,15 +900,15 @@ export default function SessionPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <div className={`flex-1 text-sm font-semibold ${t1Won ? 'text-green-600' : 'text-red-600'}`}>
+                      <div className={`flex-1 text-sm font-semibold ${side1}`}>
                         {getPlayerName(m.team1_p1)} & {getPlayerName(m.team1_p2)}
                       </div>
                       <div className="font-bold text-lg min-w-[60px] text-center">
-                        <span className={t1Won ? 'text-green-600' : 'text-red-600'}>{m.team1_score}</span>
+                        <span className={side1}>{m.team1_score}</span>
                         <span className="text-gray-500"> – </span>
-                        <span className={!t1Won ? 'text-green-600' : 'text-red-600'}>{m.team2_score}</span>
+                        <span className={side2}>{m.team2_score}</span>
                       </div>
-                      <div className={`flex-1 text-sm font-semibold text-right ${!t1Won ? 'text-green-600' : 'text-red-600'}`}>
+                      <div className={`flex-1 text-sm font-semibold text-right ${side2}`}>
                         {getPlayerName(m.team2_p1)} & {getPlayerName(m.team2_p2)}
                       </div>
                     </div>
