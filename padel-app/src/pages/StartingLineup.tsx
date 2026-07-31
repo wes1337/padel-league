@@ -70,6 +70,10 @@ export default function StartingLineup() {
   const [guestList, setGuestList] = useState<string[]>([])
   const [copied, setCopied] = useState(false)
   const [insightCourt, setInsightCourt] = useState<number | null>(null)
+  // Stable random seed for the "no history yet" draw (e.g. a new season's first
+  // night) so unseeded players are ordered randomly, not alphabetically. Fixed per
+  // visit; reload the page to re-draw.
+  const [drawSeed] = useState(() => Math.floor(Math.random() * 1_000_000_000))
 
   const { data: league } = useLeague(leagueId)
   const { data: seasons = [] } = useSeasons(leagueId)
@@ -189,8 +193,8 @@ export default function StartingLineup() {
 
   const result = useMemo(() => {
     if (names.length < 4) return null
-    return suggestStartingPairs(names, players as Player[], lastWeekMatches, seasonMatches as Match[])
-  }, [names, players, lastWeekMatches, seasonMatches])
+    return suggestStartingPairs(names, players as Player[], lastWeekMatches, seasonMatches as Match[], 0, drawSeed)
+  }, [names, players, lastWeekMatches, seasonMatches, drawSeed])
 
   // Manual team override. `editedFlat` holds the players as a flat list (4 per
   // court: [pair1a, pair1b, pair2a, pair2b]); null = use the suggestion as-is.
@@ -427,7 +431,7 @@ export default function StartingLineup() {
             </p>
           ) : lastWeekMatches.length === 0 && (seasonMatches as Match[]).length === 0 && (
             <p className="text-gray-500 text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-              No match history yet — courts are seeded in selection order.
+              No match history yet — courts are drawn at random. Reload to re-draw, or tap Edit teams.
             </p>
           )}
 

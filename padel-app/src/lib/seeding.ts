@@ -36,6 +36,27 @@ export function cleanNameLine(line: string): string {
     .trim()
 }
 
+// Small seeded PRNG so an "unseeded" draw (no history yet) is random but stable
+// for a given seed — it won't reshuffle on every re-render, only when the caller
+// changes the seed. Deterministic given the seed (good for tests).
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+function shuffled<T>(arr: T[], rng: () => number): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
 // Split a pasted block (newline- or comma-separated) into candidate names.
 export function parseNames(raw: string): string[] {
   return raw
@@ -64,6 +85,7 @@ export function suggestStartingPairs(
   lastWeekMatches: Match[],
   seasonMatches: Match[],
   variant = 0,
+  seed = 0,
 ): SeedingResult {
   // 1. Resolve pasted names → league players (case-insensitive, exact match).
   const byName = new Map<string, Player>()
@@ -146,13 +168,19 @@ export function suggestStartingPairs(
     ranked.splice(idx, 0, { id: p.id, name: p.name, source: 'season' })
   }
 
-  // Newcomers (matched players with no history, then unmatched names) at the bottom.
+  // Newcomers (matched players with no history, then unmatched names) go to the
+  // bottom — but in RANDOM order, not alphabetical. With no last-week/season data
+  // (e.g. the first night of a brand-new season) everyone is a newcomer, so the
+  // whole draw is random rather than "whoever's first alphabetically starts top".
+  const newcomers: SeededPlayer[] = []
   for (const p of matched) {
     if (!lastWeekRank.has(p.id) && !seasonRank.has(p.id)) {
-      ranked.push({ id: p.id, name: p.name, source: 'new' })
+      newcomers.push({ id: p.id, name: p.name, source: 'new' })
     }
   }
-  for (const name of unmatchedNames) ranked.push({ id: null, name, source: 'new' })
+  for (const name of unmatchedNames) newcomers.push({ id: null, name, source: 'new' })
+  const rng = mulberry32(seed)
+  for (const p of shuffled(newcomers, rng)) ranked.push(p)
 
   // 4. Chunk into full courts of 4; leftover lowest-ranked players sit out game 1.
   const numCourts = Math.floor(ranked.length / 4)
