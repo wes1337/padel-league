@@ -160,6 +160,21 @@ export default function LeagueHome() {
     const name = newSeasonName.trim()
     if (!name || creatingSeason) return
     setCreatingSeason(true)
+    // One active season per league. Re-check the DB (not just the button's
+    // disabled state) so a stale client can't slip in a second active season.
+    const { data: stillActive } = await supabase
+      .from('seasons')
+      .select('id')
+      .eq('league_id', leagueId!)
+      .eq('ended', false)
+      .limit(1)
+    if (stillActive && stillActive.length > 0) {
+      setCreatingSeason(false)
+      setShowCreateSeason(false)
+      setNewSeasonName('')
+      queryClient.invalidateQueries({ queryKey: qk.seasons(leagueId!) })
+      return
+    }
     const { data, error } = await supabase
       .from('seasons')
       .insert({ league_id: leagueId, name })
@@ -515,13 +530,14 @@ export default function LeagueHome() {
               </button>
             )}
 
-            {/* End current season */}
-            {activeSeason && currentSeason?.id === activeSeason.id && (
+            {/* End the season being viewed — shown for ANY active (non-ended)
+                season, so if two ever end up active you can still close either. */}
+            {currentSeason && !currentSeason.ended && (
               <button
                 onClick={endSeason}
                 className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold rounded-lg py-2 text-sm transition-colors border border-red-300"
               >
-                End Season: {activeSeason.name}
+                End Season: {currentSeason.name}
               </button>
             )}
           </div>
