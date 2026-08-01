@@ -131,9 +131,27 @@ export default function StartingLineup() {
   const ready = !playersLoading && !sessionsLoading && (sessionIds.length === 0 || matchesLoaded)
   useEffect(() => {
     if (initialized || !ready) return
-    setSelected(new Set(lastWeekOrder))
+    // Restore a saved roster if we have one for this session (survives reloads and
+    // accidental refreshes); otherwise pre-select last week's line-up.
+    const saved = sessionId ? localStorage.getItem(`lineup_roster_${sessionId}`) : null
+    if (saved) {
+      try {
+        const { selected: sel, guests } = JSON.parse(saved) as { selected: string[]; guests: string[] }
+        setSelected(new Set(Array.isArray(sel) ? sel : []))
+        if (Array.isArray(guests)) setGuestList(guests)
+      } catch { setSelected(new Set(lastWeekOrder)) }
+    } else {
+      setSelected(new Set(lastWeekOrder))
+    }
     setInitialized(true)
-  }, [initialized, ready, lastWeekOrder])
+  }, [initialized, ready, lastWeekOrder, sessionId])
+
+  // Persist the roster so a reload / accidental refresh doesn't wipe the players
+  // you've picked or the new names you've typed.
+  useEffect(() => {
+    if (!initialized || !sessionId) return
+    localStorage.setItem(`lineup_roster_${sessionId}`, JSON.stringify({ selected: [...selected], guests: guestList }))
+  }, [initialized, sessionId, selected, guestList])
 
   const playerById = useMemo(() => {
     const m = new Map<string, Player>()
@@ -308,6 +326,7 @@ export default function StartingLineup() {
       // 23505 = another phone already created this round (unique index). Treat as
       // success — navigate on and show the existing games rather than erroring.
       if (error && error.code !== '23505') throw error
+      if (sessionId) localStorage.removeItem(`lineup_roster_${sessionId}`)
       queryClient.invalidateQueries({ queryKey: ['matches'] })
       queryClient.invalidateQueries({ queryKey: qk.players(leagueId!) })
       navigate(`/l/${leagueId}/session/${sessionId}`)
