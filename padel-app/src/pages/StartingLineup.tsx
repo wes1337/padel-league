@@ -118,11 +118,6 @@ export default function StartingLineup() {
   )
   const lastWeekSet = useMemo(() => new Set(lastWeekOrder), [lastWeekOrder])
 
-  const seasonRank = useMemo(() => {
-    const m = new Map<string, number>()
-    computeStats(players as Player[], seasonMatches as Match[]).forEach((s, i) => m.set(s.player.id, i))
-    return m
-  }, [players, seasonMatches])
 
   // Pre-select last week's roster once — but only after every query has settled.
   // Gating on isLoading/isSuccess (not "is the array non-empty") avoids a race
@@ -159,22 +154,18 @@ export default function StartingLineup() {
     return m
   }, [players])
 
-  // Chip groups: last week's players (in finish order), then everyone else (by season rank).
+  // Chip groups: last week's players, then everyone else. Both listed A–Z so a
+  // name is easy to find when picking the roster (this is display order only —
+  // seeding ranks players independently from match history).
+  const byName = (a: Player, b: Player) => a.name.localeCompare(b.name)
   const lastWeekPlayers = useMemo(
-    () => lastWeekOrder.map(id => playerById.get(id)).filter((p): p is Player => !!p),
+    () => lastWeekOrder.map(id => playerById.get(id)).filter((p): p is Player => !!p).sort(byName),
     [lastWeekOrder, playerById]
   )
-  const otherPlayers = useMemo(() => {
-    return (players as Player[])
-      .filter(p => !lastWeekSet.has(p.id))
-      .sort((a, b) => {
-        const ra = seasonRank.get(a.id), rb = seasonRank.get(b.id)
-        if (ra !== undefined && rb !== undefined) return ra - rb
-        if (ra !== undefined) return -1
-        if (rb !== undefined) return 1
-        return a.name.localeCompare(b.name)
-      })
-  }, [players, lastWeekSet, seasonRank])
+  const otherPlayers = useMemo(
+    () => (players as Player[]).filter(p => !lastWeekSet.has(p.id)).sort(byName),
+    [players, lastWeekSet]
+  )
 
   function toggle(id: string) {
     setSelected(prev => {
